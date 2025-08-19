@@ -1,0 +1,36 @@
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+auto_detect_solc = false
+solc = "0.8.30"
+ffi = true
+ast = true
+viaIR = true
+build_info = true
+extra_output = ["storageLayout"]
+libs = ["lib"]
+verbosity = 3
+optimizer = true
+optimizer_runs = 60_000
+fs_permissions = [{ access = "read-write", path = "./config" }]
+remappings = [
+  '@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/',
+  '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
+]
+
+[rpc_endpoints]
+mainnet = "https://mainnet.infura.io/v3/3a0fa033ac184bd6bdea8aa7d910614f"
+sepolia = "https://sepolia.infura.io/v3/3a0fa033ac184bd6bdea8aa7d910614f"
+base = "https://mainnet.base.org"
+base-sepolia = "https://sepolia.base.org"
+celo = "https://forno.celo.org"
+alfajores = "https://alfajores-forno.celo-testnet.org"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/api" }
+sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.etherscan.io/api"  }
+base = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
+base-sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
+celo = { key = "${CELOSCAN_API_KEY}", url = "https://api.celoscan.io/api"}
+alfajores = { key = "${CELOSCAN_API_KEY}", url = "https://api-alfajores.celoscan.io/api"}

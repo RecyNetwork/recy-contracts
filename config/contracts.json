@@ -1,0 +1,188 @@
+{
+  "44787": {
+    "name": "Celo Alfajores Testnet",
+    "addresses": {
+      "protocol": "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd"
+    },
+    "contracts": {
+      "token": "0xDbD78b923E04e456Ec34Bb94E3eDBa525E53eE87",
+      "reportAttributes": "0x01d10327d24b2C2c92cCC4Fe6C622CA8d97E6968",
+      "reportSvg": "0x31593A6D3BFAa500eEE09ccB5b6180058D45Ef0B",
+      "reportData": "0x97e08166Dfa892f4D37aDe5bfeDBEFaB324C7C9a",
+      "reportImplementation": "0xeE23ecd0949b7C3Fc836a682DdAA8511b98aEDf2",
+      "factory": "0xb8d7DfD683a91E50b5D1335BaCa39A1F9ff306F3"
+    },
+    "proxies": {
+      "default": {
+        "address": "0xF9ffA551064bbcFafbADEbD50eE79065aE188e76",
+        "settings": {
+          "unlockDelay": 60,
+          "shareRecycler": 60,
+          "shareValidator": 10,
+          "shareGenerator": 20,
+          "shareProtocol": 10
+        },
+        "recyclers": [
+          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+          "0xBdF566d020e206456534e873f5EF385A762aC4FC",
+          "0xcC57F5c55A4dd7D183FF530C576ee9B4Af4b9530",
+          "0x607AAD172555dE7bA7715fc59A7b3cB023D4140A"
+        ],
+        "recyclerFunds": [
+          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+          "0xBdF566d020e206456534e873f5EF385A762aC4FC",
+          "0xcC57F5c55A4dd7D183FF530C576ee9B4Af4b9530",
+          "0x607AAD172555dE7bA7715fc59A7b3cB023D4140A"
+        ],
+        "auditors": [
+          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+          "0x20BAe19A7B6Faf0bFc0fd7F29548FB803F1E8FD9",
+          "0x37EE01FFbD857Acc9FBE2ee4090816B224b2C1e8"
+        ],
+        "auditorFunds": [
+          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+          "0x20BAe19A7B6Faf0bFc0fd7F29548FB803F1E8FD9",
+          "0x37EE01FFbD857Acc9FBE2ee4090816B224b2C1e8"
+        ],
+        "admins": [
+          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+          "0xdA7aEe1A6f2337Bd908B4669702604f5327C1A61",
+          "0x7433Ef1475d8c6AeCB2b296770c01e1e2eDBdBf3"
+        ],
+        "emergency": [
+          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+          "0xdA7aEe1A6f2337Bd908B4669702604f5327C1A61",
+          "0x7433Ef1475d8c6AeCB2b296770c01e1e2eDBdBf3"
+        ]
+      }
+    }
+  },
+  "42220": {
+    "name": "Celo Mainnet",
+    "addresses": {
+      "protocol": null
+    },
+    "contracts": {
+      "token": null,
+      "reportAttributes": null,
+      "reportSvg": null,
+      "reportData": null,
+      "reportImplementation": null,
+      "factory": null
+    },
+    "proxies": {
+      "default": {
+        "address": null,
+        "settings": {
+          "unlockDelay": 2592000,
+          "shareRecycler": 60,
+          "shareValidator": 10,
+          "shareGenerator": 20,
+          "shareProtocol": 10
+        },
+        "recyclers": [],
+        "recyclerFunds": [],
+        "auditors": [],
+        "auditorFunds": [],
+        "admins": [],
+        "emergency": []
+      }
+    }
+  },
+  "1": {
+    "name": "Ethereum Mainnet",
+    "addresses": {
+      "protocol": null
+    },
+    "contracts": {
+      "token": null,
+      "reportAttributes": null,
+      "reportSvg": null,
+      "reportData": null,
+      "reportImplementation": null,
+      "factory": null
+    },
+    "proxies": {
+      "default": {
+        "address": null,
+        "settings": {
+          "unlockDelay": 2592000,
+          "shareRecycler": 60,
+          "shareValidator": 10,
+          "shareGenerator": 20,
+          "shareProtocol": 10
+        },
+        "recyclers": [],
+        "recyclerFunds": [],
+        "auditors": [],
+        "auditorFunds": [],
+        "admins": [],
+        "emergency": []
+      }
+    }
+  },
+  "11155111": {
+    "name": "Sepolia Testnet",
+    "addresses": {
+      "protocol": null
+    },
+    "contracts": {
+      "token": null,
+      "reportAttributes": null,
+      "reportSvg": null,
+      "reportData": null,
+      "reportImplementation": null,
+      "factory": null
+    },
+    "proxies": {
+      "default": {
+        "address": null,
+        "settings": {
+          "unlockDelay": 60,
+          "shareRecycler": 60,
+          "shareValidator": 10,
+          "shareGenerator": 20,
+          "shareProtocol": 10
+        },
+        "recyclers": [],
+        "recyclerFunds": [],
+        "auditors": [],
+        "auditorFunds": [],
+        "admins": [],
+        "emergency": []
+      }
+    }
+  },
+  "31337": {
+    "name": "Localhost",
+    "addresses": {
+      "protocol": "0x1234567890123456789012345678901234567890"
+    },
+    "contracts": {
+      "token": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "reportAttributes": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "reportSvg": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "reportData": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "reportImplementation": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      "factory": "0x24883d1BEF488C3E92b24D4D73913192701DC30B"
+    },
+    "proxies": {
+      "default": {
+        "address": "0x94099942864EA81cCF197E9D71ac53310b1468D8",
+        "settings": {
+          "unlockDelay": 60,
+          "shareRecycler": 60,
+          "shareValidator": 10,
+          "shareGenerator": 20,
+          "shareProtocol": 10
+        },
+        "recyclers": [],
+        "recyclerFunds": [],
+        "auditors": [],
+        "auditorFunds": [],
+        "admins": [],
+        "emergency": []
+      }
+    }
+  }
+}
