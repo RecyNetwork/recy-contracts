@@ -30,6 +30,10 @@ contract RecyReport is
     bytes32 public constant RECYCLER_ROLE = RecyConstants.RECYCLER_ROLE;
     bytes32 public constant EMERGENCY_ROLE = RecyConstants.EMERGENCY_ROLE;
 
+    /// @notice The trusted forwarder address for ERC-2771 meta-transactions
+    address private _trustedForwarder;
+
+    event TrustedForwarderChanged(address indexed oldForwarder, address indexed newForwarder);
     event ReportResult(
         uint256 indexed tokenId,
         address indexed recycler,
@@ -74,10 +78,11 @@ contract RecyReport is
      */
     modifier onlyTokenOwnerOrRecyclerOrAuditor(uint256 _tokenId) {
         RecyTypes.RecyInfo storage _info = info[_tokenId];
+        address sender = _msgSender();
         require(
-            ownerOf(_tokenId) == msg.sender ||
-                _info.recycler == msg.sender ||
-                _info.validator == msg.sender,
+            ownerOf(_tokenId) == sender ||
+                _info.recycler == sender ||
+                _info.validator == sender,
             RecyErrors.NotReportOwner()
         );
 
@@ -255,7 +260,7 @@ contract RecyReport is
      */
     function mintRecyReport() external {
         uint256 nftId = nftNextId;
-        _safeMint(msg.sender, nftId);
+        _safeMint(_msgSender(), nftId);
         status[nftId] = RecyConstants.RECYCLE_CREATED;
         nftNextId = uint128(nftId + RecyConstants.NFT_ID_INCREMENT);
     }
@@ -299,7 +304,7 @@ contract RecyReport is
 
         RecyTypes.RecyInfo storage _info = info[nftId];
         _info.recycleDate = uint64(_recycleDate);
-        _info.recycler = msg.sender;
+        _info.recycler = _msgSender();
         _info.wasteAmount = _wasteAmount;
 
         RecyTypes.RecyMaterials[] storage recyMaterials = materials[nftId];
@@ -320,7 +325,7 @@ contract RecyReport is
         emit MetadataUpdate(nftId);
         emit ReportResult(
             nftId,
-            msg.sender,
+            _msgSender(),
             _info.recycleDate,
             _info.wasteAmount
         );
@@ -359,7 +364,7 @@ contract RecyReport is
         }
 
         RecyTypes.RecyInfo storage _info = info[_tokenId];
-        _info.recycler = msg.sender;
+        _info.recycler = _msgSender();
         _info.recycleDate = uint64(_recycleDate);
         _info.wasteAmount = _wasteAmount;
 
@@ -381,7 +386,7 @@ contract RecyReport is
         emit MetadataUpdate(_tokenId);
         emit ReportResult(
             _tokenId,
-            msg.sender,
+            _msgSender(),
             _info.recycleDate,
             _info.wasteAmount
         );
@@ -403,7 +408,7 @@ contract RecyReport is
         );
 
         RecyTypes.RecyInfo storage _info = info[_tokenId];
-        _info.validator = msg.sender;
+        _info.validator = _msgSender();
         _info.validationDate = uint64(block.timestamp);
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
@@ -420,7 +425,7 @@ contract RecyReport is
         emit MetadataUpdate(_tokenId);
         emit ReportValidated(
             _tokenId,
-            msg.sender,
+            _msgSender(),
             _info.validationDate,
             _reward.rewardAmount
         );
@@ -481,7 +486,7 @@ contract RecyReport is
         );
 
         emit MetadataUpdate(_tokenId);
-        emit RewardClaimed(_tokenId, msg.sender, ra);
+        emit RewardClaimed(_tokenId, _msgSender(), ra);
     }
 
     /**
@@ -517,5 +522,97 @@ contract RecyReport is
         address _fundAddress
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         funds[_signatory] = _fundAddress;
+    }
+
+    // =========================================================================
+    // ERC-2771 Meta-Transaction Support
+    // =========================================================================
+
+    /**
+     * @notice Returns the trusted forwarder address for ERC-2771 meta-transactions
+     * @return The address of the currently configured trusted forwarder
+     */
+    function trustedForwarder() public view returns (address) {
+        return _trustedForwarder;
+    }
+
+    /**
+     * @notice Checks if an address is the trusted forwarder
+     * @param _forwarder The address to check
+     * @return True if the address is the trusted forwarder
+     */
+    function isTrustedForwarder(address _forwarder) public view returns (bool) {
+        return _forwarder == _trustedForwarder;
+    }
+
+    /**
+     * @notice Sets the trusted forwarder address for ERC-2771 meta-transactions
+     * @dev Only accounts with DEFAULT_ADMIN_ROLE can update the forwarder. Set to address(0) to disable.
+     * @param _forwarder The new trusted forwarder address
+     * @custom:emits TrustedForwarderChanged Event with the old and new forwarder addresses
+     */
+    function setTrustedForwarder(
+        address _forwarder
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        address oldForwarder = _trustedForwarder;
+        _trustedForwarder = _forwarder;
+        emit TrustedForwarderChanged(oldForwarder, _forwarder);
+    }
+
+    /**
+     * @dev Override _msgSender to support ERC-2771 meta-transactions.
+     * When called by the trusted forwarder, extracts the original sender from calldata.
+     */
+    function _msgSender()
+        internal
+        view
+        override
+        returns (address)
+    {
+        uint256 calldataLength = msg.data.length;
+        uint256 contextSuffixLength = _contextSuffixLength();
+        if (
+            isTrustedForwarder(msg.sender) &&
+            calldataLength >= contextSuffixLength
+        ) {
+            return
+                address(
+                    bytes20(msg.data[calldataLength - contextSuffixLength:])
+                );
+        }
+        return super._msgSender();
+    }
+
+    /**
+     * @dev Override _msgData to support ERC-2771 meta-transactions.
+     * When called by the trusted forwarder, strips the appended sender address from calldata.
+     */
+    function _msgData()
+        internal
+        view
+        override
+        returns (bytes calldata)
+    {
+        uint256 calldataLength = msg.data.length;
+        uint256 contextSuffixLength = _contextSuffixLength();
+        if (
+            isTrustedForwarder(msg.sender) &&
+            calldataLength >= contextSuffixLength
+        ) {
+            return msg.data[:calldataLength - contextSuffixLength];
+        }
+        return super._msgData();
+    }
+
+    /**
+     * @dev ERC-2771 specifies the context suffix as a single address (20 bytes).
+     */
+    function _contextSuffixLength()
+        internal
+        pure
+        override
+        returns (uint256)
+    {
+        return 20;
     }
 }
