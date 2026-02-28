@@ -26,6 +26,8 @@ base = "https://mainnet.base.org"
 base-sepolia = "https://sepolia.base.org"
 celo = "https://forno.celo.org"
 alfajores = "https://alfajores-forno.celo-testnet.org"
+avalanche = "https://api.avax.network/ext/bc/C/rpc"
+fuji = "https://api.avax-test.network/ext/bc/C/rpc"
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/api" }
@@ -34,3 +36,5 @@ base = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
 base-sepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
 celo = { key = "${CELOSCAN_API_KEY}", url = "https://api.celoscan.io/api"}
 alfajores = { key = "${CELOSCAN_API_KEY}", url = "https://api-alfajores.celoscan.io/api"}
+avalanche = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=43114" }
+fuji = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=43113" }
