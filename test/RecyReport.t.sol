@@ -1956,4 +1956,387 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
     // ===== END ACCESS CONTROL TESTS =====
 
     // ===== END FUND WALLET TESTS =====
+
+    // ===== TRUSTED FORWARDER TESTS =====
+
+    function test_trustedForwarderDefaultsToZero() public view {
+        assertEq(
+            recyReport.trustedForwarder(),
+            address(0),
+            "Trusted forwarder should default to address(0)"
+        );
+    }
+
+    function test_isTrustedForwarderReturnsFalseByDefault() public view {
+        assertFalse(
+            recyReport.isTrustedForwarder(address(0x999)),
+            "No address should be trusted forwarder by default"
+        );
+    }
+
+    function test_setTrustedForwarder() public {
+        address forwarder = address(0xF01);
+
+        vm.expectEmit(true, true, false, false);
+        emit RecyReport.TrustedForwarderChanged(address(0), forwarder);
+
+        recyReport.setTrustedForwarder(forwarder);
+
+        assertEq(
+            recyReport.trustedForwarder(),
+            forwarder,
+            "Trusted forwarder should be updated"
+        );
+        assertTrue(
+            recyReport.isTrustedForwarder(forwarder),
+            "isTrustedForwarder should return true for set address"
+        );
+    }
+
+    function test_setTrustedForwarderOnlyAdmin() public {
+        address forwarder = address(0xF01);
+
+        vm.prank(user);
+        vm.expectRevert();
+        recyReport.setTrustedForwarder(forwarder);
+    }
+
+    function test_setTrustedForwarderToZeroDisables() public {
+        address forwarder = address(0xF01);
+        recyReport.setTrustedForwarder(forwarder);
+        assertTrue(recyReport.isTrustedForwarder(forwarder));
+
+        vm.expectEmit(true, true, false, false);
+        emit RecyReport.TrustedForwarderChanged(forwarder, address(0));
+
+        recyReport.setTrustedForwarder(address(0));
+
+        assertEq(
+            recyReport.trustedForwarder(),
+            address(0),
+            "Trusted forwarder should be disabled"
+        );
+        assertFalse(recyReport.isTrustedForwarder(forwarder));
+    }
+
+    function test_setTrustedForwarderUpdate() public {
+        address forwarder1 = address(0xF01);
+        address forwarder2 = address(0xF02);
+
+        recyReport.setTrustedForwarder(forwarder1);
+        assertEq(recyReport.trustedForwarder(), forwarder1);
+
+        vm.expectEmit(true, true, false, false);
+        emit RecyReport.TrustedForwarderChanged(forwarder1, forwarder2);
+
+        recyReport.setTrustedForwarder(forwarder2);
+
+        assertEq(recyReport.trustedForwarder(), forwarder2);
+        assertFalse(recyReport.isTrustedForwarder(forwarder1));
+        assertTrue(recyReport.isTrustedForwarder(forwarder2));
+    }
+
+    function test_mintRecyReportViaForwarder() public {
+        address forwarder = address(0xF01);
+        address realUser = address(0xBEEF);
+
+        recyReport.setTrustedForwarder(forwarder);
+
+        // Simulate forwarder call: calldata = function selector + real sender appended (20 bytes)
+        bytes memory callData = abi.encodeWithSelector(
+            RecyReport.mintRecyReport.selector
+        );
+        bytes memory forwardedCallData = abi.encodePacked(callData, realUser);
+
+        vm.prank(forwarder);
+        (bool success, ) = address(recyReport).call(forwardedCallData);
+        assertTrue(success, "Forwarded mintRecyReport should succeed");
+
+        // The NFT should be owned by realUser, not the forwarder
+        assertEq(
+            recyReport.ownerOf(0),
+            realUser,
+            "NFT should be minted to the real user, not the forwarder"
+        );
+    }
+
+    function test_mintRecyReportResultViaForwarder() public {
+        address forwarder = address(0xF01);
+        address realRecycler = address(0xCAFE);
+        address generator = address(0xDADA);
+
+        recyReport.setTrustedForwarder(forwarder);
+        recyReport.grantRole(RecyConstants.RECYCLER_ROLE, realRecycler);
+
+        (
+            uint32[] memory materials,
+            uint128[] memory materialAmounts,
+            uint32[] memory recycleTypes,
+            uint32[] memory recycleShapes
+        ) = createSingleMaterialArray();
+
+        bytes memory callData = abi.encodeWithSelector(
+            RecyReport.mintRecyReportResult.selector,
+            generator,
+            uint64(block.timestamp),
+            uint128(1000),
+            materials,
+            materialAmounts,
+            recycleTypes,
+            recycleShapes,
+            uint32(0)
+        );
+        bytes memory forwardedCallData = abi.encodePacked(
+            callData,
+            realRecycler
+        );
+
+        vm.prank(forwarder);
+        (bool success, ) = address(recyReport).call(forwardedCallData);
+        assertTrue(success, "Forwarded mintRecyReportResult should succeed");
+
+        // NFT owned by generator, recycler recorded as realRecycler
+        assertEq(recyReport.ownerOf(0), generator);
+        (, address infoRecycler, , , ) = recyReport.info(0);
+        assertEq(
+            infoRecycler,
+            realRecycler,
+            "Recycler should be the real sender, not the forwarder"
+        );
+    }
+
+    function test_validateRecyReportViaForwarder() public {
+        address forwarder = address(0xF01);
+        address realAuditor = address(0xABCD);
+
+        recyReport.setTrustedForwarder(forwarder);
+        recyReport.grantRole(RecyConstants.AUDITOR_ROLE, realAuditor);
+
+        // First, create a report to validate
+        (
+            uint32[] memory materials,
+            uint128[] memory materialAmounts,
+            uint32[] memory recycleTypes,
+            uint32[] memory recycleShapes
+        ) = createSingleMaterialArray();
+
+        vm.prank(RECYCLER);
+        recyReport.mintRecyReportResult(
+            user,
+            uint64(block.timestamp),
+            1000,
+            materials,
+            materialAmounts,
+            recycleTypes,
+            recycleShapes,
+            0
+        );
+
+        // Validate via forwarder
+        bytes memory callData = abi.encodeWithSelector(
+            RecyReport.validateRecyReport.selector,
+            uint256(0)
+        );
+        bytes memory forwardedCallData = abi.encodePacked(
+            callData,
+            realAuditor
+        );
+
+        vm.prank(forwarder);
+        (bool success, ) = address(recyReport).call(forwardedCallData);
+        assertTrue(success, "Forwarded validateRecyReport should succeed");
+
+        assertEq(
+            recyReport.status(0),
+            RecyConstants.RECYCLE_VALIDATED,
+            "Report should be validated"
+        );
+        (address infoValidator, , , , ) = recyReport.info(0);
+        assertEq(
+            infoValidator,
+            realAuditor,
+            "Validator should be the real sender, not the forwarder"
+        );
+    }
+
+    function test_claimRecyReportRewardViaForwarder() public {
+        address forwarder = address(0xF01);
+
+        recyReport.setTrustedForwarder(forwarder);
+
+        // Create and validate a report
+        (
+            uint32[] memory materials,
+            uint128[] memory materialAmounts,
+            uint32[] memory recycleTypes,
+            uint32[] memory recycleShapes
+        ) = createSingleMaterialArray();
+
+        vm.prank(RECYCLER);
+        recyReport.mintRecyReportResult(
+            user,
+            uint64(block.timestamp),
+            1000,
+            materials,
+            materialAmounts,
+            recycleTypes,
+            recycleShapes,
+            0
+        );
+
+        vm.prank(VALIDATOR);
+        recyReport.validateRecyReport(0);
+
+        // Fast forward past unlock delay
+        vm.warp(block.timestamp + 3601);
+
+        // Claim via forwarder as the NFT owner (user)
+        bytes memory callData = abi.encodeWithSelector(
+            RecyReport.claimRecyReportReward.selector,
+            uint256(0)
+        );
+        bytes memory forwardedCallData = abi.encodePacked(callData, user);
+
+        vm.prank(forwarder);
+        (bool success, ) = address(recyReport).call(forwardedCallData);
+        assertTrue(success, "Forwarded claimRecyReportReward should succeed");
+
+        assertEq(
+            recyReport.status(0),
+            RecyConstants.RECYCLE_REWARDED,
+            "Report should be rewarded"
+        );
+    }
+
+    function test_forwarderCannotSpoofWithoutBeingTrusted() public {
+        address untrustedForwarder = address(0xBAD);
+        address realUser = address(0xBEEF);
+
+        // Do NOT set as trusted forwarder
+
+        bytes memory callData = abi.encodeWithSelector(
+            RecyReport.mintRecyReport.selector
+        );
+        bytes memory forwardedCallData = abi.encodePacked(callData, realUser);
+
+        vm.prank(untrustedForwarder);
+        (bool success, ) = address(recyReport).call(forwardedCallData);
+        assertTrue(
+            success,
+            "Call should succeed but mint to forwarder address"
+        );
+
+        // NFT should be minted to the untrustedForwarder (msg.sender), not realUser
+        assertEq(
+            recyReport.ownerOf(0),
+            untrustedForwarder,
+            "NFT should be minted to msg.sender when forwarder is not trusted"
+        );
+    }
+
+    function test_forwarderRoleCheckUsesRealSender() public {
+        address forwarder = address(0xF01);
+        address unauthorizedUser = address(0xDEAD);
+
+        recyReport.setTrustedForwarder(forwarder);
+        // unauthorizedUser does NOT have RECYCLER_ROLE
+
+        (
+            uint32[] memory materials,
+            uint128[] memory materialAmounts,
+            uint32[] memory recycleTypes,
+            uint32[] memory recycleShapes
+        ) = createSingleMaterialArray();
+
+        bytes memory callData = abi.encodeWithSelector(
+            RecyReport.mintRecyReportResult.selector,
+            user,
+            uint64(block.timestamp),
+            uint128(1000),
+            materials,
+            materialAmounts,
+            recycleTypes,
+            recycleShapes,
+            uint32(0)
+        );
+        bytes memory forwardedCallData = abi.encodePacked(
+            callData,
+            unauthorizedUser
+        );
+
+        vm.prank(forwarder);
+        (bool success, ) = address(recyReport).call(forwardedCallData);
+        assertFalse(
+            success,
+            "Should revert because real sender lacks RECYCLER_ROLE"
+        );
+    }
+
+    function test_setRecyReportResultViaForwarder() public {
+        address forwarder = address(0xF01);
+        address realRecycler = address(0xCAFE);
+
+        recyReport.setTrustedForwarder(forwarder);
+        recyReport.grantRole(RecyConstants.RECYCLER_ROLE, realRecycler);
+
+        // First mint an empty report
+        vm.prank(user);
+        recyReport.mintRecyReport();
+
+        (
+            uint32[] memory materials,
+            uint128[] memory materialAmounts,
+            uint32[] memory recycleTypes,
+            uint32[] memory recycleShapes
+        ) = createSingleMaterialArray();
+
+        bytes memory callData = abi.encodeWithSelector(
+            RecyReport.setRecyReportResult.selector,
+            uint256(0),
+            uint64(block.timestamp),
+            uint128(2000),
+            materials,
+            materialAmounts,
+            recycleTypes,
+            recycleShapes,
+            uint32(0)
+        );
+        bytes memory forwardedCallData = abi.encodePacked(
+            callData,
+            realRecycler
+        );
+
+        vm.prank(forwarder);
+        (bool success, ) = address(recyReport).call(forwardedCallData);
+        assertTrue(success, "Forwarded setRecyReportResult should succeed");
+
+        assertEq(
+            recyReport.status(0),
+            RecyConstants.RECYCLE_COMPLETED,
+            "Report should be completed"
+        );
+        (, address infoRecycler, , , ) = recyReport.info(0);
+        assertEq(
+            infoRecycler,
+            realRecycler,
+            "Recycler should be the real sender"
+        );
+    }
+
+    function test_directCallStillWorksWithForwarderSet() public {
+        address forwarder = address(0xF01);
+        recyReport.setTrustedForwarder(forwarder);
+
+        // Direct call (not through forwarder) should still work normally
+        vm.prank(user);
+        recyReport.mintRecyReport();
+
+        assertEq(
+            recyReport.ownerOf(0),
+            user,
+            "Direct call should still use msg.sender"
+        );
+    }
+
+    // ===== END TRUSTED FORWARDER TESTS =====
 }
