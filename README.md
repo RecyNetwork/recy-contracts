@@ -24,11 +24,11 @@ forge build
 forge test
 ```
 
-### Deploy
+### Deploy locally with Anvil
 
 #### Anvil
 
-- make sure you have run `anvil` in a separate terminal window to start a local Ethereum node.
+- make sure you have run `anvil` in a separate terminal window to start a local EVM node.
 
 ```sh
 # Deploy RecyToken (ERC20 for testing/rewards)
@@ -61,7 +61,7 @@ forge script script/deploy/RecyReportTrustedForwarderDeploy.s.sol:RecyReportTrus
 - make sure you have the `deployer` account set up in your wallets using `cast wallet import [name] --private-key [private-key]` with `[name]` being `deployer` and `[private-key]` being the private key of the sepolia funded deployer account.
 - make sure you have set up the `sepolia` network in `foundry.toml` with the correct RPC URL.
 
-##### Deploy
+##### Deploy on Sepolia
 
 ```sh
 forge script script/RecyReport.s.sol:RecyReportTestnetScript --account deployer --verify --broadcast --rpc-url sepolia
@@ -72,7 +72,7 @@ forge script script/RecyReport.s.sol:RecyReportTestnetScript --account deployer 
 - make sure you have the `deployer` account set up in your wallets using `cast wallet import [name] --private-key [private-key]` with `[name]` being `deployer` and `[private-key]` being the private key of the fuji funded deployer account.
 - make sure you have set up the `fuji` network in `foundry.toml` with the correct RPC URL.
 
-##### Deploy
+##### Deploy on Fuji
 
 ```sh
 forge script script/deploy/RecyTokenDeploy.s.sol:RecyTokenDeploy --account deployer --verify --broadcast --rpc-url fuji
