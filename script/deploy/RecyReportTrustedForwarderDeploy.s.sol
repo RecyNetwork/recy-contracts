@@ -21,15 +21,14 @@ contract RecyReportTrustedForwarderDeploy is Script, ConfigManager {
         vm.startBroadcast();
 
         // Deploy the ERC2771Forwarder with a descriptive EIP-712 domain name
-        ERC2771Forwarder forwarder = new ERC2771Forwarder("RecyReportForwarder");
+        ERC2771Forwarder forwarder = new ERC2771Forwarder(
+            "RecyReportForwarder"
+        );
 
         vm.stopBroadcast();
 
         console.log("=== Deployment Complete ===");
-        console.log(
-            "ERC2771Forwarder deployed to:",
-            address(forwarder)
-        );
+        console.log("ERC2771Forwarder deployed to:", address(forwarder));
         console.log("");
         console.log("=== Next Steps ===");
         console.log(
