@@ -4,11 +4,27 @@ pragma solidity ^0.8.30;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {
+    ERC721Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    PausableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {
+    ERC2771ContextUpgradeable
+} from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+import {
+    ContextUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {RecyReportData} from "./RecyReportData.sol";
 import {RecyConstants} from "./lib/RecyConstants.sol";
 import {RecyTypes} from "./lib/RecyTypes.sol";
@@ -21,7 +37,8 @@ contract RecyReport is
     IERC4906,
     AccessControlUpgradeable,
     PausableUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    ERC2771ContextUpgradeable
 {
     RecyReportData private data;
     ERC20 public token;
@@ -30,10 +47,13 @@ contract RecyReport is
     bytes32 public constant RECYCLER_ROLE = RecyConstants.RECYCLER_ROLE;
     bytes32 public constant EMERGENCY_ROLE = RecyConstants.EMERGENCY_ROLE;
 
-    /// @notice The trusted forwarder address for ERC-2771 meta-transactions
-    address private _trustedForwarder;
+    /// @notice The trusted forwarder address for ERC-2771 meta-transactions (storage-based for flexibility)
+    address private _storedTrustedForwarder;
 
-    event TrustedForwarderChanged(address indexed oldForwarder, address indexed newForwarder);
+    event TrustedForwarderChanged(
+        address indexed oldForwarder,
+        address indexed newForwarder
+    );
     event ReportResult(
         uint256 indexed tokenId,
         address indexed recycler,
@@ -90,7 +110,7 @@ contract RecyReport is
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor() ERC2771ContextUpgradeable(address(0)) {
         _disableInitializers();
     }
 
@@ -530,19 +550,11 @@ contract RecyReport is
 
     /**
      * @notice Returns the trusted forwarder address for ERC-2771 meta-transactions
+     * @dev Overrides OZ's immutable forwarder with a storage-based one for admin flexibility
      * @return The address of the currently configured trusted forwarder
      */
-    function trustedForwarder() public view returns (address) {
-        return _trustedForwarder;
-    }
-
-    /**
-     * @notice Checks if an address is the trusted forwarder
-     * @param _forwarder The address to check
-     * @return True if the address is the trusted forwarder
-     */
-    function isTrustedForwarder(address _forwarder) public view returns (bool) {
-        return _forwarder == _trustedForwarder;
+    function trustedForwarder() public view override returns (address) {
+        return _storedTrustedForwarder;
     }
 
     /**
@@ -554,65 +566,44 @@ contract RecyReport is
     function setTrustedForwarder(
         address _forwarder
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        address oldForwarder = _trustedForwarder;
-        _trustedForwarder = _forwarder;
+        address oldForwarder = _storedTrustedForwarder;
+        _storedTrustedForwarder = _forwarder;
         emit TrustedForwarderChanged(oldForwarder, _forwarder);
     }
 
     /**
-     * @dev Override _msgSender to support ERC-2771 meta-transactions.
-     * When called by the trusted forwarder, extracts the original sender from calldata.
+     * @dev Resolve _msgSender conflict between ContextUpgradeable and ERC2771ContextUpgradeable
      */
     function _msgSender()
         internal
         view
-        override
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
         returns (address)
     {
-        uint256 calldataLength = msg.data.length;
-        uint256 contextSuffixLength = _contextSuffixLength();
-        if (
-            isTrustedForwarder(msg.sender) &&
-            calldataLength >= contextSuffixLength
-        ) {
-            return
-                address(
-                    bytes20(msg.data[calldataLength - contextSuffixLength:])
-                );
-        }
-        return super._msgSender();
+        return ERC2771ContextUpgradeable._msgSender();
     }
 
     /**
-     * @dev Override _msgData to support ERC-2771 meta-transactions.
-     * When called by the trusted forwarder, strips the appended sender address from calldata.
+     * @dev Resolve _msgData conflict between ContextUpgradeable and ERC2771ContextUpgradeable
      */
     function _msgData()
         internal
         view
-        override
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
         returns (bytes calldata)
     {
-        uint256 calldataLength = msg.data.length;
-        uint256 contextSuffixLength = _contextSuffixLength();
-        if (
-            isTrustedForwarder(msg.sender) &&
-            calldataLength >= contextSuffixLength
-        ) {
-            return msg.data[:calldataLength - contextSuffixLength];
-        }
-        return super._msgData();
+        return ERC2771ContextUpgradeable._msgData();
     }
 
     /**
-     * @dev ERC-2771 specifies the context suffix as a single address (20 bytes).
+     * @dev Resolve _contextSuffixLength conflict between ContextUpgradeable and ERC2771ContextUpgradeable
      */
     function _contextSuffixLength()
         internal
-        pure
-        override
+        view
+        override(ContextUpgradeable, ERC2771ContextUpgradeable)
         returns (uint256)
     {
-        return 20;
+        return ERC2771ContextUpgradeable._contextSuffixLength();
     }
 }

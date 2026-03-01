@@ -51,6 +51,9 @@ forge script script/deploy/RecyReportFactoryDeploy.s.sol:RecyReportFactoryDeploy
 
 # Deploy RecyReportProxyDeploy
 forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportProxyDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+
+# Deploy ERC2771 Trusted Forwarder (for gasless meta-transactions)
+forge script script/deploy/RecyReportTrustedForwarderDeploy.s.sol:RecyReportTrustedForwarderDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
 ```
 
 #### Sepolia
@@ -64,28 +67,30 @@ forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportProxyDeploy --r
 forge script script/RecyReport.s.sol:RecyReportTestnetScript --account deployer --verify --broadcast --rpc-url sepolia
 ```
 
-#### Alfajores
+#### Fuji
 
-- make sure you have the `deployer` account set up in your wallets using `cast wallet import [name] --private-key [private-key]` with `[name]` being `deployer` and `[private-key]` being the private key of the alfajores funded deployer account.
-- make sure you have set up the `alfajores` network in `foundry.toml` with the correct RPC URL.
+- make sure you have the `deployer` account set up in your wallets using `cast wallet import [name] --private-key [private-key]` with `[name]` being `deployer` and `[private-key]` being the private key of the fuji funded deployer account.
+- make sure you have set up the `fuji` network in `foundry.toml` with the correct RPC URL.
 
 ##### Deploy
 
 ```sh
-forge script script/deploy/RecyTokenDeploy.s.sol:RecyTokenDeploy --account deployer --verify --broadcast --rpc-url alfajores
+forge script script/deploy/RecyTokenDeploy.s.sol:RecyTokenDeploy --account deployer --verify --broadcast --rpc-url fuji
 
-forge script script/deploy/RecyReportAttributesDeploy.s.sol:RecyReportAttributesDeploy --account deployer --verify --broadcast --rpc-url alfajores
+forge script script/deploy/RecyReportAttributesDeploy.s.sol:RecyReportAttributesDeploy --account deployer --verify --broadcast --rpc-url fuji
 
-forge script script/deploy/RecyReportSvgDeploy.s.sol:RecyReportSvgDeploy --account deployer --verify --broadcast --rpc-url alfajores
+forge script script/deploy/RecyReportSvgDeploy.s.sol:RecyReportSvgDeploy --account deployer --verify --broadcast --rpc-url fuji
 
-forge script script/deploy/RecyReportDataDeploy.s.sol:RecyReportDataDeploy --account deployer --verify --broadcast --rpc-url alfajores
+forge script script/deploy/RecyReportDataDeploy.s.sol:RecyReportDataDeploy --account deployer --verify --broadcast --rpc-url fuji
 
 
-forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy --account deployer --verify --broadcast --rpc-url alfajores
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy --account deployer --verify --broadcast --rpc-url fuji
 
-forge script script/deploy/RecyReportFactoryDeploy.s.sol:RecyReportFactoryDeploy --account deployer --verify --broadcast --rpc-url alfajores
+forge script script/deploy/RecyReportFactoryDeploy.s.sol:RecyReportFactoryDeploy --account deployer --verify --broadcast --rpc-url fuji
 
-proxy=default forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportProxyDeploy --account deployer --verify --broadcast --rpc-url alfajores
+proxy=default forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportProxyDeploy --account deployer --verify --broadcast --rpc-url fuji
+
+forge script script/deploy/RecyReportTrustedForwarderDeploy.s.sol:RecyReportTrustedForwarderDeploy --account deployer --verify --broadcast --rpc-url fuji
 ```
 
 ##### Role management
@@ -93,7 +98,7 @@ proxy=default forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportP
 ###### Apply all roles from config to the default proxy
 
 ```sh
-forge script script/ManageRoles.s.sol:ManageRoles --sig "applyAllRolesFromConfig()" --rpc-url alfajores --account deployer --broadcast
+forge script script/ManageRoles.s.sol:ManageRoles --sig "applyAllRolesFromConfig()" --rpc-url fuji --account deployer --broadcast
 ```
 
 ###### Grant auditor role
@@ -101,7 +106,7 @@ forge script script/ManageRoles.s.sol:ManageRoles --sig "applyAllRolesFromConfig
 ```sh
  forge script script/ManageRoles.s.sol:ManageRoles \
    --sig "grantAuditor(address,address)" <PROXY_ADDRESS> <AUDITOR_ADDRESS> \
-   --rpc-url alfajores --account deployer --broadcast
+   --rpc-url fuji --account deployer --broadcast
 ```
 
 ###### Revoke auditor role
@@ -109,7 +114,7 @@ forge script script/ManageRoles.s.sol:ManageRoles --sig "applyAllRolesFromConfig
 ```sh
  forge script script/ManageRoles.s.sol:ManageRoles \
    --sig "revokeAuditor(address,address)" <PROXY_ADDRESS> <AUDITOR_ADDRESS> \
-   --rpc-url alfajores --account deployer --broadcast
+   --rpc-url fuji --account deployer --broadcast
 ```
 
 ###### Check if address has auditor role
@@ -117,7 +122,7 @@ forge script script/ManageRoles.s.sol:ManageRoles --sig "applyAllRolesFromConfig
 ```sh
  forge script script/ManageRoles.s.sol:ManageRoles \
    --sig "checkAuditor(address,address)" <PROXY_ADDRESS> <AUDITOR_ADDRESS> \
-   --rpc-url alfajores
+   --rpc-url fuji
 ```
 
 ###### Grant recycler role
@@ -125,7 +130,7 @@ forge script script/ManageRoles.s.sol:ManageRoles --sig "applyAllRolesFromConfig
 ```sh
 forge script script/ManageRoles.s.sol:ManageRoles \
   --sig "grantRecycler(address,address)" <PROXY_ADDRESS> <RECYCLER_ADDRESS> \
-  --rpc-url alfajores --account deployer --broadcast
+  --rpc-url fuji --account deployer --broadcast
 ```
 
 ###### Revoke recycler role
@@ -133,7 +138,7 @@ forge script script/ManageRoles.s.sol:ManageRoles \
 ```sh
  forge script script/ManageRoles.s.sol:ManageRoles \
    --sig "revokeRecycler(address,address)" <PROXY_ADDRESS> <RECYCLER_ADDRESS> \
-   --rpc-url alfajores --account deployer --broadcast
+   --rpc-url fuji --account deployer --broadcast
 ```
 
 ###### Check if address has recycler role
@@ -141,7 +146,7 @@ forge script script/ManageRoles.s.sol:ManageRoles \
 ```sh
  forge script script/ManageRoles.s.sol:ManageRoles \
    --sig "checkRecycler(address,address)" <PROXY_ADDRESS> <RECYCLER_ADDRESS> \
-   --rpc-url alfajores
+   --rpc-url fuji
 ```
 
 ##### List all deployed proxies
@@ -149,13 +154,13 @@ forge script script/ManageRoles.s.sol:ManageRoles \
 ```sh
  forge script script/ManageRoles.s.sol:ManageRoles \
    --sig "listProxies()" \
-   --rpc-url alfajores
+   --rpc-url fuji
 ```
 
 ##### Populate
 
 ```sh
-forge script script/PopulateRecyReport.s.sol:PopulateRecyReportScript --account deployer --broadcast --rpc-url alfajores
+forge script script/PopulateRecyReport.s.sol:PopulateRecyReportScript --account deployer --broadcast --rpc-url fuji
 ```
 
 #### Mainnet
@@ -210,11 +215,11 @@ forge build
 #### Upgrade Proxy
 
 ```sh
-forge script script/deploy/RecyReportProxyUpgrade.s.sol:RecyReportProxyUpgrade --sig 'upgradeProxy(address,address)' --rpc-url alfajores --account deployer --broadcast <proxy> <implementation>
+forge script script/deploy/RecyReportProxyUpgrade.s.sol:RecyReportProxyUpgrade --sig 'upgradeProxy(address,address)' --rpc-url fuji --account deployer --broadcast <proxy> <implementation>
 ```
 
 #### List All Proxies
 
 ```sh
-forge script script/deploy/RecyReportProxyUpgrade.s.sol:RecyReportProxyUpgrade --sig 'listAllProxiesWithImplementations()' --rpc-url alfajores --account deployer --broadcast
+forge script script/deploy/RecyReportProxyUpgrade.s.sol:RecyReportProxyUpgrade --sig 'listAllProxiesWithImplementations()' --rpc-url fuji --account deployer --broadcast
 ```
