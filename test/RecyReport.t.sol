@@ -27,6 +27,10 @@ contract MockReceiver is IERC721Receiver {
     }
 }
 
+contract MockLZEndpointReport {
+    function setDelegate(address) external {}
+}
+
 contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
     RecyReport public recyReport;
     RecyReportData public recyData;
@@ -50,11 +54,12 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         protocol = address(0xABC);
 
         // Deploy test token
+        MockLZEndpointReport mockEndpoint = new MockLZEndpointReport();
         testToken = new RecyToken(
             "Test Recy Token",
             "TRECY",
-            18,
             1000000,
+            address(mockEndpoint),
             address(this)
         );
         mockReceiver = new MockReceiver();
@@ -1320,11 +1325,12 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardWithInsufficientBalance() public {
         // Deploy a separate token contract with no initial balance for the test
+        MockLZEndpointReport emptyEndpoint = new MockLZEndpointReport();
         RecyToken emptyToken = new RecyToken(
             "Empty Test Token",
             "EMPTY",
-            18,
             0, // No initial supply
+            address(emptyEndpoint),
             address(this)
         );
 

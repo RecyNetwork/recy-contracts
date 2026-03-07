@@ -5,17 +5,23 @@ import "forge-std/Test.sol";
 import "../src/RecyToken.sol";
 import "./helpers/TestHelpers.sol";
 
+contract MockLZEndpoint {
+    function setDelegate(address) external {}
+}
+
 contract RecyTokenTest is Test, TestHelpers {
     RecyToken public token;
     address public owner = address(0x1);
     address public user = address(0x2);
+    MockLZEndpoint public mockEndpoint;
 
     function setUp() public {
+        mockEndpoint = new MockLZEndpoint();
         token = new RecyToken(
             "Test Token",
             "TEST",
-            18,
             1000000, // 1M tokens
+            address(mockEndpoint),
             owner
         );
     }
@@ -88,38 +94,12 @@ contract RecyTokenTest is Test, TestHelpers {
 
     // ===== CONSTRUCTOR EDGE CASES =====
 
-    function test_constructorWithZeroDecimals() public {
-        RecyToken zeroDecimalToken = new RecyToken(
-            "Zero Decimal Token",
-            "ZDT",
-            0,
-            1000000,
-            owner
-        );
-
-        assertEq(zeroDecimalToken.decimals(), 0);
-        assertEq(zeroDecimalToken.totalSupply(), 1000000); // No decimal multiplication
-    }
-
-    function test_constructorWithMaxDecimals() public {
-        // With 255 decimals and any supply > 0, we get overflow
-        // So this should revert due to arithmetic overflow
-        vm.expectRevert();
-        new RecyToken(
-            "Max Decimal Token",
-            "MDT",
-            255, // Max uint8
-            1,
-            owner
-        );
-    }
-
     function test_constructorWithZeroSupply() public {
         RecyToken zeroSupplyToken = new RecyToken(
             "Zero Supply Token",
             "ZST",
-            18,
             0,
+            address(mockEndpoint),
             owner
         );
 
@@ -134,21 +114,33 @@ contract RecyTokenTest is Test, TestHelpers {
         RecyToken maxSupplyToken = new RecyToken(
             "Max Supply Token",
             "MST",
-            18,
             maxSupply,
+            address(mockEndpoint),
             owner
         );
 
         assertEq(maxSupplyToken.totalSupply(), maxSupply * 10 ** 18);
     }
 
-    function test_constructorWithZeroOwner() public {
+    function test_constructorWithZeroDelegate() public {
         vm.expectRevert();
-        new RecyToken("Zero Owner Token", "ZOT", 18, 1000000, address(0));
+        new RecyToken(
+            "Zero Delegate Token",
+            "ZDT",
+            1000000,
+            address(mockEndpoint),
+            address(0)
+        );
     }
 
     function test_constructorWithEmptyName() public {
-        RecyToken emptyNameToken = new RecyToken("", "ENT", 18, 1000000, owner);
+        RecyToken emptyNameToken = new RecyToken(
+            "",
+            "ENT",
+            1000000,
+            address(mockEndpoint),
+            owner
+        );
         assertEq(emptyNameToken.name(), "");
         assertEq(emptyNameToken.symbol(), "ENT");
     }
@@ -157,8 +149,8 @@ contract RecyTokenTest is Test, TestHelpers {
         RecyToken emptySymbolToken = new RecyToken(
             "Empty Symbol Token",
             "",
-            18,
             1000000,
+            address(mockEndpoint),
             owner
         );
 
@@ -490,9 +482,8 @@ contract RecyTokenTest is Test, TestHelpers {
 
     // ===== DECIMAL EDGE CASES =====
 
-    function test_decimalsImmutable() public view {
+    function test_decimalsIs18() public view {
         assertEq(token.decimals(), 18);
-        // Decimals should be view/pure and not changeable
     }
 
     // ===== OWNERSHIP TRANSFER EDGE CASES =====

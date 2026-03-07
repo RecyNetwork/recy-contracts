@@ -1,25 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {OFT} from "@layerzerolabs/oft-evm/contracts/OFT.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract RecyToken is ERC20, Ownable {
-    uint8 private _decimals;
-
+contract RecyToken is OFT {
     constructor(
-        string memory name,
-        string memory symbol,
-        uint8 decimals_,
-        uint256 initialSupply,
-        address owner
-    ) ERC20(name, symbol) Ownable(owner) {
-        _decimals = decimals_;
-        _mint(owner, initialSupply * 10 ** decimals_);
-    }
-
-    function decimals() public view virtual override returns (uint8) {
-        return _decimals;
+        string memory _name,
+        string memory _symbol,
+        uint256 _initialSupply,
+        address _lzEndpoint,
+        address _delegate
+    ) OFT(_name, _symbol, _lzEndpoint, _delegate) Ownable(_delegate) {
+        if (_initialSupply > 0) {
+            _mint(_delegate, _initialSupply * 10 ** decimals());
+        }
     }
 
     function mint(address to, uint256 amount) public onlyOwner {

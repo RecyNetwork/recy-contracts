@@ -18,6 +18,7 @@ contract ConfigManager is Script {
         address reportSvg;
         address reportData;
         address factory;
+        address lzEndpoint;
     }
 
     struct ProxyConfig {
@@ -131,6 +132,14 @@ contract ConfigManager is Script {
         if (_isValidAddress(factoryStr)) {
             config.factory = vm.parseAddress(factoryStr);
         }
+
+        // Read lzEndpoint address
+        string memory lzEndpointStr = json.readString(
+            string.concat(".", chainIdStr, ".addresses.lzEndpoint")
+        );
+        if (_isValidAddress(lzEndpointStr)) {
+            config.lzEndpoint = vm.parseAddress(lzEndpointStr);
+        }
     }
 
     function _readProxyAddress(
@@ -202,7 +211,6 @@ contract ConfigManager is Script {
         } catch {
             config.recyclers = new address[](0);
         }
-
         // Read recyclerFunds array
         try
             vm.parseJsonAddressArray(
@@ -214,7 +222,6 @@ contract ConfigManager is Script {
         } catch {
             config.recyclerFunds = new address[](0);
         }
-
         // Read auditors array
         try
             vm.parseJsonAddressArray(json, string.concat(basePath, ".auditors"))
@@ -223,7 +230,6 @@ contract ConfigManager is Script {
         } catch {
             config.auditors = new address[](0);
         }
-
         // Read auditorFunds array
         try
             vm.parseJsonAddressArray(
@@ -235,7 +241,6 @@ contract ConfigManager is Script {
         } catch {
             config.auditorFunds = new address[](0);
         }
-
         // Read admins array
         try
             vm.parseJsonAddressArray(json, string.concat(basePath, ".admins"))
@@ -244,7 +249,6 @@ contract ConfigManager is Script {
         } catch {
             config.admins = new address[](0);
         }
-
         // Read emergency array
         try
             vm.parseJsonAddressArray(

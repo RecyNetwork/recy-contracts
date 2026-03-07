@@ -11,24 +11,33 @@ contract RecyTokenDeploy is Script, ConfigManager {
     function run() public {
         uint256 chainId = block.chainid;
 
-        console.log("=== SimpleToken Deployment ===");
+        console.log("=== RecyToken (OFT) Deployment ===");
         console.log("Chain ID:", chainId);
+
+        // Load network config for lzEndpoint
+        NetworkConfig memory networkConfig = getNetworkConfig(chainId);
+        require(
+            networkConfig.lzEndpoint != address(0),
+            "lzEndpoint not configured for this chain"
+        );
+
+        address delegate = address(0x3402ce3b5f88c852c0d6992C69A03095d1345BBd);
 
         vm.startBroadcast();
 
         // Token configuration
         string memory name = "RecyToken";
         string memory symbol = "cRECY";
-        uint8 decimals = 18;
 
-        // Deploy RecyToken
+        // Deploy RecyToken (OFT)
         console.log("Deploying RecyToken...");
+        console.log("LZ Endpoint:", networkConfig.lzEndpoint);
         RecyToken token = new RecyToken(
             name,
             symbol,
-            decimals,
             0,
-            address(0x3402ce3b5f88c852c0d6992C69A03095d1345BBd)
+            networkConfig.lzEndpoint,
+            delegate
         );
 
         vm.stopBroadcast();
@@ -42,20 +51,6 @@ contract RecyTokenDeploy is Script, ConfigManager {
         console.log("Token decimals:", token.decimals());
         console.log("Token owner:", token.owner());
         console.log("Initial supply:", token.totalSupply());
-        console.log("Owner balance:", token.balanceOf(msg.sender));
-
-        // Display token information
-        console.log("=== Token Information ===");
-        console.log(
-            "Total Supply:",
-            token.totalSupply() / 10 ** token.decimals(),
-            "tokens"
-        );
-        console.log(
-            "Owner Balance:",
-            token.balanceOf(msg.sender) / 10 ** token.decimals(),
-            "tokens"
-        );
 
         console.log("=== Deployment Complete ===");
     }

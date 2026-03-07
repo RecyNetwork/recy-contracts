@@ -49,7 +49,14 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         RecyReportAttributes attributes = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
-        token = new RecyToken("Test Token", "TEST", 18, 1000000, owner);
+        MockLZEndpointForHelpers mockEndpoint = new MockLZEndpointForHelpers();
+        token = new RecyToken(
+            "Test Token",
+            "TEST",
+            1000000,
+            address(mockEndpoint),
+            owner
+        );
 
         // Deploy implementation
         implementation = new RecyReport();

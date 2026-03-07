@@ -25,6 +25,11 @@ contract TestHelpers is Test {
     address constant PROTOCOL = address(0x1005);
     address constant MALICIOUS_USER = address(0x1006);
 
+    function _deployMockEndpoint() internal returns (address) {
+        MockLZEndpointForHelpers mock = new MockLZEndpointForHelpers();
+        return address(mock);
+    }
+
     /**
      * @notice Create a complete test setup with all contracts deployed
      */
@@ -40,7 +45,13 @@ contract TestHelpers is Test {
         )
     {
         // Deploy mock token
-        testToken = new RecyToken("Test Token", "TEST", 18, 1000000, OWNER);
+        testToken = new RecyToken(
+            "Test Token",
+            "TEST",
+            1000000,
+            _deployMockEndpoint(),
+            OWNER
+        );
 
         // Deploy dependencies
         recyAttributes = new RecyReportAttributes();
@@ -92,7 +103,13 @@ contract TestHelpers is Test {
         internal
         returns (RecyReport recyReport, RecyToken testToken)
     {
-        testToken = new RecyToken("Test Token", "TEST", 18, 1000000, OWNER);
+        testToken = new RecyToken(
+            "Test Token",
+            "TEST",
+            1000000,
+            _deployMockEndpoint(),
+            OWNER
+        );
 
         RecyReportAttributes recyAttributes = new RecyReportAttributes();
         RecyReportSvg recySvg = new RecyReportSvg();
@@ -425,7 +442,13 @@ contract TestHelpers is Test {
             RecyReportData dataContract
         )
     {
-        testToken = new RecyToken("Test Token", "TEST", 18, 1000000, OWNER);
+        testToken = new RecyToken(
+            "Test Token",
+            "TEST",
+            1000000,
+            _deployMockEndpoint(),
+            OWNER
+        );
 
         RecyReportAttributes attributes = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();
@@ -763,4 +786,8 @@ contract TestHelpers is Test {
         assertEq(recyReport.shareGenerator(), expectedGenerator);
         assertEq(recyReport.shareProtocol(), expectedProtocol);
     }
+}
+
+contract MockLZEndpointForHelpers {
+    function setDelegate(address) external {}
 }
