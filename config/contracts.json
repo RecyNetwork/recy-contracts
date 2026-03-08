@@ -11,11 +11,11 @@
       "reportSvg": "0x9fF1255abeB3Bf65419FedF1cBcAf426F00C7A40",
       "reportData": "0x1C00BBB839Cb45Aa2b273Cc53B248D7B80d04a1b",
       "reportImplementation": "0x3a36aDA04BDAE0D574b3E96f14f870Bf58EB162a",
-      "factory": "0x8b3ff93673fE164DAaD17F8c326Ed502e702c3d5"
+      "factory": "0xb0bACC63Ec846cdeCf42264DC0c1f41114e0547b"
     },
     "proxies": {
       "default": {
-        "address": "0x3C35A8D01E5580Be308DA93eE62234Fb10af6A09",
+        "address": "0xc72A0c9b2D2759e03ca56bcEdf1D702c9182cC5b",
         "settings": {
           "unlockDelay": 60,
           "shareRecycler": 60,
