@@ -38,10 +38,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
         NetworkConfig memory config = getNetworkConfig(chainId);
 
         // Ensure factory address is not zero
-        require(
-            config.factory != address(0),
-            "Factory address not found in config"
-        );
+        require(config.factory != address(0), "Factory address not found in config");
 
         factory = RecyReportFactory(config.factory);
 
@@ -56,10 +53,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
      */
     function upgradeProxy(address proxy, address newImplementation) public {
         require(proxy != address(0), "Invalid proxy address");
-        require(
-            newImplementation != address(0),
-            "Invalid implementation address"
-        );
+        require(newImplementation != address(0), "Invalid implementation address");
 
         vm.startBroadcast();
 
@@ -82,10 +76,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
 
         // Verify the upgrade
         address newImpl = _getCurrentImplementation(proxy);
-        require(
-            newImpl == newImplementation,
-            "Upgrade failed - implementation not updated"
-        );
+        require(newImpl == newImplementation, "Upgrade failed - implementation not updated");
 
         console.log("SUCCESS: Proxy upgraded successfully!");
         console.log("New Implementation:", newImpl);
@@ -98,10 +89,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
      * @param newImplementation The new implementation contract address
      */
     function upgradeAllProxies(address newImplementation) public {
-        require(
-            newImplementation != address(0),
-            "Invalid implementation address"
-        );
+        require(newImplementation != address(0), "Invalid implementation address");
 
         vm.startBroadcast();
 
@@ -114,10 +102,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
         uint256 totalUpgraded = 0;
 
         while (true) {
-            (address[] memory proxies, ) = factory.getDeployedProxiesPaginated(
-                page,
-                pageSize
-            );
+            (address[] memory proxies,) = factory.getDeployedProxiesPaginated(page, pageSize);
 
             if (proxies.length == 0) break;
 
@@ -167,9 +152,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
         if (implementation == config.reportImplementation) {
             console.log("Status: Using current implementation from config");
         } else {
-            console.log(
-                "Status: Using different implementation (possibly upgraded)"
-            );
+            console.log("Status: Using different implementation (possibly upgraded)");
         }
     }
 
@@ -183,10 +166,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
         uint256 page = 0;
 
         while (true) {
-            (address[] memory proxies, ) = factory.getDeployedProxiesPaginated(
-                page,
-                pageSize
-            );
+            (address[] memory proxies,) = factory.getDeployedProxiesPaginated(page, pageSize);
 
             if (proxies.length == 0) break;
 
@@ -218,10 +198,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
         // Deploy new implementation
         RecyReport newImplementation = new RecyReport();
 
-        console.log(
-            "SUCCESS: New implementation deployed at:",
-            address(newImplementation)
-        );
+        console.log("SUCCESS: New implementation deployed at:", address(newImplementation));
         console.log("Use this address to upgrade proxies");
 
         vm.stopBroadcast();
@@ -232,9 +209,7 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
      * @param proxy The proxy contract address
      * @return The current implementation address
      */
-    function _getCurrentImplementation(
-        address proxy
-    ) internal view returns (address) {
+    function _getCurrentImplementation(address proxy) internal view returns (address) {
         // Use the EIP-1967 standard storage slot for implementation
         bytes32 IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 

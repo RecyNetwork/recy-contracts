@@ -25,10 +25,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
     uint256 private proxyCounter = 0;
 
     // Helper function to check if string starts with prefix
-    function startsWith(
-        string memory str,
-        string memory prefix
-    ) internal pure returns (bool) {
+    function startsWith(string memory str, string memory prefix) internal pure returns (bool) {
         bytes memory strBytes = bytes(str);
         bytes memory prefixBytes = bytes(prefix);
 
@@ -50,42 +47,20 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         RecyReportSvg svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
         MockLZEndpointForHelpers mockEndpoint = new MockLZEndpointForHelpers();
-        token = new RecyToken(
-            "Test Token",
-            "TEST",
-            1000000,
-            address(mockEndpoint),
-            owner
-        );
+        token = new RecyToken("Test Token", "TEST", 1000000, address(mockEndpoint), owner);
 
         // Deploy implementation
         implementation = new RecyReport();
 
         // Deploy factory
-        factory = new RecyReportFactory(
-            address(implementation),
-            address(dataContract)
-        );
+        factory = new RecyReportFactory(address(implementation), address(dataContract));
     }
 
     // Helper function for deploying proxies with standard test parameters
     function deployTestProxy() internal returns (address) {
         proxyCounter++;
-        string memory proxyName = string(
-            abi.encodePacked("test-proxy-", vm.toString(proxyCounter))
-        );
-        return
-            factory.deployProxy(
-                proxyName,
-                "RECY",
-                address(token),
-                protocolAddress,
-                3600,
-                25,
-                25,
-                25,
-                25
-            );
+        string memory proxyName = string(abi.encodePacked("test-proxy-", vm.toString(proxyCounter)));
+        return factory.deployProxy(proxyName, "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
     function test_deployProxy() public {
@@ -114,17 +89,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
     }
 
     function test_deployProxyWithCustomConfig() public {
-        address proxy = factory.deployProxy(
-            "custom-config-proxy",
-            "cCUSTOM",
-            address(token),
-            protocolAddress,
-            3600,
-            70,
-            10,
-            15,
-            5
-        );
+        address proxy =
+            factory.deployProxy("custom-config-proxy", "cCUSTOM", address(token), protocolAddress, 3600, 70, 10, 15, 5);
 
         RecyReport recyReport = RecyReport(proxy);
         assertEq(recyReport.name(), "custom-config-proxy");
@@ -157,20 +123,17 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         }
 
         // Test pagination
-        (address[] memory proxies, uint256 total) = factory
-            .getDeployedProxiesPaginated(0, 3);
+        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(0, 3);
         assertEq(total, 5);
         assertEq(proxies.length, 3);
 
         // Test second page
-        (address[] memory proxies2, uint256 total2) = factory
-            .getDeployedProxiesPaginated(3, 3);
+        (address[] memory proxies2, uint256 total2) = factory.getDeployedProxiesPaginated(3, 3);
         assertEq(total2, 5);
         assertEq(proxies2.length, 2);
 
         // Test out of bounds
-        (address[] memory proxies3, uint256 total3) = factory
-            .getDeployedProxiesPaginated(10, 3);
+        (address[] memory proxies3, uint256 total3) = factory.getDeployedProxiesPaginated(10, 3);
         assertEq(total3, 5);
         assertEq(proxies3.length, 0);
     }
@@ -179,11 +142,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         // We can't predict the exact proxy address, but we can check that the event is emitted
         // with the correct deployer address and proxy name
         vm.expectEmit(false, true, true, false); // Don't check first indexed parameter (proxy address)
-        emit RecyReportFactory.ProxyDeployed(
-            address(0),
-            address(this),
-            "test-proxy-1"
-        );
+        emit RecyReportFactory.ProxyDeployed(address(0), address(this), "test-proxy-1");
 
         deployTestProxy();
     }
@@ -203,11 +162,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
         // Grant role
         vm.expectEmit(true, true, true, false);
-        emit RecyReportFactory.AuditorRoleGranted(
-            proxy,
-            auditor,
-            address(this)
-        );
+        emit RecyReportFactory.AuditorRoleGranted(proxy, auditor, address(this));
         factory.grantAuditorRole(proxy, auditor);
 
         // Check role was granted
@@ -215,11 +170,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
         // Revoke role
         vm.expectEmit(true, true, true, false);
-        emit RecyReportFactory.AuditorRoleRevoked(
-            proxy,
-            auditor,
-            address(this)
-        );
+        emit RecyReportFactory.AuditorRoleRevoked(proxy, auditor, address(this));
         factory.revokeAuditorRole(proxy, auditor);
 
         // Check role was revoked
@@ -236,11 +187,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
         // Grant role
         vm.expectEmit(true, true, true, false);
-        emit RecyReportFactory.RecyclerRoleGranted(
-            proxy,
-            newRecycler,
-            address(this)
-        );
+        emit RecyReportFactory.RecyclerRoleGranted(proxy, newRecycler, address(this));
         factory.grantRecyclerRole(proxy, newRecycler);
 
         // Check role was granted
@@ -248,11 +195,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
         // Revoke role
         vm.expectEmit(true, true, true, false);
-        emit RecyReportFactory.RecyclerRoleRevoked(
-            proxy,
-            newRecycler,
-            address(this)
-        );
+        emit RecyReportFactory.RecyclerRoleRevoked(proxy, newRecycler, address(this));
         factory.revokeRecyclerRole(proxy, newRecycler);
 
         // Check role was revoked
@@ -378,11 +321,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
         // Grant role
         vm.expectEmit(true, true, true, false);
-        emit RecyReportFactory.EmergencyRoleGranted(
-            proxy,
-            emergency,
-            address(this)
-        );
+        emit RecyReportFactory.EmergencyRoleGranted(proxy, emergency, address(this));
         factory.grantEmergencyRole(proxy, emergency);
 
         // Check role was granted
@@ -390,11 +329,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
         // Revoke role
         vm.expectEmit(true, true, true, false);
-        emit RecyReportFactory.EmergencyRoleRevoked(
-            proxy,
-            emergency,
-            address(this)
-        );
+        emit RecyReportFactory.EmergencyRoleRevoked(proxy, emergency, address(this));
         factory.revokeEmergencyRole(proxy, emergency);
 
         // Check role was revoked
@@ -450,15 +385,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
     function test_deployProxyWithMaxValues() public {
         address proxy = factory.deployProxy(
-            "max-values-proxy",
-            "RECY",
-            address(token),
-            protocolAddress,
-            type(uint64).max,
-            100,
-            0,
-            0,
-            0
+            "max-values-proxy", "RECY", address(token), protocolAddress, type(uint64).max, 100, 0, 0, 0
         );
 
         RecyReport report = RecyReport(proxy);
@@ -468,22 +395,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
     function test_deployProxyWithZeroShares() public {
         // This should now revert due to invalid share distribution (0+0+0+0 != 100)
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                RecyErrors.RecyReportInvalidShareDistribution.selector
-            )
-        );
-        factory.deployProxy(
-            "zero-shares-proxy",
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            0,
-            0,
-            0,
-            0
-        );
+        vm.expectRevert(abi.encodeWithSelector(RecyErrors.RecyReportInvalidShareDistribution.selector));
+        factory.deployProxy("zero-shares-proxy", "RECY", address(token), protocolAddress, 3600, 0, 0, 0, 0);
     }
 
     function test_deployMultipleProxiesInSingleTransaction() public {
@@ -510,8 +423,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
             deployTestProxy();
         }
 
-        (address[] memory proxies, uint256 total) = factory
-            .getDeployedProxiesPaginated(0, 2);
+        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(0, 2);
 
         assertEq(total, 3);
         assertEq(proxies.length, 2);
@@ -522,8 +434,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
             deployTestProxy();
         }
 
-        (address[] memory proxies, uint256 total) = factory
-            .getDeployedProxiesPaginated(3, 5);
+        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(3, 5);
 
         assertEq(total, 3);
         assertEq(proxies.length, 0);
@@ -532,16 +443,14 @@ contract RecyReportFactoryTest is Test, TestHelpers {
     function test_getPaginatedProxiesWithZeroLimit() public {
         deployTestProxy();
 
-        (address[] memory proxies, uint256 total) = factory
-            .getDeployedProxiesPaginated(0, 0);
+        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(0, 0);
 
         assertEq(total, 1);
         assertEq(proxies.length, 0);
     }
 
     function test_getPaginatedProxiesFromEmptyList() public view {
-        (address[] memory proxies, uint256 total) = factory
-            .getDeployedProxiesPaginated(0, 10);
+        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(0, 10);
 
         assertEq(total, 0);
         assertEq(proxies.length, 0);
@@ -628,11 +537,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
         // Upgrade the proxy
         vm.expectEmit(true, true, true, false);
-        emit RecyReportFactory.ProxyUpgraded(
-            proxy,
-            address(newImplementation),
-            address(this)
-        );
+        emit RecyReportFactory.ProxyUpgraded(proxy, address(newImplementation), address(this));
         factory.upgradeProxy(proxy, address(newImplementation));
 
         // Verify the upgrade worked by checking the implementation
@@ -796,8 +701,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         }
 
         // Request more than available with offset + limit > total
-        (address[] memory proxies, uint256 total) = factory
-            .getDeployedProxiesPaginated(1, 10);
+        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(1, 10);
 
         assertEq(total, 3);
         assertEq(proxies.length, 2); // Should return only available proxies from offset 1
@@ -807,15 +711,13 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         deployTestProxy();
 
         // Test with very large values
-        (address[] memory proxies, uint256 total) = factory
-            .getDeployedProxiesPaginated(type(uint256).max, 1);
+        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(type(uint256).max, 1);
 
         assertEq(total, 1);
         assertEq(proxies.length, 0); // Offset too large
 
         // Test with large limit but valid offset
-        (address[] memory proxies2, uint256 total2) = factory
-            .getDeployedProxiesPaginated(0, type(uint256).max);
+        (address[] memory proxies2, uint256 total2) = factory.getDeployedProxiesPaginated(0, type(uint256).max);
 
         assertEq(total2, 1);
         assertEq(proxies2.length, 1); // Should return all available

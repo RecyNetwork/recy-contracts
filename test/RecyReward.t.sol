@@ -12,8 +12,7 @@ contract RecyRewardTest is Test {
         uint256 supply = 1000 * ONE_E18;
         uint128 amount = 1000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FIRST_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FIRST_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -24,8 +23,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.FIRST_EPOCH;
         uint128 amount = 1000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FIRST_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FIRST_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -36,8 +34,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.FIRST_EPOCH + 1;
         uint128 amount = 2000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.SECOND_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.SECOND_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -48,8 +45,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.SECOND_EPOCH;
         uint128 amount = 1500;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.SECOND_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.SECOND_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -60,8 +56,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.SECOND_EPOCH + 1;
         uint128 amount = 5000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.THIRD_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.THIRD_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -72,8 +67,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.THIRD_EPOCH;
         uint128 amount = 3000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.THIRD_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.THIRD_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -84,8 +78,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.THIRD_EPOCH + 1;
         uint128 amount = 10000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FOURTH_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FOURTH_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -96,8 +89,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.FOURTH_EPOCH;
         uint128 amount = 7500;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FOURTH_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FOURTH_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -108,8 +100,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.FOURTH_EPOCH + 1;
         uint128 amount = 25000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FIFTH_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FIFTH_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -120,8 +111,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.FIFTH_EPOCH;
         uint128 amount = 15000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FIFTH_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FIFTH_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -132,8 +122,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.FIFTH_EPOCH + 1;
         uint128 amount = 50000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.LAST_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.LAST_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -144,8 +133,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.LAST_EPOCH;
         uint128 amount = 30000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.LAST_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.LAST_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -156,8 +144,7 @@ contract RecyRewardTest is Test {
         uint256 supply = RecyReward.LAST_EPOCH + 1;
         uint128 amount = 100000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FALLBACK_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FALLBACK_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -217,8 +204,7 @@ contract RecyRewardTest is Test {
         uint256 supply = 0;
         uint128 amount = 1000;
 
-        uint128 expectedReward = (amount * ONE_E18) /
-            RecyReward.FIRST_EPOCH_REWARD;
+        uint128 expectedReward = (amount * ONE_E18) / RecyReward.FIRST_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
 
         assertEq(actualReward, expectedReward);
@@ -239,34 +225,13 @@ contract RecyRewardTest is Test {
         // Test that different epochs produce different or equal rewards based on their divisors
         uint128 amount = 10000;
 
-        uint128 firstEpochReward = RecyReward.calculateReward(
-            amount,
-            RecyReward.FIRST_EPOCH / 2
-        );
-        uint128 secondEpochReward = RecyReward.calculateReward(
-            amount,
-            RecyReward.SECOND_EPOCH / 2
-        );
-        uint128 thirdEpochReward = RecyReward.calculateReward(
-            amount,
-            RecyReward.THIRD_EPOCH / 2
-        );
-        uint128 fourthEpochReward = RecyReward.calculateReward(
-            amount,
-            RecyReward.FOURTH_EPOCH / 2
-        );
-        uint128 fifthEpochReward = RecyReward.calculateReward(
-            amount,
-            RecyReward.FIFTH_EPOCH / 2
-        );
-        uint128 lastEpochReward = RecyReward.calculateReward(
-            amount,
-            RecyReward.LAST_EPOCH / 2
-        );
-        uint128 fallbackReward = RecyReward.calculateReward(
-            amount,
-            RecyReward.LAST_EPOCH + 1
-        );
+        uint128 firstEpochReward = RecyReward.calculateReward(amount, RecyReward.FIRST_EPOCH / 2);
+        uint128 secondEpochReward = RecyReward.calculateReward(amount, RecyReward.SECOND_EPOCH / 2);
+        uint128 thirdEpochReward = RecyReward.calculateReward(amount, RecyReward.THIRD_EPOCH / 2);
+        uint128 fourthEpochReward = RecyReward.calculateReward(amount, RecyReward.FOURTH_EPOCH / 2);
+        uint128 fifthEpochReward = RecyReward.calculateReward(amount, RecyReward.FIFTH_EPOCH / 2);
+        uint128 lastEpochReward = RecyReward.calculateReward(amount, RecyReward.LAST_EPOCH / 2);
+        uint128 fallbackReward = RecyReward.calculateReward(amount, RecyReward.LAST_EPOCH + 1);
 
         // All rewards should be positive
         assertGt(firstEpochReward, 0);
@@ -308,12 +273,8 @@ contract RecyRewardTest is Test {
         uint128 largeAmount = 1000000; // 1 million units
         uint256 largeSupply = RecyReward.THIRD_EPOCH;
 
-        uint128 expectedReward = (largeAmount * ONE_E18) /
-            RecyReward.THIRD_EPOCH_REWARD;
-        uint128 actualReward = RecyReward.calculateReward(
-            largeAmount,
-            largeSupply
-        );
+        uint128 expectedReward = (largeAmount * ONE_E18) / RecyReward.THIRD_EPOCH_REWARD;
+        uint128 actualReward = RecyReward.calculateReward(largeAmount, largeSupply);
 
         assertEq(actualReward, expectedReward);
     }
@@ -348,10 +309,7 @@ contract RecyRewardTest is Test {
         assertLt(RecyReward.LAST_EPOCH_REWARD, RecyReward.FALLBACK_REWARD);
     }
 
-    function test_calculateRewardFuzz(
-        uint128 amount,
-        uint256 supply
-    ) public pure {
+    function test_calculateRewardFuzz(uint128 amount, uint256 supply) public pure {
         // Fuzz test to ensure no reverts with random inputs
         vm.assume(amount > 0);
         vm.assume(supply > 0);
@@ -363,10 +321,7 @@ contract RecyRewardTest is Test {
 
         // Reward should be proportional to amount (larger amount = larger reward, assuming same supply)
         if (amount > 1) {
-            uint128 smallerReward = RecyReward.calculateReward(
-                amount - 1,
-                supply
-            );
+            uint128 smallerReward = RecyReward.calculateReward(amount - 1, supply);
             assertGe(reward, smallerReward);
         }
     }
@@ -393,10 +348,7 @@ contract RecyRewardTest is Test {
 
         // All of these should execute without reverting
         for (uint256 i = 0; i < testSupplies.length; i++) {
-            uint128 reward = RecyReward.calculateReward(
-                amount,
-                testSupplies[i]
-            );
+            uint128 reward = RecyReward.calculateReward(amount, testSupplies[i]);
             assertGt(reward, 0); // Should always return a positive reward for positive amount
         }
     }

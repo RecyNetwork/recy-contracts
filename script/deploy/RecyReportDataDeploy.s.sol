@@ -25,18 +25,12 @@ contract RecyReportDataDeploy is Script, ConfigManager {
         // Check if RecyReportAttributes is deployed
         RecyReportAttributes recyAttributes;
         if (config.reportAttributes != address(0)) {
-            console.log(
-                "Using existing RecyReportAttributes at:",
-                config.reportAttributes
-            );
+            console.log("Using existing RecyReportAttributes at:", config.reportAttributes);
             recyAttributes = RecyReportAttributes(config.reportAttributes);
         } else {
             console.log("Deploying new RecyReportAttributes...");
             recyAttributes = new RecyReportAttributes();
-            console.log(
-                "RecyReportAttributes deployed to:",
-                address(recyAttributes)
-            );
+            console.log("RecyReportAttributes deployed to:", address(recyAttributes));
         }
 
         // Check if RecyReportSvg is deployed
@@ -52,10 +46,7 @@ contract RecyReportDataDeploy is Script, ConfigManager {
 
         // Deploy RecyReportData
         console.log("Deploying RecyReportData...");
-        RecyReportData recyData = new RecyReportData(
-            address(recyAttributes),
-            address(recySvg)
-        );
+        RecyReportData recyData = new RecyReportData(address(recyAttributes), address(recySvg));
 
         vm.stopBroadcast();
 
@@ -67,17 +58,12 @@ contract RecyReportDataDeploy is Script, ConfigManager {
 
         // Verify the contract is properly initialized
         console.log("=== Contract Verification ===");
-        console.log(
-            "RecyReportData.attributes():",
-            address(recyData.attributes())
-        );
+        console.log("RecyReportData.attributes():", address(recyData.attributes()));
         console.log("RecyReportData.svg():", address(recyData.svg()));
 
         // Test basic functionality
         console.log("=== Functionality Test ===");
-        try recyData.attributes().getMaterials() returns (
-            string[] memory materials
-        ) {
+        try recyData.attributes().getMaterials() returns (string[] memory materials) {
             console.log("Materials array length:", materials.length);
             console.log("Contract initialization successful!");
         } catch {

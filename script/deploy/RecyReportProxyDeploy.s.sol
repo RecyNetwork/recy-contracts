@@ -25,8 +25,7 @@ contract RecyReportProxyDeploy is Script, ConfigManager {
         ProxyConfig memory config = getProxyConfig(chainId, proxyName);
 
         require(
-            networkConfig.factory != address(0),
-            "Factory address not found in config. Please deploy the factory first."
+            networkConfig.factory != address(0), "Factory address not found in config. Please deploy the factory first."
         );
 
         console.log("=== Using RecyReportFactory ===");
@@ -42,10 +41,7 @@ contract RecyReportProxyDeploy is Script, ConfigManager {
         console.log("\n=== Factory Information ===");
         console.log("Implementation:", factory.implementation());
         console.log("Data Contract:", factory.dataContract());
-        console.log(
-            "Total Deployed Proxies:",
-            factory.getDeployedProxiesCount()
-        );
+        console.log("Total Deployed Proxies:", factory.getDeployedProxiesCount());
 
         // Deploy proxy for recycler if they don't have one
         console.log("\n=== Deploying RecyReportproxy Proxy ===");
@@ -75,10 +71,7 @@ contract RecyReportProxyDeploy is Script, ConfigManager {
 
         // Display final statistics
         console.log("\n=== Final Factory Statistics ===");
-        console.log(
-            "Total deployed proxies:",
-            factory.getDeployedProxiesCount()
-        );
+        console.log("Total deployed proxies:", factory.getDeployedProxiesCount());
 
         // Get all deployed proxies
         address[] memory allProxies = factory.getAllDeployedProxies();

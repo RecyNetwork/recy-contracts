@@ -58,35 +58,31 @@ contract RecyReportData {
         RecyTypes.RecyInfo memory _info,
         RecyTypes.RecyMaterials[] memory _materials
     ) external view returns (string memory) {
-        string memory image = string.concat(
-            "data:image/svg+xml;base64,",
-            Base64.encode(bytes(generateSvg(_status)))
-        );
+        string memory image = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(generateSvg(_status))));
 
-        return
-            string.concat(
-                "data:application/json;base64,",
-                Base64.encode(
-                    bytes(
-                        string.concat(
-                            '{"name":"RecyReport #',
-                            Strings.toString(_tokenId),
-                            '", "description":"This is a Recycle Report NFT that was obtained by recycling materials."',
-                            ',"image":"',
-                            image,
-                            '","attributes": [{"trait_type":"Status","value":"',
-                            generateStatusText(_status),
-                            '"}',
-                            generateWasteAmountText(_info.wasteAmount),
-                            generateRecycleDateText(_info.recycleDate),
-                            generateauditDateText(_info.auditDate),
-                            generateRewardText(_status, _reward, _token),
-                            generateMaterialsText(_materials),
-                            "]}"
-                        )
+        return string.concat(
+            "data:application/json;base64,",
+            Base64.encode(
+                bytes(
+                    string.concat(
+                        '{"name":"RecyReport #',
+                        Strings.toString(_tokenId),
+                        '", "description":"This is a Recycle Report NFT that was obtained by recycling materials."',
+                        ',"image":"',
+                        image,
+                        '","attributes": [{"trait_type":"Status","value":"',
+                        generateStatusText(_status),
+                        '"}',
+                        generateWasteAmountText(_info.wasteAmount),
+                        generateRecycleDateText(_info.recycleDate),
+                        generateauditDateText(_info.auditDate),
+                        generateRewardText(_status, _reward, _token),
+                        generateMaterialsText(_materials),
+                        "]}"
                     )
                 )
-            );
+            )
+        );
     }
 
     /**
@@ -108,19 +104,18 @@ contract RecyReportData {
         RecyTypes.RecyInfo memory _info,
         RecyTypes.RecyMaterials[] memory _materials
     ) external view returns (string memory) {
-        return
-            string.concat(
-                '{"name":"RecyReport #',
-                Strings.toString(_tokenId),
-                '", "description":"This is a Recycle Report NFT that was obtained by recycling materials.","attributes": [',
-                generateStatusText(_status),
-                generateWasteAmountText(_info.wasteAmount),
-                generateRecycleDateText(_info.recycleDate),
-                generateauditDateText(_info.auditDate),
-                generateRewardText(_status, _reward, _token),
-                generateMaterialsText(_materials),
-                "]}"
-            );
+        return string.concat(
+            '{"name":"RecyReport #',
+            Strings.toString(_tokenId),
+            '", "description":"This is a Recycle Report NFT that was obtained by recycling materials.","attributes": [',
+            generateStatusText(_status),
+            generateWasteAmountText(_info.wasteAmount),
+            generateRecycleDateText(_info.recycleDate),
+            generateauditDateText(_info.auditDate),
+            generateRewardText(_status, _reward, _token),
+            generateMaterialsText(_materials),
+            "]}"
+        );
     }
 
     function generateSvg(uint8 _status) internal view returns (string memory) {
@@ -133,9 +128,11 @@ contract RecyReportData {
         }
     }
 
-    function generateMaterialsText(
-        RecyTypes.RecyMaterials[] memory _materials
-    ) internal view returns (string memory materials) {
+    function generateMaterialsText(RecyTypes.RecyMaterials[] memory _materials)
+        internal
+        view
+        returns (string memory materials)
+    {
         for (uint256 i = 0; i < _materials.length; i++) {
             materials = string.concat(
                 materials,
@@ -150,51 +147,36 @@ contract RecyReportData {
         }
     }
 
-    function generateauditDateText(
-        uint256 _auditDate
-    ) internal pure returns (string memory auditDate) {
+    function generateauditDateText(uint256 _auditDate) internal pure returns (string memory auditDate) {
         if (_auditDate > 0) {
             auditDate = string.concat(
-                ',{"display_type":"date","trait_type":"Validation Date","value":',
-                Strings.toString(_auditDate),
-                "}"
+                ',{"display_type":"date","trait_type":"Validation Date","value":', Strings.toString(_auditDate), "}"
             );
         }
     }
 
-    function generateRecycleDateText(
-        uint256 _recycleDate
-    ) internal pure returns (string memory recycleDate) {
+    function generateRecycleDateText(uint256 _recycleDate) internal pure returns (string memory recycleDate) {
         if (_recycleDate > 0) {
             recycleDate = string.concat(
-                ',{"display_type":"date","trait_type":"Recycle Date","value":',
-                Strings.toString(_recycleDate),
-                "}"
+                ',{"display_type":"date","trait_type":"Recycle Date","value":', Strings.toString(_recycleDate), "}"
             );
         }
     }
 
-    function generateWasteAmountText(
-        uint256 _wasteAmount
-    ) internal pure returns (string memory wasteAmount) {
+    function generateWasteAmountText(uint256 _wasteAmount) internal pure returns (string memory wasteAmount) {
         if (_wasteAmount > 0) {
-            wasteAmount = string.concat(
-                ',{"trait_type":"Waste Amount (mg)","value":',
-                Strings.toString(_wasteAmount),
-                "}"
-            );
+            wasteAmount =
+                string.concat(',{"trait_type":"Waste Amount (mg)","value":', Strings.toString(_wasteAmount), "}");
         }
     }
 
-    function generateRewardText(
-        uint8 _status,
-        RecyTypes.RecyReward memory _reward,
-        ERC20 _token
-    ) internal view returns (string memory reward) {
+    function generateRewardText(uint8 _status, RecyTypes.RecyReward memory _reward, ERC20 _token)
+        internal
+        view
+        returns (string memory reward)
+    {
         if (_status > 2) {
-            uint256 rewardPaid = _status == RecyConstants.RECYCLE_REWARDED
-                ? _reward.rewardAmount
-                : 0;
+            uint256 rewardPaid = _status == RecyConstants.RECYCLE_REWARDED ? _reward.rewardAmount : 0;
             reward = string.concat(
                 ',{"trait_type":"Reward Claimed","value":',
                 Strings.toString(rewardPaid / RecyConstants.ONE_E18),
@@ -209,14 +191,8 @@ contract RecyReportData {
         }
     }
 
-    function generateStatusText(
-        uint8 _status
-    ) internal pure returns (string memory status) {
-        status = string.concat(
-            '{"trait_type":"Status","value":"',
-            getStatus(_status),
-            '"}'
-        );
+    function generateStatusText(uint8 _status) internal pure returns (string memory status) {
+        status = string.concat('{"trait_type":"Status","value":"', getStatus(_status), '"}');
     }
 
     function getStatus(uint8 _status) internal pure returns (string memory) {

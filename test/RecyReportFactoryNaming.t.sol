@@ -33,38 +33,19 @@ contract RecyReportFactoryNamingTest is Test {
         RecyReportSvg svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
         MockLZEndpointNaming mockEndpoint = new MockLZEndpointNaming();
-        token = new RecyToken(
-            "Test Token",
-            "TEST",
-            1000000,
-            address(mockEndpoint),
-            owner
-        );
+        token = new RecyToken("Test Token", "TEST", 1000000, address(mockEndpoint), owner);
 
         // Deploy implementation
         implementation = new RecyReport();
 
         // Deploy factory
-        factory = new RecyReportFactory(
-            address(implementation),
-            address(dataContract)
-        );
+        factory = new RecyReportFactory(address(implementation), address(dataContract));
     }
 
     function test_deployProxyWithName() public {
         string memory proxyName = "my-custom-proxy";
 
-        address proxy = factory.deployProxy(
-            proxyName,
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        address proxy = factory.deployProxy(proxyName, "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
 
         // Verify the proxy is mapped correctly
         assertEq(factory.getProxyByName(proxyName), proxy);
@@ -76,46 +57,16 @@ contract RecyReportFactoryNamingTest is Test {
         string memory proxyName = "duplicate-proxy";
 
         // Deploy first proxy
-        factory.deployProxy(
-            proxyName,
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        factory.deployProxy(proxyName, "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
 
         // Try to deploy second proxy with same name - should revert
         vm.expectRevert(RecyReportFactory.ProxyNameAlreadyExists.selector);
-        factory.deployProxy(
-            proxyName,
-            "RECY2",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        factory.deployProxy(proxyName, "RECY2", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
     function test_cannotDeployProxyWithEmptyName() public {
         vm.expectRevert(RecyReportFactory.InvalidProxyName.selector);
-        factory.deployProxy(
-            "",
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        factory.deployProxy("", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
     function test_getProxyByNameNotFound() public {
@@ -140,17 +91,7 @@ contract RecyReportFactoryNamingTest is Test {
 
         // Deploy proxies with specific names
         for (uint256 i = 0; i < expectedNames.length; i++) {
-            factory.deployProxy(
-                expectedNames[i],
-                "RECY",
-                address(token),
-                protocolAddress,
-                3600,
-                25,
-                25,
-                25,
-                25
-            );
+            factory.deployProxy(expectedNames[i], "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
         }
 
         string[] memory actualNames = factory.getAllProxyNames();
@@ -165,30 +106,10 @@ contract RecyReportFactoryNamingTest is Test {
         assertEq(factory.getProxyNamesCount(), 0);
 
         // Deploy some proxies
-        factory.deployProxy(
-            "proxy-1",
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        factory.deployProxy("proxy-1", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
         assertEq(factory.getProxyNamesCount(), 1);
 
-        factory.deployProxy(
-            "proxy-2",
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        factory.deployProxy("proxy-2", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
         assertEq(factory.getProxyNamesCount(), 2);
     }
 
@@ -196,39 +117,15 @@ contract RecyReportFactoryNamingTest is Test {
         string memory proxyName = "event-test-proxy";
 
         vm.expectEmit(false, true, true, false);
-        emit RecyReportFactory.ProxyDeployed(
-            address(0),
-            address(this),
-            proxyName
-        );
+        emit RecyReportFactory.ProxyDeployed(address(0), address(this), proxyName);
 
-        factory.deployProxy(
-            proxyName,
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        factory.deployProxy(proxyName, "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
     function test_bidirectionalMapping() public {
         string memory proxyName = "bidirectional-test";
 
-        address proxy = factory.deployProxy(
-            proxyName,
-            "RECY",
-            address(token),
-            protocolAddress,
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
+        address proxy = factory.deployProxy(proxyName, "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
 
         // Test name -> address mapping
         assertEq(factory.getProxyByName(proxyName), proxy);

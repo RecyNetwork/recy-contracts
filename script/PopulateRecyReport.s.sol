@@ -128,23 +128,14 @@ contract PopulateRecyReportScript is Script, ConfigManager {
         NetworkConfig memory networkConfig = getNetworkConfig(chainId);
         ProxyConfig memory config = getProxyConfig(chainId, "default");
 
-        require(
-            networkConfig.factory != address(0),
-            "RecyReportFactory contract not deployed"
-        );
-        require(
-            networkConfig.token != address(0),
-            "Token contract not deployed"
-        );
+        require(networkConfig.factory != address(0), "RecyReportFactory contract not deployed");
+        require(networkConfig.token != address(0), "Token contract not deployed");
 
         RecyReportFactory factory = RecyReportFactory(networkConfig.factory);
         RecyToken token = RecyToken(networkConfig.token);
 
         // Get the deployed proxy address from the factory
-        (address[] memory proxies, ) = factory.getDeployedProxiesPaginated(
-            0,
-            1
-        );
+        (address[] memory proxies,) = factory.getDeployedProxiesPaginated(0, 1);
         require(proxies.length > 0, "No proxies deployed");
 
         address proxyAddress = proxies[0];
@@ -159,11 +150,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
         // Warp to a future time to avoid unlock delay issues
         uint256 futureTime = block.timestamp + config.unlockDelay + 300; // 5 minutes extra buffer
         vm.warp(futureTime);
-        console.log(
-            "Warped to future time: %d (current + %d seconds)",
-            futureTime,
-            config.unlockDelay + 300
-        );
+        console.log("Warped to future time: %d (current + %d seconds)", futureTime, config.unlockDelay + 300);
 
         vm.startBroadcast();
 
@@ -172,15 +159,12 @@ contract PopulateRecyReportScript is Script, ConfigManager {
         console.log("Broadcaster:", broadcaster);
 
         // Grant necessary roles to the broadcaster through the factory
-        bytes32 RECYCLER_ROLE = recyReport.RECYCLER_ROLE();
-        bytes32 AUDITOR_ROLE = recyReport.AUDITOR_ROLE();
-
-        if (!recyReport.hasRole(RECYCLER_ROLE, broadcaster)) {
+        if (!recyReport.hasRole(recyReport.RECYCLER_ROLE(), broadcaster)) {
             console.log("Granting RECYCLER_ROLE to broadcaster via factory...");
             factory.grantRecyclerRole(proxyAddress, broadcaster);
         }
 
-        if (!recyReport.hasRole(AUDITOR_ROLE, broadcaster)) {
+        if (!recyReport.hasRole(recyReport.AUDITOR_ROLE(), broadcaster)) {
             console.log("Granting AUDITOR_ROLE to broadcaster via factory...");
             factory.grantAuditorRole(proxyAddress, broadcaster);
         }
@@ -258,12 +242,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
             else if (tokenStatus == 4) statusText = "REWARDED";
             else statusText = "UNKNOWN";
 
-            console.log(
-                "NFT #%d - Status: %s - Owner: %s",
-                tokenId,
-                statusText,
-                vm.toString(owner)
-            );
+            console.log("NFT #%d - Status: %s - Owner: %s", tokenId, statusText, vm.toString(owner));
         }
 
         console.log("\n=== Population Complete ===");

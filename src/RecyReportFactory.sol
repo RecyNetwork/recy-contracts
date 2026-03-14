@@ -2,9 +2,7 @@
 pragma solidity ^0.8.34;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {
-    ERC1967Proxy
-} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {RecyReport} from "./RecyReport.sol";
 
 /**
@@ -32,59 +30,23 @@ contract RecyReportFactory is Ownable {
     string[] public proxyNames;
 
     /// @notice Events
-    event ProxyDeployed(
-        address indexed proxy,
-        address indexed deployer,
-        string indexed proxyName
-    );
+    event ProxyDeployed(address indexed proxy, address indexed deployer, string indexed proxyName);
 
-    event AuditorRoleGranted(
-        address indexed proxy,
-        address indexed auditor,
-        address indexed grantedBy
-    );
+    event AuditorRoleGranted(address indexed proxy, address indexed auditor, address indexed grantedBy);
 
-    event AuditorRoleRevoked(
-        address indexed proxy,
-        address indexed auditor,
-        address indexed revokedBy
-    );
+    event AuditorRoleRevoked(address indexed proxy, address indexed auditor, address indexed revokedBy);
 
-    event RecyclerRoleGranted(
-        address indexed proxy,
-        address indexed recycler,
-        address indexed grantedBy
-    );
+    event RecyclerRoleGranted(address indexed proxy, address indexed recycler, address indexed grantedBy);
 
-    event RecyclerRoleRevoked(
-        address indexed proxy,
-        address indexed recycler,
-        address indexed revokedBy
-    );
+    event RecyclerRoleRevoked(address indexed proxy, address indexed recycler, address indexed revokedBy);
 
-    event AdminRoleGranted(
-        address indexed proxy,
-        address indexed admin,
-        address indexed grantedBy
-    );
+    event AdminRoleGranted(address indexed proxy, address indexed admin, address indexed grantedBy);
 
-    event AdminRoleRevoked(
-        address indexed proxy,
-        address indexed admin,
-        address indexed revokedBy
-    );
+    event AdminRoleRevoked(address indexed proxy, address indexed admin, address indexed revokedBy);
 
-    event EmergencyRoleGranted(
-        address indexed proxy,
-        address indexed emergency,
-        address indexed grantedBy
-    );
+    event EmergencyRoleGranted(address indexed proxy, address indexed emergency, address indexed grantedBy);
 
-    event EmergencyRoleRevoked(
-        address indexed proxy,
-        address indexed emergency,
-        address indexed revokedBy
-    );
+    event EmergencyRoleRevoked(address indexed proxy, address indexed emergency, address indexed revokedBy);
 
     /// @notice Errors
     error RecyclerAlreadyHasProxy();
@@ -100,10 +62,7 @@ contract RecyReportFactory is Ownable {
      * @param _implementation Address of the RecyReport implementation contract
      * @param _dataContract Address of the RecyReportData contract
      */
-    constructor(
-        address _implementation,
-        address _dataContract
-    ) Ownable(msg.sender) {
+    constructor(address _implementation, address _dataContract) Ownable(msg.sender) {
         if (_implementation == address(0)) revert InvalidImplementation();
         if (_dataContract == address(0)) revert InvalidDataContract();
 
@@ -155,10 +114,7 @@ contract RecyReportFactory is Ownable {
         );
 
         // Deploy the proxy contract
-        ERC1967Proxy newProxy = new ERC1967Proxy(
-            implementation,
-            initializeCall
-        );
+        ERC1967Proxy newProxy = new ERC1967Proxy(implementation, initializeCall);
 
         proxy = address(newProxy);
 
@@ -185,11 +141,7 @@ contract RecyReportFactory is Ownable {
      * @notice Get all deployed proxy addresses
      * @return proxies Array of all deployed proxy addresses
      */
-    function getAllDeployedProxies()
-        external
-        view
-        returns (address[] memory proxies)
-    {
+    function getAllDeployedProxies() external view returns (address[] memory proxies) {
         return deployedProxies;
     }
 
@@ -200,10 +152,11 @@ contract RecyReportFactory is Ownable {
      * @return proxies Array of proxy addresses
      * @return total Total number of deployed proxies
      */
-    function getDeployedProxiesPaginated(
-        uint256 offset,
-        uint256 limit
-    ) external view returns (address[] memory proxies, uint256 total) {
+    function getDeployedProxiesPaginated(uint256 offset, uint256 limit)
+        external
+        view
+        returns (address[] memory proxies, uint256 total)
+    {
         total = deployedProxies.length;
 
         if (offset >= total) {
@@ -230,9 +183,7 @@ contract RecyReportFactory is Ownable {
      * @param proxyName The name of the proxy
      * @return proxy The address of the proxy with the given name
      */
-    function getProxyByName(
-        string memory proxyName
-    ) external view returns (address proxy) {
+    function getProxyByName(string memory proxyName) external view returns (address proxy) {
         proxy = proxyByName[proxyName];
         if (proxy == address(0)) revert ProxyNotFound();
         return proxy;
@@ -243,9 +194,7 @@ contract RecyReportFactory is Ownable {
      * @param proxy The address of the proxy
      * @return proxyName The name of the proxy at the given address
      */
-    function getNameByProxy(
-        address proxy
-    ) external view returns (string memory proxyName) {
+    function getNameByProxy(address proxy) external view returns (string memory proxyName) {
         proxyName = nameByProxy[proxy];
         if (bytes(proxyName).length == 0) revert ProxyNotFound();
         return proxyName;
@@ -256,9 +205,7 @@ contract RecyReportFactory is Ownable {
      * @param proxyName The name to check
      * @return exists True if the proxy name exists
      */
-    function proxyNameExists(
-        string memory proxyName
-    ) external view returns (bool exists) {
+    function proxyNameExists(string memory proxyName) external view returns (bool exists) {
         return proxyByName[proxyName] != address(0);
     }
 
@@ -283,10 +230,7 @@ contract RecyReportFactory is Ownable {
      * @param proxy The proxy address to grant the role on
      * @param auditor The address to grant the AUDITOR_ROLE to
      */
-    function grantAuditorRole(
-        address proxy,
-        address auditor
-    ) external onlyOwner {
+    function grantAuditorRole(address proxy, address auditor) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(auditor != address(0), "Invalid auditor address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
@@ -302,10 +246,7 @@ contract RecyReportFactory is Ownable {
      * @param proxy The proxy address to revoke the role from
      * @param auditor The address to revoke the AUDITOR_ROLE from
      */
-    function revokeAuditorRole(
-        address proxy,
-        address auditor
-    ) external onlyOwner {
+    function revokeAuditorRole(address proxy, address auditor) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(auditor != address(0), "Invalid auditor address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
@@ -321,10 +262,7 @@ contract RecyReportFactory is Ownable {
      * @param proxy The proxy address to grant the role on
      * @param recycler The address to grant the RECYCLER_ROLE to
      */
-    function grantRecyclerRole(
-        address proxy,
-        address recycler
-    ) external onlyOwner {
+    function grantRecyclerRole(address proxy, address recycler) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(recycler != address(0), "Invalid recycler address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
@@ -340,10 +278,7 @@ contract RecyReportFactory is Ownable {
      * @param proxy The proxy address to revoke the role from
      * @param recycler The address to revoke the RECYCLER_ROLE from
      */
-    function revokeRecyclerRole(
-        address proxy,
-        address recycler
-    ) external onlyOwner {
+    function revokeRecyclerRole(address proxy, address recycler) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(recycler != address(0), "Invalid recycler address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
@@ -391,10 +326,7 @@ contract RecyReportFactory is Ownable {
      * @param proxy The proxy address to grant the role on
      * @param emergency The address to grant the EMERGENCY_ROLE to
      */
-    function grantEmergencyRole(
-        address proxy,
-        address emergency
-    ) external onlyOwner {
+    function grantEmergencyRole(address proxy, address emergency) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(emergency != address(0), "Invalid emergency address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
@@ -410,10 +342,7 @@ contract RecyReportFactory is Ownable {
      * @param proxy The proxy address to revoke the role from
      * @param emergency The address to revoke the EMERGENCY_ROLE from
      */
-    function revokeEmergencyRole(
-        address proxy,
-        address emergency
-    ) external onlyOwner {
+    function revokeEmergencyRole(address proxy, address emergency) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(emergency != address(0), "Invalid emergency address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
@@ -430,10 +359,7 @@ contract RecyReportFactory is Ownable {
      * @param auditor The address to check
      * @return hasRole True if the address has the AUDITOR_ROLE
      */
-    function hasAuditorRole(
-        address proxy,
-        address auditor
-    ) external view returns (bool hasRole) {
+    function hasAuditorRole(address proxy, address auditor) external view returns (bool hasRole) {
         require(proxy != address(0), "Invalid proxy address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
 
@@ -447,10 +373,7 @@ contract RecyReportFactory is Ownable {
      * @param recycler The address to check
      * @return hasRole True if the address has the RECYCLER_ROLE
      */
-    function hasRecyclerRole(
-        address proxy,
-        address recycler
-    ) external view returns (bool hasRole) {
+    function hasRecyclerRole(address proxy, address recycler) external view returns (bool hasRole) {
         require(proxy != address(0), "Invalid proxy address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
 
@@ -464,10 +387,7 @@ contract RecyReportFactory is Ownable {
      * @param admin The address to check
      * @return hasRole True if the address has the DEFAULT_ADMIN_ROLE
      */
-    function hasAdminRole(
-        address proxy,
-        address admin
-    ) external view returns (bool hasRole) {
+    function hasAdminRole(address proxy, address admin) external view returns (bool hasRole) {
         require(proxy != address(0), "Invalid proxy address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
 
@@ -481,10 +401,7 @@ contract RecyReportFactory is Ownable {
      * @param emergency The address to check
      * @return hasRole True if the address has the EMERGENCY_ROLE
      */
-    function hasEmergencyRole(
-        address proxy,
-        address emergency
-    ) external view returns (bool hasRole) {
+    function hasEmergencyRole(address proxy, address emergency) external view returns (bool hasRole) {
         require(proxy != address(0), "Invalid proxy address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
 
@@ -498,15 +415,9 @@ contract RecyReportFactory is Ownable {
      * @param newImplementation The new implementation contract address
      * @dev Only the factory owner can upgrade proxies
      */
-    function upgradeProxy(
-        address proxy,
-        address newImplementation
-    ) external onlyOwner {
+    function upgradeProxy(address proxy, address newImplementation) external onlyOwner {
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
-        require(
-            newImplementation != address(0),
-            "Invalid implementation address"
-        );
+        require(newImplementation != address(0), "Invalid implementation address");
 
         // Call upgradeToAndCall on the proxy - factory has DEFAULT_ADMIN_ROLE
         RecyReport(proxy).upgradeToAndCall(newImplementation, "");
@@ -515,20 +426,14 @@ contract RecyReportFactory is Ownable {
     }
 
     /// @notice Event emitted when a proxy is upgraded
-    event ProxyUpgraded(
-        address indexed proxy,
-        address indexed newImplementation,
-        address indexed upgradedBy
-    );
+    event ProxyUpgraded(address indexed proxy, address indexed newImplementation, address indexed upgradedBy);
 
     /**
      * @notice Internal function to check if a proxy was deployed by this factory
      * @param proxy The proxy address to check
      * @return isDeployed True if the proxy was deployed by this factory
      */
-    function _isDeployedProxy(
-        address proxy
-    ) internal view returns (bool isDeployed) {
+    function _isDeployedProxy(address proxy) internal view returns (bool isDeployed) {
         for (uint256 i = 0; i < deployedProxies.length; i++) {
             if (deployedProxies[i] == proxy) {
                 return true;
@@ -545,11 +450,7 @@ contract RecyReportFactory is Ownable {
      * @param recycler The recycler address
      * @param fundWallet The fund wallet address (can be zero to clear)
      */
-    function setRecyclerFund(
-        address proxy,
-        address recycler,
-        address fundWallet
-    ) external onlyOwner {
+    function setRecyclerFund(address proxy, address recycler, address fundWallet) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(recycler != address(0), "Invalid recycler address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
@@ -563,11 +464,7 @@ contract RecyReportFactory is Ownable {
      * @param auditor The auditor address
      * @param fundWallet The fund wallet address (can be zero to clear)
      */
-    function setAuditorFund(
-        address proxy,
-        address auditor,
-        address fundWallet
-    ) external onlyOwner {
+    function setAuditorFund(address proxy, address auditor, address fundWallet) external onlyOwner {
         require(proxy != address(0), "Invalid proxy address");
         require(auditor != address(0), "Invalid auditor address");
         require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
