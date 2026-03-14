@@ -28,11 +28,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     function test_getMaterialSvg() public view {
         // compare against auto‐getter materialSvg(index)
         string memory expected = recyReportAttributes.materialSvg(2);
-        assertEq(
-            recyReportAttributes.getMaterialSvg(2),
-            expected,
-            "getMaterialSvg index 2 mismatch"
-        );
+        assertEq(recyReportAttributes.getMaterialSvg(2), expected, "getMaterialSvg index 2 mismatch");
     }
 
     /// @notice Test getMaterialSvg reverts when index >= length
@@ -62,9 +58,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     /// @notice Test getDisposalMethod reverts when index is out of bounds
     function test_getDisposalMethod_reverts() public {
         uint256 len = recyReportAttributes.getDisposalMethods().length;
-        vm.expectRevert(
-            "RecyReportAttributes.getDisposalMethod: Invalid index"
-        );
+        vm.expectRevert("RecyReportAttributes.getDisposalMethod: Invalid index");
         recyReportAttributes.getDisposalMethod(len);
     }
 
@@ -101,11 +95,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     /// @notice Test getMaterialSvgs returns the full array
     function test_getMaterialSvgs_fullArrays() public view {
         string[] memory svgs = recyReportAttributes.getMaterialSvgs();
-        assertEq(
-            svgs.length,
-            recyReportAttributes.getMaterials().length,
-            "getMaterialSvgs length mismatch"
-        );
+        assertEq(svgs.length, recyReportAttributes.getMaterials().length, "getMaterialSvgs length mismatch");
     }
 
     /// @notice Test getMaterials returns the complete array
@@ -165,17 +155,13 @@ contract RecyReportAttributesTest is Test, TestHelpers {
 
     /// @notice Test addMaterial reverts on empty name
     function test_addMaterial_emptyName_reverts() public {
-        expectRevertWithMessage(
-            "RecyReportAttributes.addMaterial: Material name cannot be empty"
-        );
+        expectRevertWithMessage("RecyReportAttributes.addMaterial: Material name cannot be empty");
         recyReportAttributes.addMaterial("", "<svg/>");
     }
 
     /// @notice Test addMaterial reverts on empty SVG
     function test_addMaterial_emptySvg_reverts() public {
-        expectRevertWithMessage(
-            "RecyReportAttributes.addMaterial: Material SVG cannot be empty"
-        );
+        expectRevertWithMessage("RecyReportAttributes.addMaterial: Material SVG cannot be empty");
         recyReportAttributes.addMaterial("TestMat", "");
     }
 
@@ -219,9 +205,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(first, "Undefined");
 
         // Test last valid index
-        string memory last = recyReportAttributes.getMaterial(
-            materialCount - 1
-        );
+        string memory last = recyReportAttributes.getMaterial(materialCount - 1);
         assertTrue(bytes(last).length > 0);
     }
 
@@ -281,9 +265,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(first, "Undefined");
 
         // Test last valid index
-        string memory last = recyReportAttributes.getDisposalMethod(
-            methodCount - 1
-        );
+        string memory last = recyReportAttributes.getDisposalMethod(methodCount - 1);
         assertTrue(bytes(last).length > 0);
     }
 
@@ -303,9 +285,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(first, "Undefined");
 
         // Test last valid index
-        string memory last = recyReportAttributes.getRecycleShape(
-            shapeCount - 1
-        );
+        string memory last = recyReportAttributes.getRecycleShape(shapeCount - 1);
         assertTrue(bytes(last).length > 0);
     }
 
@@ -353,9 +333,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         recyReportAttributes.addMaterial("   ", "   ");
 
         uint256 materialCount = recyReportAttributes.getMaterials().length;
-        string memory lastMaterial = recyReportAttributes.getMaterial(
-            materialCount - 1
-        );
+        string memory lastMaterial = recyReportAttributes.getMaterial(materialCount - 1);
         assertEq(lastMaterial, "   ");
     }
 
@@ -367,12 +345,8 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         uint256 newCount = recyReportAttributes.getMaterials().length;
         assertEq(newCount, initialCount + 1);
 
-        string memory newMaterial = recyReportAttributes.getMaterial(
-            initialCount
-        );
-        string memory newSvg = recyReportAttributes.getMaterialSvg(
-            initialCount
-        );
+        string memory newMaterial = recyReportAttributes.getMaterial(initialCount);
+        string memory newSvg = recyReportAttributes.getMaterialSvg(initialCount);
 
         assertEq(newMaterial, "TestMaterial");
         assertEq(newSvg, "<svg>test</svg>");
@@ -382,12 +356,8 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         uint256 initialCount = recyReportAttributes.getMaterials().length;
 
         for (uint256 i = 0; i < 5; i++) {
-            string memory name = string(
-                abi.encodePacked("Material", vm.toString(i))
-            );
-            string memory svg = string(
-                abi.encodePacked("<svg>", vm.toString(i), "</svg>")
-            );
+            string memory name = string(abi.encodePacked("Material", vm.toString(i)));
+            string memory svg = string(abi.encodePacked("<svg>", vm.toString(i), "</svg>"));
 
             recyReportAttributes.addMaterial(name, svg);
         }
@@ -397,29 +367,19 @@ contract RecyReportAttributesTest is Test, TestHelpers {
 
         // Verify all materials were added correctly
         for (uint256 i = 0; i < 5; i++) {
-            string memory expectedName = string(
-                abi.encodePacked("Material", vm.toString(i))
-            );
-            string memory expectedSvg = string(
-                abi.encodePacked("<svg>", vm.toString(i), "</svg>")
-            );
+            string memory expectedName = string(abi.encodePacked("Material", vm.toString(i)));
+            string memory expectedSvg = string(abi.encodePacked("<svg>", vm.toString(i), "</svg>"));
 
-            assertEq(
-                recyReportAttributes.getMaterial(initialCount + i),
-                expectedName
-            );
-            assertEq(
-                recyReportAttributes.getMaterialSvg(initialCount + i),
-                expectedSvg
-            );
+            assertEq(recyReportAttributes.getMaterial(initialCount + i), expectedName);
+            assertEq(recyReportAttributes.getMaterialSvg(initialCount + i), expectedSvg);
         }
     }
 
     function test_addMaterialWithLongStrings() public {
-        string
-            memory longName = "This is a very long material name that tests the boundary conditions of string storage in Solidity contracts and ensures that extremely long strings are handled correctly";
-        string
-            memory longSvg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='0' y='0' width='100' height='100' fill='red'/><circle cx='50' cy='50' r='25' fill='blue'/><text x='50' y='50' text-anchor='middle'>Very Long SVG Content</text></svg>";
+        string memory longName =
+            "This is a very long material name that tests the boundary conditions of string storage in Solidity contracts and ensures that extremely long strings are handled correctly";
+        string memory longSvg =
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='0' y='0' width='100' height='100' fill='red'/><circle cx='50' cy='50' r='25' fill='blue'/><text x='50' y='50' text-anchor='middle'>Very Long SVG Content</text></svg>";
 
         uint256 initialCount = recyReportAttributes.getMaterials().length;
 
@@ -472,9 +432,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         recyReportAttributes.addRecycleType("");
 
         uint256 typeCount = recyReportAttributes.getRecycleTypes().length;
-        string memory lastType = recyReportAttributes.getRecycleType(
-            typeCount - 1
-        );
+        string memory lastType = recyReportAttributes.getRecycleType(typeCount - 1);
         assertEq(lastType, "");
     }
 
@@ -486,9 +444,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         uint256 newCount = recyReportAttributes.getRecycleTypes().length;
         assertEq(newCount, initialCount + 1);
 
-        string memory newType = recyReportAttributes.getRecycleType(
-            initialCount
-        );
+        string memory newType = recyReportAttributes.getRecycleType(initialCount);
         assertEq(newType, "TestRecycleType");
     }
 
@@ -497,9 +453,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         recyReportAttributes.addDisposalMethod("");
 
         uint256 methodCount = recyReportAttributes.getDisposalMethods().length;
-        string memory lastMethod = recyReportAttributes.getDisposalMethod(
-            methodCount - 1
-        );
+        string memory lastMethod = recyReportAttributes.getDisposalMethod(methodCount - 1);
         assertEq(lastMethod, "");
     }
 
@@ -511,9 +465,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         uint256 newCount = recyReportAttributes.getDisposalMethods().length;
         assertEq(newCount, initialCount + 1);
 
-        string memory newMethod = recyReportAttributes.getDisposalMethod(
-            initialCount
-        );
+        string memory newMethod = recyReportAttributes.getDisposalMethod(initialCount);
         assertEq(newMethod, "TestDisposalMethod");
     }
 
@@ -522,9 +474,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         recyReportAttributes.addRecycleShape("");
 
         uint256 shapeCount = recyReportAttributes.getRecycleShapes().length;
-        string memory lastShape = recyReportAttributes.getRecycleShape(
-            shapeCount - 1
-        );
+        string memory lastShape = recyReportAttributes.getRecycleShape(shapeCount - 1);
         assertEq(lastShape, "");
     }
 
@@ -536,9 +486,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         uint256 newCount = recyReportAttributes.getRecycleShapes().length;
         assertEq(newCount, initialCount + 1);
 
-        string memory newShape = recyReportAttributes.getRecycleShape(
-            initialCount
-        );
+        string memory newShape = recyReportAttributes.getRecycleShape(initialCount);
         assertEq(newShape, "TestRecycleShape");
     }
 
@@ -549,12 +497,8 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         uint256 addCount = 50; // Reduced to avoid gas limits
 
         for (uint256 i = 0; i < addCount; i++) {
-            string memory name = string(
-                abi.encodePacked("StressMaterial", vm.toString(i))
-            );
-            string memory svg = string(
-                abi.encodePacked("<svg>stress", vm.toString(i), "</svg>")
-            );
+            string memory name = string(abi.encodePacked("StressMaterial", vm.toString(i)));
+            string memory svg = string(abi.encodePacked("<svg>stress", vm.toString(i), "</svg>"));
 
             recyReportAttributes.addMaterial(name, svg);
         }
@@ -563,18 +507,9 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(finalCount, initialCount + addCount);
 
         // Verify random samples
-        assertEq(
-            recyReportAttributes.getMaterial(initialCount),
-            "StressMaterial0"
-        );
-        assertEq(
-            recyReportAttributes.getMaterial(initialCount + 25),
-            "StressMaterial25"
-        );
-        assertEq(
-            recyReportAttributes.getMaterial(initialCount + addCount - 1),
-            "StressMaterial49"
-        );
+        assertEq(recyReportAttributes.getMaterial(initialCount), "StressMaterial0");
+        assertEq(recyReportAttributes.getMaterial(initialCount + 25), "StressMaterial25");
+        assertEq(recyReportAttributes.getMaterial(initialCount + addCount - 1), "StressMaterial49");
     }
 
     // ===== INTEGRATION TESTS =====
@@ -592,18 +527,9 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         uint256 methodCount = recyReportAttributes.getDisposalMethods().length;
         uint256 shapeCount = recyReportAttributes.getRecycleShapes().length;
 
-        assertEq(
-            recyReportAttributes.getMaterial(materialCount - 1),
-            "NewMaterial"
-        );
+        assertEq(recyReportAttributes.getMaterial(materialCount - 1), "NewMaterial");
         assertEq(recyReportAttributes.getRecycleType(typeCount - 1), "NewType");
-        assertEq(
-            recyReportAttributes.getDisposalMethod(methodCount - 1),
-            "NewMethod"
-        );
-        assertEq(
-            recyReportAttributes.getRecycleShape(shapeCount - 1),
-            "NewShape"
-        );
+        assertEq(recyReportAttributes.getDisposalMethod(methodCount - 1), "NewMethod");
+        assertEq(recyReportAttributes.getRecycleShape(shapeCount - 1), "NewShape");
     }
 }

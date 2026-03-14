@@ -219,9 +219,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         distribution.whitelistReportContract(address(mockReport1));
 
         uint256 expected = REWARD_AMOUNT - CLAIMED_AMOUNT; // Should have = 500 tokens
-        uint256 actual = distribution.calculateTokensToMint(
-            address(mockReport1)
-        );
+        uint256 actual = distribution.calculateTokensToMint(address(mockReport1));
         assertEq(actual, expected);
     }
 
@@ -240,9 +238,7 @@ contract RecyDistributionTest is Test, TestHelpers {
 
         uint256 shouldHave = REWARD_AMOUNT - CLAIMED_AMOUNT; // 500 tokens
         uint256 expected = shouldHave - existingBalance; // 500 - 200 = 300 tokens
-        uint256 actual = distribution.calculateTokensToMint(
-            address(mockReport1)
-        );
+        uint256 actual = distribution.calculateTokensToMint(address(mockReport1));
         assertEq(actual, expected);
     }
 
@@ -259,9 +255,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         vm.prank(owner);
         token.transfer(address(mockReport1), excessBalance);
 
-        uint256 actual = distribution.calculateTokensToMint(
-            address(mockReport1)
-        );
+        uint256 actual = distribution.calculateTokensToMint(address(mockReport1));
         assertEq(actual, 0);
     }
 
@@ -298,10 +292,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         distribution.mintTokensToReport(address(mockReport1));
 
         assertEq(token.balanceOf(address(mockReport1)), expectedMint);
-        assertEq(
-            distribution.totalMintedToReport(address(mockReport1)),
-            expectedMint
-        );
+        assertEq(distribution.totalMintedToReport(address(mockReport1)), expectedMint);
     }
 
     function test_mintTokensToReportNoNeed() public {
@@ -363,14 +354,8 @@ contract RecyDistributionTest is Test, TestHelpers {
 
         assertEq(token.balanceOf(address(mockReport1)), 500 * 10 ** 18);
         assertEq(token.balanceOf(address(mockReport2)), 1000 * 10 ** 18);
-        assertEq(
-            distribution.totalMintedToReport(address(mockReport1)),
-            500 * 10 ** 18
-        );
-        assertEq(
-            distribution.totalMintedToReport(address(mockReport2)),
-            1000 * 10 ** 18
-        );
+        assertEq(distribution.totalMintedToReport(address(mockReport1)), 500 * 10 ** 18);
+        assertEq(distribution.totalMintedToReport(address(mockReport2)), 1000 * 10 ** 18);
     }
 
     function test_mintTokensToAllReportsSkipsBlacklisted() public {
@@ -435,8 +420,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         distribution.blacklistReportContract(address(mockReport2)); // Blacklist middle one
         vm.stopPrank();
 
-        address[] memory activeContracts = distribution
-            .getActiveReportContracts();
+        address[] memory activeContracts = distribution.getActiveReportContracts();
         assertEq(activeContracts.length, 2);
         assertEq(activeContracts[0], address(mockReport1));
         assertEq(activeContracts[1], address(mockReport3));
@@ -448,8 +432,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         distribution.blacklistReportContract(address(mockReport1));
         vm.stopPrank();
 
-        address[] memory activeContracts = distribution
-            .getActiveReportContracts();
+        address[] memory activeContracts = distribution.getActiveReportContracts();
         assertEq(activeContracts.length, 0);
     }
 
@@ -495,20 +478,14 @@ contract RecyDistributionTest is Test, TestHelpers {
         // First mint
         vm.prank(owner);
         distribution.mintTokensToReport(address(mockReport1));
-        assertEq(
-            distribution.totalMintedToReport(address(mockReport1)),
-            500 * 10 ** 18
-        );
+        assertEq(distribution.totalMintedToReport(address(mockReport1)), 500 * 10 ** 18);
 
         // Increase rewards and mint again
         mockReport1.setRewardTotal(1500 * 10 ** 18);
 
         vm.prank(owner);
         distribution.mintTokensToReport(address(mockReport1));
-        assertEq(
-            distribution.totalMintedToReport(address(mockReport1)),
-            1000 * 10 ** 18
-        ); // 500 + 500
+        assertEq(distribution.totalMintedToReport(address(mockReport1)), 1000 * 10 ** 18); // 500 + 500
     }
 
     function test_whitelistAfterRemoval() public {

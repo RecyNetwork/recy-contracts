@@ -139,7 +139,7 @@ contract RecyReportFactoryNamingTest is Test {
         expectedNames[2] = "proxy-3";
 
         // Deploy proxies with specific names
-        for (uint i = 0; i < expectedNames.length; i++) {
+        for (uint256 i = 0; i < expectedNames.length; i++) {
             factory.deployProxy(
                 expectedNames[i],
                 "RECY",
@@ -156,7 +156,7 @@ contract RecyReportFactoryNamingTest is Test {
         string[] memory actualNames = factory.getAllProxyNames();
         assertEq(actualNames.length, expectedNames.length);
 
-        for (uint i = 0; i < expectedNames.length; i++) {
+        for (uint256 i = 0; i < expectedNames.length; i++) {
             assertEq(actualNames[i], expectedNames[i]);
         }
     }

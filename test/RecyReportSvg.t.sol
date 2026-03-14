@@ -14,16 +14,13 @@ contract RecyReportSvgTest is Test {
     }
 
     /// @dev helper to check substring
-    function contains(
-        string memory where,
-        string memory what
-    ) internal pure returns (bool) {
+    function contains(string memory where, string memory what) internal pure returns (bool) {
         bytes memory a = bytes(where);
         bytes memory b = bytes(what);
         if (b.length > a.length) return false;
-        for (uint i; i <= a.length - b.length; i++) {
+        for (uint256 i; i <= a.length - b.length; i++) {
             bool ok = true;
-            for (uint j; j < b.length; j++) {
+            for (uint256 j; j < b.length; j++) {
                 if (a[i + j] != b[j]) {
                     ok = false;
                     break;

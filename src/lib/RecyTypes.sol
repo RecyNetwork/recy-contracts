@@ -12,10 +12,12 @@ library RecyTypes {
         uint64 auditDate;
         uint128 wasteAmount; // in miligrams
     }
+
     struct RecyReward {
         uint128 rewardAmount;
         uint64 rewardUnlockDate;
     }
+
     struct RecyMaterials {
         uint32 material;
         uint32 recycleType;

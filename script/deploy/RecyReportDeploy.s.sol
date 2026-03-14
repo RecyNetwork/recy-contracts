@@ -27,9 +27,6 @@ contract RecyReportDeploy is Script, ConfigManager {
 
         console.log("=== Manual Config Update Required ===");
         console.log("Add to config/contracts.json for chain", chainId, ":");
-        console.log(
-            "RecyReport upgradable implementation deployed to:",
-            address(implementation)
-        );
+        console.log("RecyReport upgradable implementation deployed to:", address(implementation));
     }
 }

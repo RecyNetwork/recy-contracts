@@ -36,9 +36,7 @@ contract ConfigManager is Script {
         uint8 shareProtocol;
     }
 
-    function getNetworkConfig(
-        uint256 chainId
-    ) public view returns (NetworkConfig memory) {
+    function getNetworkConfig(uint256 chainId) public view returns (NetworkConfig memory) {
         string memory json = vm.readFile(CONFIG_PATH);
         string memory chainIdStr = vm.toString(chainId);
 
@@ -51,10 +49,7 @@ contract ConfigManager is Script {
         return config;
     }
 
-    function getProxyConfig(
-        uint256 chainId,
-        string memory proxyName
-    ) public view returns (ProxyConfig memory) {
+    function getProxyConfig(uint256 chainId, string memory proxyName) public view returns (ProxyConfig memory) {
         string memory json = vm.readFile(CONFIG_PATH);
         string memory chainIdStr = vm.toString(chainId);
 
@@ -72,71 +67,55 @@ contract ConfigManager is Script {
         return config;
     }
 
-    function _readContractAddresses(
-        string memory json,
-        string memory chainIdStr,
-        NetworkConfig memory config
-    ) internal pure {
+    function _readContractAddresses(string memory json, string memory chainIdStr, NetworkConfig memory config)
+        internal
+        pure
+    {
         // Read token address
-        string memory tokenStr = json.readString(
-            string.concat(".", chainIdStr, ".contracts.token")
-        );
+        string memory tokenStr = json.readString(string.concat(".", chainIdStr, ".contracts.token"));
         if (_isValidAddress(tokenStr)) {
             config.token = vm.parseAddress(tokenStr);
         }
 
         // Read protocol address
-        string memory protocolStr = json.readString(
-            string.concat(".", chainIdStr, ".addresses.protocol")
-        );
+        string memory protocolStr = json.readString(string.concat(".", chainIdStr, ".addresses.protocol"));
         if (_isValidAddress(protocolStr)) {
             config.protocol = vm.parseAddress(protocolStr);
         }
 
         // Read reportImplementation address
-        string memory reportStr = json.readString(
-            string.concat(".", chainIdStr, ".contracts.reportImplementation")
-        );
+        string memory reportStr = json.readString(string.concat(".", chainIdStr, ".contracts.reportImplementation"));
         if (_isValidAddress(reportStr)) {
             config.reportImplementation = vm.parseAddress(reportStr);
         }
 
         // Read reportAttributes address
-        string memory reportAttributesStr = json.readString(
-            string.concat(".", chainIdStr, ".contracts.reportAttributes")
-        );
+        string memory reportAttributesStr =
+            json.readString(string.concat(".", chainIdStr, ".contracts.reportAttributes"));
         if (_isValidAddress(reportAttributesStr)) {
             config.reportAttributes = vm.parseAddress(reportAttributesStr);
         }
 
         // Read reportSvg address
-        string memory reportSvgStr = json.readString(
-            string.concat(".", chainIdStr, ".contracts.reportSvg")
-        );
+        string memory reportSvgStr = json.readString(string.concat(".", chainIdStr, ".contracts.reportSvg"));
         if (_isValidAddress(reportSvgStr)) {
             config.reportSvg = vm.parseAddress(reportSvgStr);
         }
 
         // Read reportData address
-        string memory reportDataStr = json.readString(
-            string.concat(".", chainIdStr, ".contracts.reportData")
-        );
+        string memory reportDataStr = json.readString(string.concat(".", chainIdStr, ".contracts.reportData"));
         if (_isValidAddress(reportDataStr)) {
             config.reportData = vm.parseAddress(reportDataStr);
         }
 
         // Read factory address
-        string memory factoryStr = json.readString(
-            string.concat(".", chainIdStr, ".contracts.factory")
-        );
+        string memory factoryStr = json.readString(string.concat(".", chainIdStr, ".contracts.factory"));
         if (_isValidAddress(factoryStr)) {
             config.factory = vm.parseAddress(factoryStr);
         }
 
         // Read lzEndpoint address
-        string memory lzEndpointStr = json.readString(
-            string.concat(".", chainIdStr, ".addresses.lzEndpoint")
-        );
+        string memory lzEndpointStr = json.readString(string.concat(".", chainIdStr, ".addresses.lzEndpoint"));
         if (_isValidAddress(lzEndpointStr)) {
             config.lzEndpoint = vm.parseAddress(lzEndpointStr);
         }
@@ -148,9 +127,7 @@ contract ConfigManager is Script {
         string memory proxyName,
         ProxyConfig memory config
     ) internal pure {
-        string memory proxyStr = json.readString(
-            string.concat(".", chainIdStr, ".proxies.", proxyName, ".address")
-        );
+        string memory proxyStr = json.readString(string.concat(".", chainIdStr, ".proxies.", proxyName, ".address"));
         if (_isValidAddress(proxyStr)) {
             config.proxy = vm.parseAddress(proxyStr);
         }
@@ -162,29 +139,13 @@ contract ConfigManager is Script {
         string memory proxyName,
         ProxyConfig memory config
     ) internal pure {
-        string memory basePath = string.concat(
-            ".",
-            chainIdStr,
-            ".proxies.",
-            proxyName,
-            ".settings"
-        );
+        string memory basePath = string.concat(".", chainIdStr, ".proxies.", proxyName, ".settings");
 
-        config.unlockDelay = uint64(
-            json.readUint(string.concat(basePath, ".unlockDelay"))
-        );
-        config.shareRecycler = uint8(
-            json.readUint(string.concat(basePath, ".shareRecycler"))
-        );
-        config.shareValidator = uint8(
-            json.readUint(string.concat(basePath, ".shareValidator"))
-        );
-        config.shareGenerator = uint8(
-            json.readUint(string.concat(basePath, ".shareGenerator"))
-        );
-        config.shareProtocol = uint8(
-            json.readUint(string.concat(basePath, ".shareProtocol"))
-        );
+        config.unlockDelay = uint64(json.readUint(string.concat(basePath, ".unlockDelay")));
+        config.shareRecycler = uint8(json.readUint(string.concat(basePath, ".shareRecycler")));
+        config.shareValidator = uint8(json.readUint(string.concat(basePath, ".shareValidator")));
+        config.shareGenerator = uint8(json.readUint(string.concat(basePath, ".shareGenerator")));
+        config.shareProtocol = uint8(json.readUint(string.concat(basePath, ".shareProtocol")));
     }
 
     function _readRoleArrays(
@@ -193,81 +154,59 @@ contract ConfigManager is Script {
         string memory proxyName,
         ProxyConfig memory config
     ) internal pure {
-        string memory basePath = string.concat(
-            ".",
-            chainIdStr,
-            ".proxies.",
-            proxyName
-        );
+        string memory basePath = string.concat(".", chainIdStr, ".proxies.", proxyName);
 
         // Read recyclers array
-        try
-            vm.parseJsonAddressArray(
-                json,
-                string.concat(basePath, ".recyclers")
-            )
-        returns (address[] memory recyclerAddresses) {
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".recyclers")) returns (
+            address[] memory recyclerAddresses
+        ) {
             config.recyclers = recyclerAddresses;
         } catch {
             config.recyclers = new address[](0);
         }
         // Read recyclerFunds array
-        try
-            vm.parseJsonAddressArray(
-                json,
-                string.concat(basePath, ".recyclerFunds")
-            )
-        returns (address[] memory recyclerFundAddresses) {
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".recyclerFunds")) returns (
+            address[] memory recyclerFundAddresses
+        ) {
             config.recyclerFunds = recyclerFundAddresses;
         } catch {
             config.recyclerFunds = new address[](0);
         }
         // Read auditors array
-        try
-            vm.parseJsonAddressArray(json, string.concat(basePath, ".auditors"))
-        returns (address[] memory auditorAddresses) {
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".auditors")) returns (
+            address[] memory auditorAddresses
+        ) {
             config.auditors = auditorAddresses;
         } catch {
             config.auditors = new address[](0);
         }
         // Read auditorFunds array
-        try
-            vm.parseJsonAddressArray(
-                json,
-                string.concat(basePath, ".auditorFunds")
-            )
-        returns (address[] memory auditorFundAddresses) {
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".auditorFunds")) returns (
+            address[] memory auditorFundAddresses
+        ) {
             config.auditorFunds = auditorFundAddresses;
         } catch {
             config.auditorFunds = new address[](0);
         }
         // Read admins array
-        try
-            vm.parseJsonAddressArray(json, string.concat(basePath, ".admins"))
-        returns (address[] memory adminAddresses) {
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".admins")) returns (address[] memory adminAddresses)
+        {
             config.admins = adminAddresses;
         } catch {
             config.admins = new address[](0);
         }
         // Read emergency array
-        try
-            vm.parseJsonAddressArray(
-                json,
-                string.concat(basePath, ".emergency")
-            )
-        returns (address[] memory emergencyAddresses) {
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".emergency")) returns (
+            address[] memory emergencyAddresses
+        ) {
             config.emergency = emergencyAddresses;
         } catch {
             config.emergency = new address[](0);
         }
     }
 
-    function _isValidAddress(
-        string memory addressStr
-    ) internal pure returns (bool) {
-        return
-            bytes(addressStr).length > 0 &&
-            keccak256(abi.encodePacked(addressStr)) !=
-            keccak256(abi.encodePacked("null"));
+    function _isValidAddress(string memory addressStr) internal pure returns (bool) {
+        return bytes(addressStr).length > 0
+            && keccak256(abi.encodePacked(addressStr)) != keccak256(abi.encodePacked("null"));
     }
 }

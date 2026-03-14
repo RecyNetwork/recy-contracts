@@ -16,10 +16,7 @@ contract RecyTokenDeploy is Script, ConfigManager {
 
         // Load network config for lzEndpoint
         NetworkConfig memory networkConfig = getNetworkConfig(chainId);
-        require(
-            networkConfig.lzEndpoint != address(0),
-            "lzEndpoint not configured for this chain"
-        );
+        require(networkConfig.lzEndpoint != address(0), "lzEndpoint not configured for this chain");
 
         address delegate = address(0x3402ce3b5f88c852c0d6992C69A03095d1345BBd);
 
@@ -32,13 +29,7 @@ contract RecyTokenDeploy is Script, ConfigManager {
         // Deploy RecyToken (OFT)
         console.log("Deploying RecyToken...");
         console.log("LZ Endpoint:", networkConfig.lzEndpoint);
-        RecyToken token = new RecyToken(
-            name,
-            symbol,
-            0,
-            networkConfig.lzEndpoint,
-            delegate
-        );
+        RecyToken token = new RecyToken(name, symbol, 0, networkConfig.lzEndpoint, delegate);
 
         vm.stopBroadcast();
 

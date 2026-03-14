@@ -17,37 +17,19 @@ contract RecyReportAttributesDeploy is Script {
 
         // Log deployment information
         console.log("=== RecyReportAttributes Deployment ===");
-        console.log(
-            "RecyReportAttributes deployed to:",
-            address(recyAttributes)
-        );
+        console.log("RecyReportAttributes deployed to:", address(recyAttributes));
         console.log("Contract owner:", recyAttributes.owner());
         console.log("Total materials:", recyAttributes.getMaterials().length);
-        console.log(
-            "Total material SVGs:",
-            recyAttributes.getMaterialSvgs().length
-        );
-        console.log(
-            "Total recycle types:",
-            recyAttributes.getRecycleTypes().length
-        );
-        console.log(
-            "Total recycle shapes:",
-            recyAttributes.getRecycleShapes().length
-        );
-        console.log(
-            "Total disposal methods:",
-            recyAttributes.getDisposalMethods().length
-        );
+        console.log("Total material SVGs:", recyAttributes.getMaterialSvgs().length);
+        console.log("Total recycle types:", recyAttributes.getRecycleTypes().length);
+        console.log("Total recycle shapes:", recyAttributes.getRecycleShapes().length);
+        console.log("Total disposal methods:", recyAttributes.getDisposalMethods().length);
 
         // Log some sample data
         console.log("Sample material[0]:", recyAttributes.material(0));
         console.log("Sample recycleType[0]:", recyAttributes.recycleType(0));
         console.log("Sample recycleShape[0]:", recyAttributes.recycleShape(0));
-        console.log(
-            "Sample disposalMethod[0]:",
-            recyAttributes.disposalMethod(0)
-        );
+        console.log("Sample disposalMethod[0]:", recyAttributes.disposalMethod(0));
 
         console.log("=== Deployment Complete ===");
     }

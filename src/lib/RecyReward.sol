@@ -20,10 +20,7 @@ library RecyReward {
     uint128 public constant LAST_EPOCH_REWARD = 35519829280;
     uint128 public constant FALLBACK_REWARD = 100000000000;
 
-    function calculateReward(
-        uint128 amount,
-        uint256 supply
-    ) public pure returns (uint128) {
+    function calculateReward(uint128 amount, uint256 supply) public pure returns (uint128) {
         if (supply <= FIRST_EPOCH) {
             return (amount * ONE_E18) / FIRST_EPOCH_REWARD;
         } else if (supply <= SECOND_EPOCH) {

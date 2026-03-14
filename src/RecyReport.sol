@@ -4,27 +4,13 @@ pragma solidity ^0.8.30;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {
-    ERC721Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {
-    AccessControlUpgradeable
-} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {
-    Initializable
-} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {
-    UUPSUpgradeable
-} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {
-    PausableUpgradeable
-} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {
-    ERC2771ContextUpgradeable
-} from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
-import {
-    ContextUpgradeable
-} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ERC2771ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {RecyReportData} from "./RecyReportData.sol";
 import {RecyConstants} from "./lib/RecyConstants.sol";
 import {RecyTypes} from "./lib/RecyTypes.sol";
@@ -50,32 +36,11 @@ contract RecyReport is
     /// @notice The trusted forwarder address for ERC-2771 meta-transactions (storage-based for flexibility)
     address private _storedTrustedForwarder;
 
-    event TrustedForwarderChanged(
-        address indexed oldForwarder,
-        address indexed newForwarder
-    );
-    event ReportResult(
-        uint256 indexed tokenId,
-        address indexed recycler,
-        uint64 recycleDate,
-        uint128 wasteAmount
-    );
-    event ReportValidated(
-        uint256 indexed tokenId,
-        address indexed validator,
-        uint64 auditDate,
-        uint128 rewardAmount
-    );
-    event ReportInvalidated(
-        uint256 indexed tokenId,
-        address indexed validator,
-        uint64 inauditDate
-    );
-    event RewardClaimed(
-        uint256 tokenId,
-        address indexed claimant,
-        uint128 rewardAmount
-    );
+    event TrustedForwarderChanged(address indexed oldForwarder, address indexed newForwarder);
+    event ReportResult(uint256 indexed tokenId, address indexed recycler, uint64 recycleDate, uint128 wasteAmount);
+    event ReportValidated(uint256 indexed tokenId, address indexed validator, uint64 auditDate, uint128 rewardAmount);
+    event ReportInvalidated(uint256 indexed tokenId, address indexed validator, uint64 inauditDate);
+    event RewardClaimed(uint256 tokenId, address indexed claimant, uint128 rewardAmount);
 
     address public protocolAddress;
 
@@ -105,9 +70,7 @@ contract RecyReport is
         RecyTypes.RecyInfo storage _info = info[_tokenId];
         address sender = _msgSender();
         require(
-            ownerOf(_tokenId) == sender ||
-                _info.recycler == sender ||
-                _info.validator == sender,
+            ownerOf(_tokenId) == sender || _info.recycler == sender || _info.validator == sender,
             RecyErrors.NotReportOwner()
         );
 
@@ -132,7 +95,8 @@ contract RecyReport is
      * @param _shareValidator Percentage of the reward that goes to the validator
      * @param _shareGenerator Percentage of the reward that goes to the generator
      * @param _shareProtocol Percentage of the reward that goes to the protocol
-     **/
+     *
+     */
     function initialize(
         string memory _name,
         string memory _symbol,
@@ -161,11 +125,7 @@ contract RecyReport is
         unlockDelay = _unlockDelay;
 
         require(
-            _shareRecycler +
-                _shareValidator +
-                _shareGenerator +
-                _shareProtocol ==
-                RecyConstants.REWARD_TOTAL_PERCENTAGE,
+            _shareRecycler + _shareValidator + _shareGenerator + _shareProtocol == RecyConstants.REWARD_TOTAL_PERCENTAGE,
             RecyErrors.RecyReportInvalidShareDistribution()
         );
 
@@ -184,9 +144,7 @@ contract RecyReport is
      * @notice Required for UUPS upgrades
      * @dev Only admin can authorize upgrades
      */
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
     /**
      * @notice Get the version of the contract
@@ -220,18 +178,14 @@ contract RecyReport is
      * @param interfaceId The interface identifier to check for support
      * @return bool True if the interface is supported, false otherwise
      */
-    function supportsInterface(
-        bytes4 interfaceId
-    )
+    function supportsInterface(bytes4 interfaceId)
         public
         view
         virtual
         override(AccessControlUpgradeable, ERC721Upgradeable, IERC165)
         returns (bool)
     {
-        return
-            interfaceId == RecyConstants.ERC4906_INTERFACE_ID ||
-            super.supportsInterface(interfaceId);
+        return interfaceId == RecyConstants.ERC4906_INTERFACE_ID || super.supportsInterface(interfaceId);
     }
 
     /**
@@ -239,21 +193,14 @@ contract RecyReport is
      * @dev The tokenURI is dynamically generated, it will be based on the information like materials, validation and rewards.
      * @param _tokenId The id of the RecyReport.
      * @return _tokenUri a string which is the tokenURI of a RecyReport.
-     **/
-    function tokenURI(
-        uint256 _tokenId
-    ) public view override returns (string memory _tokenUri) {
+     *
+     */
+    function tokenURI(uint256 _tokenId) public view override returns (string memory _tokenUri) {
         require(ownerOf(_tokenId) != address(0), RecyErrors.NftNotExists());
 
-        return
-            data.tokenUriAttributes(
-                _tokenId,
-                status[_tokenId],
-                token,
-                reward[_tokenId],
-                info[_tokenId],
-                materials[_tokenId]
-            );
+        return data.tokenUriAttributes(
+            _tokenId, status[_tokenId], token, reward[_tokenId], info[_tokenId], materials[_tokenId]
+        );
     }
 
     /**
@@ -262,20 +209,10 @@ contract RecyReport is
      * @param _tokenId The id of the RecyReport
      * @return _tokenUri A JSON string containing the metadata of the RecyReport
      */
-    function tokenJson(
-        uint256 _tokenId
-    ) public view returns (string memory _tokenUri) {
+    function tokenJson(uint256 _tokenId) public view returns (string memory _tokenUri) {
         require(ownerOf(_tokenId) != address(0), RecyErrors.NftNotExists());
 
-        return
-            data.tokenJson(
-                _tokenId,
-                status[_tokenId],
-                token,
-                reward[_tokenId],
-                info[_tokenId],
-                materials[_tokenId]
-            );
+        return data.tokenJson(_tokenId, status[_tokenId], token, reward[_tokenId], info[_tokenId], materials[_tokenId]);
     }
 
     /**
@@ -316,9 +253,8 @@ contract RecyReport is
         uint32 _disposalMethod
     ) external onlyRole(RECYCLER_ROLE) {
         if (
-            _materials.length != _materialAmounts.length ||
-            _materials.length != _recycleTypes.length ||
-            _materials.length != _recycleShapes.length
+            _materials.length != _materialAmounts.length || _materials.length != _recycleTypes.length
+                || _materials.length != _recycleShapes.length
         ) {
             revert RecyErrors.ArrayLengthMismatch();
         }
@@ -348,12 +284,7 @@ contract RecyReport is
         status[nftId] = RecyConstants.RECYCLE_COMPLETED;
 
         emit MetadataUpdate(nftId);
-        emit ReportResult(
-            nftId,
-            _msgSender(),
-            _info.recycleDate,
-            _info.wasteAmount
-        );
+        emit ReportResult(nftId, _msgSender(), _info.recycleDate, _info.wasteAmount);
     }
 
     /**
@@ -381,9 +312,8 @@ contract RecyReport is
         uint32 _disposalMethod
     ) external onlyRole(RECYCLER_ROLE) {
         if (
-            _materials.length != _materialAmounts.length ||
-            _materials.length != _recycleTypes.length ||
-            _materials.length != _recycleShapes.length
+            _materials.length != _materialAmounts.length || _materials.length != _recycleTypes.length
+                || _materials.length != _recycleShapes.length
         ) {
             revert RecyErrors.ArrayLengthMismatch();
         }
@@ -409,12 +339,7 @@ contract RecyReport is
         status[_tokenId] = RecyConstants.RECYCLE_COMPLETED;
 
         emit MetadataUpdate(_tokenId);
-        emit ReportResult(
-            _tokenId,
-            _msgSender(),
-            _info.recycleDate,
-            _info.wasteAmount
-        );
+        emit ReportResult(_tokenId, _msgSender(), _info.recycleDate, _info.wasteAmount);
     }
 
     /**
@@ -424,12 +349,9 @@ contract RecyReport is
      * @custom:emits ReportValidated Event containing validation and reward details
      * @custom:emits MetadataUpdate Event for NFT metadata refresh
      */
-    function validateRecyReport(
-        uint256 _tokenId
-    ) external onlyRole(AUDITOR_ROLE) {
+    function validateRecyReport(uint256 _tokenId) external onlyRole(AUDITOR_ROLE) {
         require(
-            status[_tokenId] == RecyConstants.RECYCLE_COMPLETED ||
-                status[_tokenId] == RecyConstants.RECYCLE_FLAGGED,
+            status[_tokenId] == RecyConstants.RECYCLE_COMPLETED || status[_tokenId] == RecyConstants.RECYCLE_FLAGGED,
             RecyErrors.RecyReportNotCompleted()
         );
 
@@ -439,22 +361,14 @@ contract RecyReport is
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
 
-        _reward.rewardAmount = RecyReward.calculateReward(
-            _info.wasteAmount,
-            token.totalSupply()
-        );
+        _reward.rewardAmount = RecyReward.calculateReward(_info.wasteAmount, token.totalSupply());
         _reward.rewardUnlockDate = uint64(block.timestamp + unlockDelay);
 
         rewardTotal += _reward.rewardAmount;
         status[_tokenId] = RecyConstants.RECYCLE_VALIDATED;
 
         emit MetadataUpdate(_tokenId);
-        emit ReportValidated(
-            _tokenId,
-            _msgSender(),
-            _info.auditDate,
-            _reward.rewardAmount
-        );
+        emit ReportValidated(_tokenId, _msgSender(), _info.auditDate, _reward.rewardAmount);
     }
 
     /**
@@ -464,12 +378,9 @@ contract RecyReport is
      * @custom:emits ReportValidated Event containing validation and reward details
      * @custom:emits MetadataUpdate Event for NFT metadata refresh
      */
-    function invalidateRecyReport(
-        uint256 _tokenId
-    ) external onlyRole(AUDITOR_ROLE) {
+    function invalidateRecyReport(uint256 _tokenId) external onlyRole(AUDITOR_ROLE) {
         require(
-            status[_tokenId] == RecyConstants.RECYCLE_COMPLETED ||
-                status[_tokenId] == RecyConstants.RECYCLE_FLAGGED,
+            status[_tokenId] == RecyConstants.RECYCLE_COMPLETED || status[_tokenId] == RecyConstants.RECYCLE_FLAGGED,
             RecyErrors.RecyReportNotCompleted()
         );
 
@@ -479,10 +390,7 @@ contract RecyReport is
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
 
-        _reward.rewardAmount = RecyReward.calculateReward(
-            _info.wasteAmount,
-            token.totalSupply()
-        );
+        _reward.rewardAmount = RecyReward.calculateReward(_info.wasteAmount, token.totalSupply());
         _reward.rewardUnlockDate = uint64(block.timestamp + unlockDelay);
 
         status[_tokenId] = RecyConstants.RECYCLE_INVALIDATED;
@@ -498,24 +406,13 @@ contract RecyReport is
      * @custom:emits RewardClaimed Event containing reward distribution details
      * @custom:emits MetadataUpdate Event for NFT metadata refresh
      */
-    function claimRecyReportReward(
-        uint256 _tokenId
-    ) public onlyTokenOwnerOrRecyclerOrAuditor(_tokenId) whenNotPaused {
-        require(
-            status[_tokenId] == RecyConstants.RECYCLE_VALIDATED,
-            RecyErrors.RecyReportNotValidated()
-        );
+    function claimRecyReportReward(uint256 _tokenId) public onlyTokenOwnerOrRecyclerOrAuditor(_tokenId) whenNotPaused {
+        require(status[_tokenId] == RecyConstants.RECYCLE_VALIDATED, RecyErrors.RecyReportNotValidated());
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
-        require(
-            _reward.rewardUnlockDate <= block.timestamp,
-            RecyErrors.RewardNotUnlocked()
-        );
+        require(_reward.rewardUnlockDate <= block.timestamp, RecyErrors.RewardNotUnlocked());
         uint128 ra = _reward.rewardAmount;
-        require(
-            token.balanceOf(address(this)) >= ra,
-            RecyErrors.InsufficientRewardBalance()
-        );
+        require(token.balanceOf(address(this)) >= ra, RecyErrors.InsufficientRewardBalance());
 
         rewardClaimed += uint256(ra);
         status[_tokenId] = RecyConstants.RECYCLE_REWARDED;
@@ -540,10 +437,7 @@ contract RecyReport is
             (ra * shareValidator) / RecyConstants.REWARD_TOTAL_PERCENTAGE
         );
 
-        token.transfer(
-            protocolAddress,
-            (ra * shareProtocol) / RecyConstants.REWARD_TOTAL_PERCENTAGE
-        );
+        token.transfer(protocolAddress, (ra * shareProtocol) / RecyConstants.REWARD_TOTAL_PERCENTAGE);
 
         emit MetadataUpdate(_tokenId);
         emit RewardClaimed(_tokenId, _msgSender(), ra);
@@ -555,9 +449,7 @@ contract RecyReport is
      * @param _tokenId The ID of the recycling report
      * @return RecyTypes.RecyMaterials[] Array of material information including amounts, types, and shapes
      */
-    function getRecyReportMaterials(
-        uint256 _tokenId
-    ) external view returns (RecyTypes.RecyMaterials[] memory) {
+    function getRecyReportMaterials(uint256 _tokenId) external view returns (RecyTypes.RecyMaterials[] memory) {
         return materials[_tokenId];
     }
 
@@ -577,10 +469,7 @@ contract RecyReport is
      * @dev Accounts can only set their own fund address
      * @param _fundAddress The fund address to associate with the caller
      */
-    function setFundsWallet(
-        address _signatory,
-        address _fundAddress
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setFundsWallet(address _signatory, address _fundAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
         funds[_signatory] = _fundAddress;
     }
 
@@ -603,9 +492,7 @@ contract RecyReport is
      * @param _forwarder The new trusted forwarder address
      * @custom:emits TrustedForwarderChanged Event with the old and new forwarder addresses
      */
-    function setTrustedForwarder(
-        address _forwarder
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setTrustedForwarder(address _forwarder) external onlyRole(DEFAULT_ADMIN_ROLE) {
         address oldForwarder = _storedTrustedForwarder;
         _storedTrustedForwarder = _forwarder;
         emit TrustedForwarderChanged(oldForwarder, _forwarder);
@@ -614,12 +501,7 @@ contract RecyReport is
     /**
      * @dev Resolve _msgSender conflict between ContextUpgradeable and ERC2771ContextUpgradeable
      */
-    function _msgSender()
-        internal
-        view
-        override(ContextUpgradeable, ERC2771ContextUpgradeable)
-        returns (address)
-    {
+    function _msgSender() internal view override(ContextUpgradeable, ERC2771ContextUpgradeable) returns (address) {
         return ERC2771ContextUpgradeable._msgSender();
     }
 

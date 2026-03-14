@@ -21,32 +21,29 @@ contract RecyReportSvgDeploy is Script {
         console.log("Contract owner:", recySvg.owner());
 
         // Test some functionality
-        console.log(
-            "Recycle SVG constant defined:",
-            bytes(recySvg.recycle()).length > 0
-        );
+        console.log("Recycle SVG constant defined:", bytes(recySvg.recycle()).length > 0);
 
         // Test SVG generation for different statuses
         console.log("Testing SVG generation:");
-        try recySvg.getCoins(0) returns (string memory /* coinsCreated */) {
+        try recySvg.getCoins(0) returns (string memory /* coinsCreated */ ) {
             console.log("Coins SVG for CREATED status generated successfully");
         } catch {
             console.log("Error generating coins SVG for CREATED status");
         }
 
-        try recySvg.getCoins(4) returns (string memory /* coinsRewarded */) {
+        try recySvg.getCoins(4) returns (string memory /* coinsRewarded */ ) {
             console.log("Coins SVG for REWARDED status generated successfully");
         } catch {
             console.log("Error generating coins SVG for REWARDED status");
         }
 
-        try recySvg.getRecycle() returns (string memory /* recycleSvg */) {
+        try recySvg.getRecycle() returns (string memory /* recycleSvg */ ) {
             console.log("Recycle SVG generated successfully");
         } catch {
             console.log("Error generating recycle SVG");
         }
 
-        try recySvg.getTrashcan() returns (string memory /* trashcanSvg */) {
+        try recySvg.getTrashcan() returns (string memory /* trashcanSvg */ ) {
             console.log("Trashcan SVG generated successfully");
         } catch {
             console.log("Error generating trashcan SVG");
