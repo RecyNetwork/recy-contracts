@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.34;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {RecyTypes} from "./lib/RecyTypes.sol";
@@ -36,7 +36,9 @@ contract RecyDistribution is Ownable {
      * @param _reportContract The address of the RecyReport contract to whitelist
      * @dev Only owner can call this function
      */
-    function whitelistReportContract(address _reportContract) external onlyOwner {
+    function whitelistReportContract(
+        address _reportContract
+    ) external onlyOwner {
         require(_reportContract != address(0), "Zero address not allowed");
 
         bool exists = false;
@@ -61,7 +63,9 @@ contract RecyDistribution is Ownable {
      * @param _reportContract The address of the RecyReport contract to blacklist
      * @dev Only owner can call this function. Blacklisted contracts cannot receive minted tokens
      */
-    function blacklistReportContract(address _reportContract) external onlyOwner {
+    function blacklistReportContract(
+        address _reportContract
+    ) external onlyOwner {
         require(_reportContract != address(0), "Zero address not allowed");
 
         // Check if contract exists in the array
@@ -73,7 +77,10 @@ contract RecyDistribution is Ownable {
             }
         }
         require(exists, "Report contract not found");
-        require(!blacklistedReports[_reportContract], "Report contract already blacklisted");
+        require(
+            !blacklistedReports[_reportContract],
+            "Report contract already blacklisted"
+        );
 
         blacklistedReports[_reportContract] = true;
 
@@ -85,7 +92,9 @@ contract RecyDistribution is Ownable {
      * @param _reportContract The address of the RecyReport contract
      * @return tokensToMint The amount of tokens that need to be minted
      */
-    function calculateTokensToMint(address _reportContract) public view returns (uint256 tokensToMint) {
+    function calculateTokensToMint(
+        address _reportContract
+    ) public view returns (uint256 tokensToMint) {
         // Check if contract exists in the array
         bool exists = false;
         for (uint256 i = 0; i < reportContracts.length; i++) {
@@ -95,7 +104,10 @@ contract RecyDistribution is Ownable {
             }
         }
         require(exists, "Report contract not found");
-        require(!blacklistedReports[_reportContract], "Report contract is blacklisted");
+        require(
+            !blacklistedReports[_reportContract],
+            "Report contract is blacklisted"
+        );
 
         RecyReport report = RecyReport(_reportContract);
 
@@ -125,7 +137,10 @@ contract RecyDistribution is Ownable {
      * @dev Only owner can call this function
      */
     function mintTokensToReport(address _reportContract) external onlyOwner {
-        require(!blacklistedReports[_reportContract], "Report contract is blacklisted");
+        require(
+            !blacklistedReports[_reportContract],
+            "Report contract is blacklisted"
+        );
 
         uint256 tokensToMint = calculateTokensToMint(_reportContract);
 
@@ -180,7 +195,11 @@ contract RecyDistribution is Ownable {
      * @notice Get all active (non-blacklisted) report contracts
      * @return Array of active report contract addresses
      */
-    function getActiveReportContracts() external view returns (address[] memory) {
+    function getActiveReportContracts()
+        external
+        view
+        returns (address[] memory)
+    {
         uint256 activeCount = 0;
 
         // Count active contracts

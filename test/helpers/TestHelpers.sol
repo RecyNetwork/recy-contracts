@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.34;
 
 import "forge-std/Test.sol";
 import "../../src/RecyReport.sol";
@@ -45,18 +45,30 @@ contract TestHelpers is Test {
         )
     {
         // Deploy mock token
-        testToken = new RecyToken("Test Token", "TEST", 1000000, _deployMockEndpoint(), OWNER);
+        testToken = new RecyToken(
+            "Test Token",
+            "TEST",
+            1000000,
+            _deployMockEndpoint(),
+            OWNER
+        );
 
         // Deploy dependencies
         recyAttributes = new RecyReportAttributes();
         recySvg = new RecyReportSvg();
-        recyData = new RecyReportData(address(recyAttributes), address(recySvg));
+        recyData = new RecyReportData(
+            address(recyAttributes),
+            address(recySvg)
+        );
 
         // Deploy implementation
         RecyReport implementation = new RecyReport();
 
         // Deploy factory
-        factory = new RecyReportFactory(address(implementation), address(recyData));
+        factory = new RecyReportFactory(
+            address(implementation),
+            address(recyData)
+        );
 
         // Deploy proxy with proper initialization
         bytes memory initData = abi.encodeWithSelector(
@@ -73,7 +85,10 @@ contract TestHelpers is Test {
             25
         );
 
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            initData
+        );
         recyReport = RecyReport(address(proxy));
 
         // Fund the contract with tokens for rewards
@@ -84,12 +99,24 @@ contract TestHelpers is Test {
     /**
      * @notice Create a minimal RecyReport setup for basic testing
      */
-    function createMinimalRecyReportSetup() internal returns (RecyReport recyReport, RecyToken testToken) {
-        testToken = new RecyToken("Test Token", "TEST", 1000000, _deployMockEndpoint(), OWNER);
+    function createMinimalRecyReportSetup()
+        internal
+        returns (RecyReport recyReport, RecyToken testToken)
+    {
+        testToken = new RecyToken(
+            "Test Token",
+            "TEST",
+            1000000,
+            _deployMockEndpoint(),
+            OWNER
+        );
 
         RecyReportAttributes recyAttributes = new RecyReportAttributes();
         RecyReportSvg recySvg = new RecyReportSvg();
-        RecyReportData recyData = new RecyReportData(address(recyAttributes), address(recySvg));
+        RecyReportData recyData = new RecyReportData(
+            address(recyAttributes),
+            address(recySvg)
+        );
 
         RecyReport implementation = new RecyReport();
 
@@ -107,7 +134,10 @@ contract TestHelpers is Test {
             25
         );
 
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            initData
+        );
         recyReport = RecyReport(address(proxy));
 
         vm.prank(OWNER);
@@ -155,7 +185,9 @@ contract TestHelpers is Test {
     /**
      * @notice Mint and complete a RecyReport for testing
      */
-    function mintAndCompleteReport(RecyReport recyReport) internal returns (uint256 tokenId) {
+    function mintAndCompleteReport(
+        RecyReport recyReport
+    ) internal returns (uint256 tokenId) {
         // Mint report
         vm.prank(USER);
         recyReport.mintRecyReport();
@@ -185,7 +217,9 @@ contract TestHelpers is Test {
     /**
      * @notice Mint, complete, and validate a RecyReport
      */
-    function mintCompleteAndValidateReport(RecyReport recyReport) internal returns (uint256 tokenId) {
+    function mintCompleteAndValidateReport(
+        RecyReport recyReport
+    ) internal returns (uint256 tokenId) {
         tokenId = mintAndCompleteReport(recyReport);
 
         // Validate report
@@ -275,7 +309,12 @@ contract TestHelpers is Test {
     /**
      * @notice Check if address has a specific role
      */
-    function assertHasRole(RecyReport recyReport, bytes32 role, address account, bool shouldHave) internal view {
+    function assertHasRole(
+        RecyReport recyReport,
+        bytes32 role,
+        address account,
+        bool shouldHave
+    ) internal view {
         if (shouldHave) {
             assertTrue(recyReport.hasRole(role, account));
         } else {
@@ -286,21 +325,33 @@ contract TestHelpers is Test {
     /**
      * @notice Assert NFT ownership
      */
-    function assertNftOwnership(RecyReport recyReport, uint256 tokenId, address expectedOwner) internal view {
+    function assertNftOwnership(
+        RecyReport recyReport,
+        uint256 tokenId,
+        address expectedOwner
+    ) internal view {
         assertEq(recyReport.ownerOf(tokenId), expectedOwner);
     }
 
     /**
      * @notice Assert report status
      */
-    function assertReportStatus(RecyReport recyReport, uint256 tokenId, uint8 expectedStatus) internal view {
+    function assertReportStatus(
+        RecyReport recyReport,
+        uint256 tokenId,
+        uint8 expectedStatus
+    ) internal view {
         assertEq(recyReport.status(tokenId), expectedStatus);
     }
 
     /**
      * @notice Fast forward time and claim reward
      */
-    function fastForwardAndClaimReward(RecyReport recyReport, uint256 tokenId, address claimer) internal {
+    function fastForwardAndClaimReward(
+        RecyReport recyReport,
+        uint256 tokenId,
+        address claimer
+    ) internal {
         vm.warp(block.timestamp + 3601); // Past unlock delay
         vm.prank(claimer);
         recyReport.claimRecyReportReward(tokenId);
@@ -309,10 +360,12 @@ contract TestHelpers is Test {
     /**
      * @notice Complete test setup: mint, set result, and validate with realistic amounts
      */
-    function completeTestSetup(RecyReport recyReport, address user, address recycler, address validator)
-        internal
-        returns (uint256 tokenId)
-    {
+    function completeTestSetup(
+        RecyReport recyReport,
+        address user,
+        address recycler,
+        address validator
+    ) internal returns (uint256 tokenId) {
         // Get the next token ID before minting
         tokenId = recyReport.nftNextId();
 
@@ -382,9 +435,20 @@ contract TestHelpers is Test {
      */
     function setupFactoryTest()
         internal
-        returns (RecyReportFactory factory, RecyToken testToken, RecyReport implementation, RecyReportData dataContract)
+        returns (
+            RecyReportFactory factory,
+            RecyToken testToken,
+            RecyReport implementation,
+            RecyReportData dataContract
+        )
     {
-        testToken = new RecyToken("Test Token", "TEST", 1000000, _deployMockEndpoint(), OWNER);
+        testToken = new RecyToken(
+            "Test Token",
+            "TEST",
+            1000000,
+            _deployMockEndpoint(),
+            OWNER
+        );
 
         RecyReportAttributes attributes = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();
@@ -392,16 +456,28 @@ contract TestHelpers is Test {
 
         implementation = new RecyReport();
 
-        factory = new RecyReportFactory(address(implementation), address(dataContract));
+        factory = new RecyReportFactory(
+            address(implementation),
+            address(dataContract)
+        );
     }
 
     /**
      * @notice Deploy proxy using factory with test configuration
      */
-    function deployProxyWithFactory(RecyReportFactory factory, RecyToken testToken) internal returns (address proxy) {
+    function deployProxyWithFactory(
+        RecyReportFactory factory,
+        RecyToken testToken
+    ) internal returns (address proxy) {
         // Generate a unique name using block timestamp and gasleft
-        string memory uniqueName =
-            string(abi.encodePacked("RecyReport-", vm.toString(block.timestamp), "-", vm.toString(gasleft())));
+        string memory uniqueName = string(
+            abi.encodePacked(
+                "RecyReport-",
+                vm.toString(block.timestamp),
+                "-",
+                vm.toString(gasleft())
+            )
+        );
         proxy = factory.deployProxy(
             uniqueName,
             "RECY",
@@ -418,10 +494,11 @@ contract TestHelpers is Test {
     /**
      * @notice Deploy proxy using factory with test configuration and custom name
      */
-    function deployProxyWithFactory(RecyReportFactory factory, string memory proxyName, RecyToken testToken)
-        internal
-        returns (address proxy)
-    {
+    function deployProxyWithFactory(
+        RecyReportFactory factory,
+        string memory proxyName,
+        RecyToken testToken
+    ) internal returns (address proxy) {
         proxy = factory.deployProxy(
             proxyName,
             "RECY",
@@ -438,7 +515,11 @@ contract TestHelpers is Test {
     /**
      * @notice Grant standard roles to a RecyReport (owner already has admin)
      */
-    function grantStandardRoles(RecyReport recyReport, address recycler, address auditor) internal {
+    function grantStandardRoles(
+        RecyReport recyReport,
+        address recycler,
+        address auditor
+    ) internal {
         recyReport.grantRole(RecyConstants.RECYCLER_ROLE, recycler);
         recyReport.grantRole(RecyConstants.AUDITOR_ROLE, auditor);
     }
@@ -446,10 +527,12 @@ contract TestHelpers is Test {
     /**
      * @notice Complete workflow: mint -> set result -> validate -> claim reward
      */
-    function completeReportWorkflow(RecyReport recyReport, address reporter, address recyclerRole, address auditorRole)
-        internal
-        returns (uint256 tokenId)
-    {
+    function completeReportWorkflow(
+        RecyReport recyReport,
+        address reporter,
+        address recyclerRole,
+        address auditorRole
+    ) internal returns (uint256 tokenId) {
         // Setup roles
         grantStandardRoles(recyReport, recyclerRole, auditorRole);
 
@@ -491,21 +574,33 @@ contract TestHelpers is Test {
     /**
      * @notice Assert token balance change
      */
-    function assertBalanceChange(RecyToken token, address account, uint256 expectedBalance) internal view {
+    function assertBalanceChange(
+        RecyToken token,
+        address account,
+        uint256 expectedBalance
+    ) internal view {
         assertEq(token.balanceOf(account), expectedBalance);
     }
 
     /**
      * @notice Assert total supply change
      */
-    function assertTotalSupplyChange(RecyToken token, uint256 expectedSupply) internal view {
+    function assertTotalSupplyChange(
+        RecyToken token,
+        uint256 expectedSupply
+    ) internal view {
         assertEq(token.totalSupply(), expectedSupply);
     }
 
     /**
      * @notice Perform mint operation with prank
      */
-    function mintAsOwner(RecyToken token, address to, uint256 amount, address owner) internal {
+    function mintAsOwner(
+        RecyToken token,
+        address to,
+        uint256 amount,
+        address owner
+    ) internal {
         vm.prank(owner);
         token.mint(to, amount);
     }
@@ -513,7 +608,11 @@ contract TestHelpers is Test {
     /**
      * @notice Perform burn operation with prank
      */
-    function burnAsOwner(RecyToken token, uint256 amount, address owner) internal {
+    function burnAsOwner(
+        RecyToken token,
+        uint256 amount,
+        address owner
+    ) internal {
         vm.prank(owner);
         token.burn(amount);
     }
@@ -528,19 +627,24 @@ contract TestHelpers is Test {
         uint8 disposalMethod,
         uint128 amountRecycled
     ) internal pure returns (RecyTypes.RecyMaterials memory) {
-        return RecyTypes.RecyMaterials({
-            material: material,
-            recycleType: recycleType,
-            recycleShape: recycleShape,
-            disposalMethod: disposalMethod,
-            amountRecycled: amountRecycled
-        });
+        return
+            RecyTypes.RecyMaterials({
+                material: material,
+                recycleType: recycleType,
+                recycleShape: recycleShape,
+                disposalMethod: disposalMethod,
+                amountRecycled: amountRecycled
+            });
     }
 
     /**
      * @notice Create standard RecyMaterials array for data tests
      */
-    function createStandardRecyMaterialsArray() internal pure returns (RecyTypes.RecyMaterials[] memory materials) {
+    function createStandardRecyMaterialsArray()
+        internal
+        pure
+        returns (RecyTypes.RecyMaterials[] memory materials)
+    {
         materials = new RecyTypes.RecyMaterials[](1);
         materials[0] = createRecyMaterials(1, 1, 1, 1, 100);
     }
@@ -548,12 +652,15 @@ contract TestHelpers is Test {
     /**
      * @notice Create RecyReward struct
      */
-    function createRecyReward(uint128 rewardAmount, uint64 rewardUnlockDate)
-        internal
-        pure
-        returns (RecyTypes.RecyReward memory)
-    {
-        return RecyTypes.RecyReward({rewardAmount: rewardAmount, rewardUnlockDate: rewardUnlockDate});
+    function createRecyReward(
+        uint128 rewardAmount,
+        uint64 rewardUnlockDate
+    ) internal pure returns (RecyTypes.RecyReward memory) {
+        return
+            RecyTypes.RecyReward({
+                rewardAmount: rewardAmount,
+                rewardUnlockDate: rewardUnlockDate
+            });
     }
 
     /**
@@ -566,19 +673,24 @@ contract TestHelpers is Test {
         uint64 auditDate,
         uint128 wasteAmount
     ) internal pure returns (RecyTypes.RecyInfo memory) {
-        return RecyTypes.RecyInfo({
-            validator: validator,
-            recycler: recycler,
-            recycleDate: recycleDate,
-            auditDate: auditDate,
-            wasteAmount: wasteAmount
-        });
+        return
+            RecyTypes.RecyInfo({
+                validator: validator,
+                recycler: recycler,
+                recycleDate: recycleDate,
+                auditDate: auditDate,
+                wasteAmount: wasteAmount
+            });
     }
 
     /**
      * @notice Add standard material to attributes contract
      */
-    function addStandardMaterial(RecyReportAttributes attributes, string memory name, string memory svg) internal {
+    function addStandardMaterial(
+        RecyReportAttributes attributes,
+        string memory name,
+        string memory svg
+    ) internal {
         attributes.addMaterial(name, svg);
     }
 
@@ -592,7 +704,10 @@ contract TestHelpers is Test {
     /**
      * @notice Assert factory proxy count
      */
-    function assertProxyCount(RecyReportFactory factory, uint256 expectedCount) internal view {
+    function assertProxyCount(
+        RecyReportFactory factory,
+        uint256 expectedCount
+    ) internal view {
         assertEq(factory.getDeployedProxiesCount(), expectedCount);
     }
 
@@ -606,7 +721,8 @@ contract TestHelpers is Test {
         uint256 expectedLength,
         uint256 expectedTotal
     ) internal view {
-        (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(offset, limit);
+        (address[] memory proxies, uint256 total) = factory
+            .getDeployedProxiesPaginated(offset, limit);
         assertEq(proxies.length, expectedLength);
         assertEq(total, expectedTotal);
     }
@@ -626,7 +742,10 @@ contract TestHelpers is Test {
         // Deploy dependencies
         RecyReportAttributes customAttributes = new RecyReportAttributes();
         RecyReportSvg customSvg = new RecyReportSvg();
-        RecyReportData customData = new RecyReportData(address(customAttributes), address(customSvg));
+        RecyReportData customData = new RecyReportData(
+            address(customAttributes),
+            address(customSvg)
+        );
 
         RecyReport implementation = new RecyReport();
 
@@ -644,7 +763,10 @@ contract TestHelpers is Test {
             protocolShare
         );
 
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), initData);
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(implementation),
+            initData
+        );
 
         return RecyReport(address(proxy));
     }

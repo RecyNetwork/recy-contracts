@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.34;
 
 import "forge-std/Script.sol";
 import "../../src/RecyReportFactory.sol";
@@ -21,7 +21,10 @@ contract TestRecyReportFactoryScript is Script, ConfigManager {
 
         // Get factory address from config
         address factoryAddress = networkConfig.factory;
-        require(factoryAddress != address(0), "Factory address not found in config");
+        require(
+            factoryAddress != address(0),
+            "Factory address not found in config"
+        );
         console.log("Factory address:", factoryAddress);
 
         // Example recycler addresses
@@ -56,7 +59,10 @@ contract TestRecyReportFactoryScript is Script, ConfigManager {
 
         // Grant recycler role to recycler1
         factory.grantRecyclerRole(proxy1, recycler1);
-        console.log("Granted RECYCLER_ROLE to recycler1:", factory.hasRecyclerRole(proxy1, recycler1));
+        console.log(
+            "Granted RECYCLER_ROLE to recycler1:",
+            factory.hasRecyclerRole(proxy1, recycler1)
+        );
 
         // Deploy second proxy
         address proxy2 = factory.deployProxy(
@@ -103,7 +109,10 @@ contract TestRecyReportFactoryScript is Script, ConfigManager {
 
         // Display factory statistics
         console.log("\n=== Factory Statistics ===");
-        console.log("Total deployed proxies:", factory.getDeployedProxiesCount());
+        console.log(
+            "Total deployed proxies:",
+            factory.getDeployedProxiesCount()
+        );
 
         // Get all deployed proxies
         address[] memory allProxies = factory.getAllDeployedProxies();
@@ -113,6 +122,10 @@ contract TestRecyReportFactoryScript is Script, ConfigManager {
         }
 
         console.log("\n=== Test Complete ===");
-        console.log("Factory successfully deployed", allProxies.length, "proxies with role management!");
+        console.log(
+            "Factory successfully deployed",
+            allProxies.length,
+            "proxies with role management!"
+        );
     }
 }

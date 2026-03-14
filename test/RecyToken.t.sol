@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.34;
 
 import "forge-std/Test.sol";
 import "../src/RecyToken.sol";
@@ -95,7 +95,13 @@ contract RecyTokenTest is Test, TestHelpers {
     // ===== CONSTRUCTOR EDGE CASES =====
 
     function test_constructorWithZeroSupply() public {
-        RecyToken zeroSupplyToken = new RecyToken("Zero Supply Token", "ZST", 0, address(mockEndpoint), owner);
+        RecyToken zeroSupplyToken = new RecyToken(
+            "Zero Supply Token",
+            "ZST",
+            0,
+            address(mockEndpoint),
+            owner
+        );
 
         assertEq(zeroSupplyToken.totalSupply(), 0);
         assertEq(zeroSupplyToken.balanceOf(owner), 0);
@@ -105,24 +111,48 @@ contract RecyTokenTest is Test, TestHelpers {
         // Test with max supply that won't overflow
         uint256 maxSupply = type(uint256).max / (10 ** 18);
 
-        RecyToken maxSupplyToken = new RecyToken("Max Supply Token", "MST", maxSupply, address(mockEndpoint), owner);
+        RecyToken maxSupplyToken = new RecyToken(
+            "Max Supply Token",
+            "MST",
+            maxSupply,
+            address(mockEndpoint),
+            owner
+        );
 
         assertEq(maxSupplyToken.totalSupply(), maxSupply * 10 ** 18);
     }
 
     function test_constructorWithZeroDelegate() public {
         vm.expectRevert();
-        new RecyToken("Zero Delegate Token", "ZDT", 1000000, address(mockEndpoint), address(0));
+        new RecyToken(
+            "Zero Delegate Token",
+            "ZDT",
+            1000000,
+            address(mockEndpoint),
+            address(0)
+        );
     }
 
     function test_constructorWithEmptyName() public {
-        RecyToken emptyNameToken = new RecyToken("", "ENT", 1000000, address(mockEndpoint), owner);
+        RecyToken emptyNameToken = new RecyToken(
+            "",
+            "ENT",
+            1000000,
+            address(mockEndpoint),
+            owner
+        );
         assertEq(emptyNameToken.name(), "");
         assertEq(emptyNameToken.symbol(), "ENT");
     }
 
     function test_constructorWithEmptySymbol() public {
-        RecyToken emptySymbolToken = new RecyToken("Empty Symbol Token", "", 1000000, address(mockEndpoint), owner);
+        RecyToken emptySymbolToken = new RecyToken(
+            "Empty Symbol Token",
+            "",
+            1000000,
+            address(mockEndpoint),
+            owner
+        );
 
         assertEq(emptySymbolToken.name(), "Empty Symbol Token");
         assertEq(emptySymbolToken.symbol(), "");
@@ -528,7 +558,9 @@ contract RecyTokenTest is Test, TestHelpers {
 
     function test_useAsPaymentInContract() public {
         // Create a simple contract that accepts token payments
-        SimplePaymentContract paymentContract = new SimplePaymentContract(token);
+        SimplePaymentContract paymentContract = new SimplePaymentContract(
+            token
+        );
 
         uint256 paymentAmount = 1000 * 10 ** 18;
 

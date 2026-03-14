@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.34;
 
 import "forge-std/Script.sol";
 import "../../src/RecyReportFactory.sol";
@@ -29,17 +29,26 @@ contract RecyReportFactoryDeploy is Script, ConfigManager {
         // Deploy a new RecyReport implementation if not exists
         address implementation;
         if (config.reportImplementation != address(0)) {
-            console.log("Using existing RecyReport implementation at:", config.reportImplementation);
+            console.log(
+                "Using existing RecyReport implementation at:",
+                config.reportImplementation
+            );
             implementation = config.reportImplementation;
         } else {
             console.log("Deploying new RecyReport implementation...");
             RecyReport newImplementation = new RecyReport();
             implementation = address(newImplementation);
-            console.log("RecyReport implementation deployed to:", implementation);
+            console.log(
+                "RecyReport implementation deployed to:",
+                implementation
+            );
         }
 
         // Deploy the factory
-        RecyReportFactory factory = new RecyReportFactory(implementation, config.reportData);
+        RecyReportFactory factory = new RecyReportFactory(
+            implementation,
+            config.reportData
+        );
 
         vm.stopBroadcast();
 

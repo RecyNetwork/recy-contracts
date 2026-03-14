@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.30;
+pragma solidity 0.8.34;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -59,27 +59,46 @@ contract RecyReportAttributes is Ownable {
     ];
 
     function getMaterial(uint256 index) public view returns (string memory) {
-        require(index < material.length, "RecyReportAttributes.getMaterial: Invalid index");
+        require(
+            index < material.length,
+            "RecyReportAttributes.getMaterial: Invalid index"
+        );
         return material[index];
     }
 
     function getMaterialSvg(uint256 index) public view returns (string memory) {
-        require(index < materialSvg.length, "RecyReportAttributes.getMaterialSvg: Invalid index");
+        require(
+            index < materialSvg.length,
+            "RecyReportAttributes.getMaterialSvg: Invalid index"
+        );
         return materialSvg[index];
     }
 
     function getRecycleType(uint256 index) public view returns (string memory) {
-        require(index < recycleType.length, "RecyReportAttributes.getRecycleType: Invalid index");
+        require(
+            index < recycleType.length,
+            "RecyReportAttributes.getRecycleType: Invalid index"
+        );
         return recycleType[index];
     }
 
-    function getDisposalMethod(uint256 index) public view returns (string memory) {
-        require(index < disposalMethod.length, "RecyReportAttributes.getDisposalMethod: Invalid index");
+    function getDisposalMethod(
+        uint256 index
+    ) public view returns (string memory) {
+        require(
+            index < disposalMethod.length,
+            "RecyReportAttributes.getDisposalMethod: Invalid index"
+        );
         return disposalMethod[index];
     }
 
-    function getRecycleShape(uint256 index) public view returns (string memory) {
-        require(index < recycleShape.length, "RecyReportAttributes.getRecycleShape: Invalid index");
+    function getRecycleShape(
+        uint256 index
+    ) public view returns (string memory) {
+        require(
+            index < recycleShape.length,
+            "RecyReportAttributes.getRecycleShape: Invalid index"
+        );
         return recycleShape[index];
     }
 
@@ -103,9 +122,18 @@ contract RecyReportAttributes is Ownable {
         return recycleShape;
     }
 
-    function addMaterial(string memory newMaterial, string memory newMaterialSvg) external onlyOwner {
-        require(bytes(newMaterial).length > 0, "RecyReportAttributes.addMaterial: Material name cannot be empty");
-        require(bytes(newMaterialSvg).length > 0, "RecyReportAttributes.addMaterial: Material SVG cannot be empty");
+    function addMaterial(
+        string memory newMaterial,
+        string memory newMaterialSvg
+    ) external onlyOwner {
+        require(
+            bytes(newMaterial).length > 0,
+            "RecyReportAttributes.addMaterial: Material name cannot be empty"
+        );
+        require(
+            bytes(newMaterialSvg).length > 0,
+            "RecyReportAttributes.addMaterial: Material SVG cannot be empty"
+        );
         material.push(newMaterial);
         materialSvg.push(newMaterialSvg);
     }
@@ -114,7 +142,9 @@ contract RecyReportAttributes is Ownable {
         recycleType.push(newRecycleType);
     }
 
-    function addDisposalMethod(string memory newDisposalMethod) external onlyOwner {
+    function addDisposalMethod(
+        string memory newDisposalMethod
+    ) external onlyOwner {
         disposalMethod.push(newDisposalMethod);
     }
 
