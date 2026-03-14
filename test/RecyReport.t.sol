@@ -17,12 +17,7 @@ import "./helpers/TestHelpers.sol";
 
 // Mock ERC721 receiver for testing
 contract MockReceiver is IERC721Receiver {
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 }
@@ -55,22 +50,13 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         // Deploy test token
         MockLZEndpointReport mockEndpoint = new MockLZEndpointReport();
-        testToken = new RecyToken(
-            "Test Recy Token",
-            "TRECY",
-            1000000,
-            address(mockEndpoint),
-            address(this)
-        );
+        testToken = new RecyToken("Test Recy Token", "TRECY", 1000000, address(mockEndpoint), address(this));
         mockReceiver = new MockReceiver();
 
         // Deploy dependencies
         recyAttributes = new RecyReportAttributes();
         recySvg = new RecyReportSvg();
-        recyData = new RecyReportData(
-            address(recyAttributes),
-            address(recySvg)
-        );
+        recyData = new RecyReportData(address(recyAttributes), address(recySvg));
 
         // Deploy implementation
         RecyReport implementation = new RecyReport();
@@ -101,12 +87,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         grantStandardRoles(recyReport, RECYCLER, VALIDATOR);
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -150,18 +131,11 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         // Set report result
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1000000 * 10 ** 18,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            0, uint64(block.timestamp), 1000000 * 10 ** 18, materials, materialAmounts, recycleTypes, recycleShapes, 0
         );
 
         assertReportStatus(recyReport, 0, RecyConstants.RECYCLE_COMPLETED);
-        (, , , , uint128 wasteAmount) = recyReport.info(0);
+        (,,,, uint128 wasteAmount) = recyReport.info(0);
         assertEq(wasteAmount, 1000000 * 10 ** 18);
     }
 
@@ -174,13 +148,9 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.prank(validator);
         recyReport.validateRecyReport(tokenId);
 
-        assertReportStatus(
-            recyReport,
-            tokenId,
-            RecyConstants.RECYCLE_VALIDATED
-        );
+        assertReportStatus(recyReport, tokenId, RecyConstants.RECYCLE_VALIDATED);
 
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
         assertGt(rewardAmount, 0);
     }
 
@@ -192,7 +162,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         fastForwardAndClaimReward(recyReport, tokenId, USER);
 
         // Verify claim was successful
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
         assertGt(rewardAmount, 0);
     }
 
@@ -201,8 +171,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         uint256 tokenId = mintAndCompleteReport(recyReport);
 
         // Get materials from the completed report
-        RecyTypes.RecyMaterials[] memory materials = recyReport
-            .getRecyReportMaterials(tokenId);
+        RecyTypes.RecyMaterials[] memory materials = recyReport.getRecyReportMaterials(tokenId);
 
         // Verify materials were recorded correctly - createTestMaterials creates 2 materials
         assertEq(materials.length, 2);
@@ -266,8 +235,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.mintRecyReport();
 
         // Get materials from incomplete report should return empty array
-        RecyTypes.RecyMaterials[] memory reportMaterials = recyReport
-            .getRecyReportMaterials(0);
+        RecyTypes.RecyMaterials[] memory reportMaterials = recyReport.getRecyReportMaterials(0);
         assertEq(reportMaterials.length, 0);
     }
 
@@ -335,11 +303,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         );
 
         // This should revert due to invalid share distribution
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                RecyErrors.RecyReportInvalidShareDistribution.selector
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(RecyErrors.RecyReportInvalidShareDistribution.selector));
         new ERC1967Proxy(address(implementation), initDataTooHigh);
 
         // Test with shares that add up to less than 100%
@@ -358,11 +322,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         );
 
         // This should also revert due to invalid share distribution
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                RecyErrors.RecyReportInvalidShareDistribution.selector
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(RecyErrors.RecyReportInvalidShareDistribution.selector));
         new ERC1967Proxy(address(implementation), initDataTooLow);
     }
 
@@ -384,10 +344,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             25 // Adds up to 100%
         );
 
-        ERC1967Proxy testProxyEqual = new ERC1967Proxy(
-            address(implementation),
-            initDataEqual
-        );
+        ERC1967Proxy testProxyEqual = new ERC1967Proxy(address(implementation), initDataEqual);
         RecyReport newReport1 = RecyReport(address(testProxyEqual));
 
         assertEq(newReport1.shareRecycler(), 25);
@@ -411,10 +368,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             10 // Adds up to 100%
         );
 
-        ERC1967Proxy testProxyUnequal = new ERC1967Proxy(
-            address(implementation2),
-            initDataUnequal
-        );
+        ERC1967Proxy testProxyUnequal = new ERC1967Proxy(address(implementation2), initDataUnequal);
         RecyReport newReport2 = RecyReport(address(testProxyUnequal));
 
         assertEq(newReport2.shareRecycler(), 40);
@@ -438,10 +392,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             1 // Adds up to 100%
         );
 
-        ERC1967Proxy testProxyEdge = new ERC1967Proxy(
-            address(implementation3),
-            initDataEdge
-        );
+        ERC1967Proxy testProxyEdge = new ERC1967Proxy(address(implementation3), initDataEdge);
         RecyReport newReport3 = RecyReport(address(testProxyEdge));
 
         assertEq(newReport3.shareRecycler(), 97);
@@ -454,16 +405,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         // Try to initialize an already initialized contract
         vm.expectRevert();
         recyReport.initialize(
-            "Another Name",
-            "ANOTHER",
-            address(testToken),
-            address(recyData),
-            protocol,
-            7200,
-            30,
-            30,
-            30,
-            10
+            "Another Name", "ANOTHER", address(testToken), address(recyData), protocol, 7200, 30, 30, 30, 10
         );
     }
 
@@ -479,13 +421,9 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_roleManagementEdgeCases() public {
         // Test self-revoke admin role (should work)
-        assertTrue(
-            recyReport.hasRole(recyReport.DEFAULT_ADMIN_ROLE(), address(this))
-        );
+        assertTrue(recyReport.hasRole(recyReport.DEFAULT_ADMIN_ROLE(), address(this)));
         recyReport.revokeRole(recyReport.DEFAULT_ADMIN_ROLE(), address(this));
-        assertFalse(
-            recyReport.hasRole(recyReport.DEFAULT_ADMIN_ROLE(), address(this))
-        );
+        assertFalse(recyReport.hasRole(recyReport.DEFAULT_ADMIN_ROLE(), address(this)));
     }
 
     // ===== MINTING EDGE CASES =====
@@ -529,20 +467,12 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         recyReport.grantRole(RecyConstants.RECYCLER_ROLE, owner);
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1000 * 10 ** 18,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            1
+            0, uint64(block.timestamp), 1000 * 10 ** 18, materials, materialAmounts, recycleTypes, recycleShapes, 1
         );
 
         // Verify the report was set with no materials
         assertEq(recyReport.status(0), RecyConstants.RECYCLE_COMPLETED);
-        RecyTypes.RecyMaterials[] memory reportMaterials = recyReport
-            .getRecyReportMaterials(0);
+        RecyTypes.RecyMaterials[] memory reportMaterials = recyReport.getRecyReportMaterials(0);
         assertEq(reportMaterials.length, 0);
     }
 
@@ -566,14 +496,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.grantRole(RecyConstants.RECYCLER_ROLE, owner);
         vm.expectRevert();
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            1
+            0, uint64(block.timestamp), 1, materials, materialAmounts, recycleTypes, recycleShapes, 1
         );
     }
 
@@ -651,26 +574,12 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         // First set
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            1
+            0, uint64(block.timestamp), 1, materials, materialAmounts, recycleTypes, recycleShapes, 1
         );
 
         // Try to set result again - should succeed and overwrite
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp + 100),
-            2,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            2
+            0, uint64(block.timestamp + 100), 2, materials, materialAmounts, recycleTypes, recycleShapes, 2
         );
 
         // Verify the result was updated
@@ -694,14 +603,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.prank(user); // Not a recycler
         vm.expectRevert();
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            1
+            0, uint64(block.timestamp), 1, materials, materialAmounts, recycleTypes, recycleShapes, 1
         );
     }
 
@@ -726,12 +628,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_validateAlreadyValidatedReport() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         // Try to validate again (should fail)
         vm.prank(validator);
@@ -757,14 +654,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.grantRole(RecyConstants.RECYCLER_ROLE, recycler);
         vm.prank(recycler);
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1000000 * 10 ** 18,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            0, uint64(block.timestamp), 1000000 * 10 ** 18, materials, materialAmounts, recycleTypes, recycleShapes, 0
         );
 
         vm.prank(user); // Not an auditor
@@ -776,12 +666,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardBeforeUnlock() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         // Don't warp - try to claim immediately (before unlock)
         vm.prank(user);
@@ -791,12 +676,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardTwice() public {
         // Setup: mint, complete, and validate a report with realistic amounts
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         // Verify the report is validated
         assertEq(recyReport.status(tokenId), RecyConstants.RECYCLE_VALIDATED);
@@ -847,14 +727,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.grantRole(RecyConstants.RECYCLER_ROLE, recycler);
         vm.prank(recycler);
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1000000 * 10 ** 18,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            0, uint64(block.timestamp), 1000000 * 10 ** 18, materials, materialAmounts, recycleTypes, recycleShapes, 0
         );
 
         vm.warp(block.timestamp + 3601);
@@ -865,12 +738,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardByNonOwner() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         vm.warp(block.timestamp + 3601);
 
@@ -902,8 +770,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_getRecyReportMaterialsForNonExistentToken() public view {
         // This function might return empty array instead of reverting
-        RecyTypes.RecyMaterials[] memory materials = recyReport
-            .getRecyReportMaterials(999);
+        RecyTypes.RecyMaterials[] memory materials = recyReport.getRecyReportMaterials(999);
         assertEq(materials.length, 0);
     }
 
@@ -911,8 +778,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.prank(user);
         recyReport.mintRecyReport();
 
-        RecyTypes.RecyMaterials[] memory materials = recyReport
-            .getRecyReportMaterials(0);
+        RecyTypes.RecyMaterials[] memory materials = recyReport.getRecyReportMaterials(0);
         assertEq(materials.length, 0);
     }
 
@@ -942,14 +808,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.grantRole(RecyConstants.RECYCLER_ROLE, recycler);
         vm.prank(recycler);
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1000000 * 10 ** 18,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            0, uint64(block.timestamp), 1000000 * 10 ** 18, materials, materialAmounts, recycleTypes, recycleShapes, 0
         );
 
         uint64 unlockTime = recyReport.unlockDate(0);
@@ -958,12 +817,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_unlockDateCalculation() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         uint64 unlockTime = recyReport.unlockDate(tokenId);
         assertTrue(unlockTime > uint64(block.timestamp));
@@ -1009,12 +863,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_noReentrancyInClaimReward() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         // Claim reward
         vm.warp(block.timestamp + 3601);
@@ -1094,14 +943,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         ) = createSingleMaterialArray();
 
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1000,
-            materials,
-            amounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            0, uint64(block.timestamp), 1000, materials, amounts, recycleTypes, recycleShapes, 0
         );
 
         // Validate the report
@@ -1140,14 +982,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         ) = createSingleMaterialArray();
 
         recyReport.setRecyReportResult(
-            0,
-            uint64(block.timestamp),
-            1000,
-            materials,
-            amounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            0, uint64(block.timestamp), 1000, materials, amounts, recycleTypes, recycleShapes, 0
         );
 
         // Validate the report
@@ -1207,16 +1042,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         shapes[1] = 1; // JAR
 
         vm.prank(RECYCLER);
-        recyReport.setRecyReportResult(
-            tokenId,
-            uint64(block.timestamp),
-            1500,
-            materials,
-            amounts,
-            types,
-            shapes,
-            0
-        );
+        recyReport.setRecyReportResult(tokenId, uint64(block.timestamp), 1500, materials, amounts, types, shapes, 0);
 
         // Validate the report
         vm.prank(VALIDATOR);
@@ -1226,10 +1052,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         string memory jsonResult = recyReport.tokenJson(tokenId);
 
         // Verify the JSON contains expected structure
-        assertTrue(
-            bytes(jsonResult).length > 0,
-            "JSON result should not be empty"
-        );
+        assertTrue(bytes(jsonResult).length > 0, "JSON result should not be empty");
     }
 
     function test_tokenJsonForNonExistentToken() public {
@@ -1254,14 +1077,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         vm.prank(RECYCLER);
         recyReport.mintRecyReportResult(
-            address(mockReceiver),
-            uint64(block.timestamp),
-            1000,
-            materials,
-            amounts,
-            types,
-            shapes,
-            0
+            address(mockReceiver), uint64(block.timestamp), 1000, materials, amounts, types, shapes, 0
         );
     }
 
@@ -1287,14 +1103,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.prank(RECYCLER);
         vm.expectRevert(RecyErrors.ArrayLengthMismatch.selector);
         recyReport.mintRecyReportResult(
-            address(mockReceiver),
-            uint64(block.timestamp),
-            1000,
-            materials,
-            amounts,
-            types,
-            shapes,
-            0
+            address(mockReceiver), uint64(block.timestamp), 1000, materials, amounts, types, shapes, 0
         );
     }
 
@@ -1311,16 +1120,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         vm.prank(unauthorizedUser);
         vm.expectRevert();
-        recyReport.mintRecyReportResult(
-            generator,
-            uint64(block.timestamp),
-            1000,
-            materials,
-            amounts,
-            types,
-            shapes,
-            0
-        );
+        recyReport.mintRecyReportResult(generator, uint64(block.timestamp), 1000, materials, amounts, types, shapes, 0);
     }
 
     function test_claimRewardWithInsufficientBalance() public {
@@ -1357,25 +1157,15 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         RecyReport emptyRecyReportProxy = RecyReport(address(emptyProxy));
 
         // Grant roles
-        emptyRecyReportProxy.grantRole(
-            emptyRecyReportProxy.RECYCLER_ROLE(),
-            recycler
-        );
-        emptyRecyReportProxy.grantRole(
-            emptyRecyReportProxy.AUDITOR_ROLE(),
-            validator
-        );
+        emptyRecyReportProxy.grantRole(emptyRecyReportProxy.RECYCLER_ROLE(), recycler);
+        emptyRecyReportProxy.grantRole(emptyRecyReportProxy.AUDITOR_ROLE(), validator);
 
         // Set up a validated report - mint to mock receiver
         emptyRecyReportProxy.mintRecyReport();
         uint256 tokenId = 0;
 
         // Transfer the token to mock receiver first so it can be claimed later
-        emptyRecyReportProxy.transferFrom(
-            address(this),
-            address(mockReceiver),
-            tokenId
-        );
+        emptyRecyReportProxy.transferFrom(address(this), address(mockReceiver), tokenId);
 
         uint32[] memory materials = new uint32[](1);
         materials[0] = 0;
@@ -1388,14 +1178,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         vm.prank(recycler);
         emptyRecyReportProxy.setRecyReportResult(
-            tokenId,
-            uint64(block.timestamp),
-            1000,
-            materials,
-            amounts,
-            types,
-            shapes,
-            0
+            tokenId, uint64(block.timestamp), 1000, materials, amounts, types, shapes, 0
         );
 
         vm.prank(validator);
@@ -1425,16 +1208,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         shapes[0] = 0;
 
         vm.prank(RECYCLER);
-        recyReport.setRecyReportResult(
-            tokenId,
-            uint64(block.timestamp),
-            1000,
-            materials,
-            amounts,
-            types,
-            shapes,
-            0
-        );
+        recyReport.setRecyReportResult(tokenId, uint64(block.timestamp), 1000, materials, amounts, types, shapes, 0);
 
         uint256 validationTime = block.timestamp + 100;
         vm.warp(validationTime);
@@ -1484,7 +1258,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         uint256 tokenId = mintCompleteAndValidateReport(recyReport);
 
         // Get reward amount and calculate expected share (25% each)
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
         uint128 expectedAmount = (rewardAmount * 25) / 100;
 
         // Record initial balances
@@ -1503,37 +1277,19 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             "Generator fund wallet should receive reward"
         );
         assertEq(
-            testToken.balanceOf(recyclerFund),
-            recInitial + expectedAmount,
-            "Recycler fund wallet should receive reward"
+            testToken.balanceOf(recyclerFund), recInitial + expectedAmount, "Recycler fund wallet should receive reward"
         );
         assertEq(
             testToken.balanceOf(validatorFund),
             valInitial + expectedAmount,
             "Validator fund wallet should receive reward"
         );
-        assertEq(
-            testToken.balanceOf(protocol),
-            protInitial + expectedAmount,
-            "Protocol should receive reward directly"
-        );
+        assertEq(testToken.balanceOf(protocol), protInitial + expectedAmount, "Protocol should receive reward directly");
 
         // Verify original addresses did NOT receive rewards
-        assertEq(
-            testToken.balanceOf(USER),
-            0,
-            "Generator should not receive direct reward"
-        );
-        assertEq(
-            testToken.balanceOf(RECYCLER),
-            0,
-            "Recycler should not receive direct reward"
-        );
-        assertEq(
-            testToken.balanceOf(VALIDATOR),
-            0,
-            "Validator should not receive direct reward"
-        );
+        assertEq(testToken.balanceOf(USER), 0, "Generator should not receive direct reward");
+        assertEq(testToken.balanceOf(RECYCLER), 0, "Recycler should not receive direct reward");
+        assertEq(testToken.balanceOf(VALIDATOR), 0, "Validator should not receive direct reward");
     }
 
     function test_claimRecyReportRewardPartialFundWallets() public {
@@ -1545,7 +1301,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         uint256 tokenId = mintCompleteAndValidateReport(recyReport);
 
         // Get reward amount and calculate expected share
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
         uint128 expectedAmount = (rewardAmount * 25) / 100;
 
         // Record initial balances
@@ -1573,18 +1329,10 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             valInitial + expectedAmount,
             "Validator should receive direct reward (no fund wallet set)"
         );
-        assertEq(
-            testToken.balanceOf(protocol),
-            protInitial + expectedAmount,
-            "Protocol should receive reward"
-        );
+        assertEq(testToken.balanceOf(protocol), protInitial + expectedAmount, "Protocol should receive reward");
 
         // Verify recycler did NOT receive direct reward
-        assertEq(
-            testToken.balanceOf(RECYCLER),
-            0,
-            "Recycler should not receive direct reward"
-        );
+        assertEq(testToken.balanceOf(RECYCLER), 0, "Recycler should not receive direct reward");
     }
 
     function test_claimRecyReportRewardNoFundWallets() public {
@@ -1592,7 +1340,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         uint256 tokenId = mintCompleteAndValidateReport(recyReport);
 
         // Get reward amount and calculate expected share
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
         uint128 expectedAmount = (rewardAmount * 25) / 100;
 
         // Record initial balances
@@ -1605,26 +1353,10 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         fastForwardAndClaimReward(recyReport, tokenId, USER);
 
         // Verify all participants receive direct rewards
-        assertEq(
-            testToken.balanceOf(USER),
-            genInitial + expectedAmount,
-            "Generator should receive direct reward"
-        );
-        assertEq(
-            testToken.balanceOf(RECYCLER),
-            recInitial + expectedAmount,
-            "Recycler should receive direct reward"
-        );
-        assertEq(
-            testToken.balanceOf(VALIDATOR),
-            valInitial + expectedAmount,
-            "Validator should receive direct reward"
-        );
-        assertEq(
-            testToken.balanceOf(protocol),
-            protInitial + expectedAmount,
-            "Protocol should receive reward"
-        );
+        assertEq(testToken.balanceOf(USER), genInitial + expectedAmount, "Generator should receive direct reward");
+        assertEq(testToken.balanceOf(RECYCLER), recInitial + expectedAmount, "Recycler should receive direct reward");
+        assertEq(testToken.balanceOf(VALIDATOR), valInitial + expectedAmount, "Validator should receive direct reward");
+        assertEq(testToken.balanceOf(protocol), protInitial + expectedAmount, "Protocol should receive reward");
     }
 
     function test_fundWalletWithZeroAddress() public {
@@ -1637,7 +1369,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         uint256 tokenId = mintCompleteAndValidateReport(recyReport);
 
         // Get reward amount
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
 
         // Record initial balance
         uint256 generatorInitialBalance = testToken.balanceOf(generator);
@@ -1692,10 +1424,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             uint8(10) // 10% protocol share
         );
 
-        ERC1967Proxy testProxy = new ERC1967Proxy(
-            address(implementation),
-            initData
-        );
+        ERC1967Proxy testProxy = new ERC1967Proxy(address(implementation), initData);
         RecyReport testReport = RecyReport(address(testProxy));
 
         // Fund the contract and grant roles
@@ -1713,7 +1442,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         // Complete setup and claim
         uint256 tokenId = mintCompleteAndValidateReport(testReport);
-        (uint128 rewardAmount, ) = testReport.reward(tokenId);
+        (uint128 rewardAmount,) = testReport.reward(tokenId);
 
         fastForwardAndClaimReward(testReport, tokenId, USER);
 
@@ -1728,12 +1457,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardByRecycler() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         vm.warp(block.timestamp + 3601);
 
@@ -1746,12 +1470,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardByValidator() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         vm.warp(block.timestamp + 3601);
 
@@ -1764,12 +1483,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardByUnauthorizedRecycler() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         // Create another recycler that has the role but wasn't involved in this report
         address otherRecycler = address(0x8888);
@@ -1785,12 +1499,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardByUnauthorizedValidator() public {
         // Setup: mint, complete, and validate a report
-        uint256 tokenId = completeTestSetup(
-            recyReport,
-            user,
-            recycler,
-            validator
-        );
+        uint256 tokenId = completeTestSetup(recyReport, user, recycler, validator);
 
         // Create another validator that has the role but wasn't involved in this report
         address otherValidator = address(0x7777);
@@ -1806,48 +1515,28 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_claimRewardAccessControlComprehensive() public {
         // Test 1: Create and claim by owner
-        uint256 tokenId1 = completeTestSetup(
-            recyReport,
-            address(0x1001),
-            address(0x1002),
-            address(0x1003)
-        );
+        uint256 tokenId1 = completeTestSetup(recyReport, address(0x1001), address(0x1002), address(0x1003));
         uint64 unlockTime1 = recyReport.unlockDate(tokenId1);
         vm.warp(unlockTime1 + 1);
         vm.prank(address(0x1001));
         recyReport.claimRecyReportReward(tokenId1);
 
         // Test 2: Create and claim by recycler
-        uint256 tokenId2 = completeTestSetup(
-            recyReport,
-            address(0x2001),
-            address(0x2002),
-            address(0x2003)
-        );
+        uint256 tokenId2 = completeTestSetup(recyReport, address(0x2001), address(0x2002), address(0x2003));
         uint64 unlockTime2 = recyReport.unlockDate(tokenId2);
         vm.warp(unlockTime2 + 1);
         vm.prank(address(0x2002));
         recyReport.claimRecyReportReward(tokenId2);
 
         // Test 3: Create and claim by validator
-        uint256 tokenId3 = completeTestSetup(
-            recyReport,
-            address(0x3001),
-            address(0x3002),
-            address(0x3003)
-        );
+        uint256 tokenId3 = completeTestSetup(recyReport, address(0x3001), address(0x3002), address(0x3003));
         uint64 unlockTime3 = recyReport.unlockDate(tokenId3);
         vm.warp(unlockTime3 + 1);
         vm.prank(address(0x3003));
         recyReport.claimRecyReportReward(tokenId3);
 
         // Test 4: Create and try to claim by unauthorized user (should fail)
-        uint256 tokenId4 = completeTestSetup(
-            recyReport,
-            address(0x4001),
-            address(0x4002),
-            address(0x4003)
-        );
+        uint256 tokenId4 = completeTestSetup(recyReport, address(0x4001), address(0x4002), address(0x4003));
         uint64 unlockTime4 = recyReport.unlockDate(tokenId4);
         vm.warp(unlockTime4 + 1);
         vm.prank(address(0x9999));
@@ -1869,7 +1558,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         uint256 tokenId = mintCompleteAndValidateReport(recyReport);
 
         // Get reward amount and calculate expected share
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
         uint128 expectedAmount = (rewardAmount * 25) / 100;
 
         // Record initial balances
@@ -1890,20 +1579,14 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             "Generator fund wallet should receive reward"
         );
         assertEq(
-            testToken.balanceOf(recyclerFund),
-            recInitial + expectedAmount,
-            "Recycler fund wallet should receive reward"
+            testToken.balanceOf(recyclerFund), recInitial + expectedAmount, "Recycler fund wallet should receive reward"
         );
         assertEq(
             testToken.balanceOf(validatorFund),
             valInitial + expectedAmount,
             "Validator fund wallet should receive reward"
         );
-        assertEq(
-            testToken.balanceOf(protocol),
-            protInitial + expectedAmount,
-            "Protocol should receive reward directly"
-        );
+        assertEq(testToken.balanceOf(protocol), protInitial + expectedAmount, "Protocol should receive reward directly");
         assertEq(recyReport.status(tokenId), RecyConstants.RECYCLE_REWARDED);
     }
 
@@ -1921,7 +1604,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         uint256 tokenId = mintCompleteAndValidateReport(recyReport);
 
         // Get reward amount and calculate expected share
-        (uint128 rewardAmount, ) = recyReport.reward(tokenId);
+        (uint128 rewardAmount,) = recyReport.reward(tokenId);
         uint128 expectedAmount = (rewardAmount * 25) / 100;
 
         // Record initial balances
@@ -1942,20 +1625,14 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             "Generator fund wallet should receive reward"
         );
         assertEq(
-            testToken.balanceOf(recyclerFund),
-            recInitial + expectedAmount,
-            "Recycler fund wallet should receive reward"
+            testToken.balanceOf(recyclerFund), recInitial + expectedAmount, "Recycler fund wallet should receive reward"
         );
         assertEq(
             testToken.balanceOf(validatorFund),
             valInitial + expectedAmount,
             "Validator fund wallet should receive reward"
         );
-        assertEq(
-            testToken.balanceOf(protocol),
-            protInitial + expectedAmount,
-            "Protocol should receive reward directly"
-        );
+        assertEq(testToken.balanceOf(protocol), protInitial + expectedAmount, "Protocol should receive reward directly");
         assertEq(recyReport.status(tokenId), RecyConstants.RECYCLE_REWARDED);
     }
 
@@ -1966,18 +1643,11 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
     // ===== TRUSTED FORWARDER TESTS =====
 
     function test_trustedForwarderDefaultsToZero() public view {
-        assertEq(
-            recyReport.trustedForwarder(),
-            address(0),
-            "Trusted forwarder should default to address(0)"
-        );
+        assertEq(recyReport.trustedForwarder(), address(0), "Trusted forwarder should default to address(0)");
     }
 
     function test_isTrustedForwarderReturnsFalseByDefault() public view {
-        assertFalse(
-            recyReport.isTrustedForwarder(address(0x999)),
-            "No address should be trusted forwarder by default"
-        );
+        assertFalse(recyReport.isTrustedForwarder(address(0x999)), "No address should be trusted forwarder by default");
     }
 
     function test_setTrustedForwarder() public {
@@ -1988,15 +1658,8 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         recyReport.setTrustedForwarder(forwarder);
 
-        assertEq(
-            recyReport.trustedForwarder(),
-            forwarder,
-            "Trusted forwarder should be updated"
-        );
-        assertTrue(
-            recyReport.isTrustedForwarder(forwarder),
-            "isTrustedForwarder should return true for set address"
-        );
+        assertEq(recyReport.trustedForwarder(), forwarder, "Trusted forwarder should be updated");
+        assertTrue(recyReport.isTrustedForwarder(forwarder), "isTrustedForwarder should return true for set address");
     }
 
     function test_setTrustedForwarderOnlyAdmin() public {
@@ -2017,11 +1680,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         recyReport.setTrustedForwarder(address(0));
 
-        assertEq(
-            recyReport.trustedForwarder(),
-            address(0),
-            "Trusted forwarder should be disabled"
-        );
+        assertEq(recyReport.trustedForwarder(), address(0), "Trusted forwarder should be disabled");
         assertFalse(recyReport.isTrustedForwarder(forwarder));
     }
 
@@ -2049,21 +1708,15 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.setTrustedForwarder(forwarder);
 
         // Simulate forwarder call: calldata = function selector + real sender appended (20 bytes)
-        bytes memory callData = abi.encodeWithSelector(
-            RecyReport.mintRecyReport.selector
-        );
+        bytes memory callData = abi.encodeWithSelector(RecyReport.mintRecyReport.selector);
         bytes memory forwardedCallData = abi.encodePacked(callData, realUser);
 
         vm.prank(forwarder);
-        (bool success, ) = address(recyReport).call(forwardedCallData);
+        (bool success,) = address(recyReport).call(forwardedCallData);
         assertTrue(success, "Forwarded mintRecyReport should succeed");
 
         // The NFT should be owned by realUser, not the forwarder
-        assertEq(
-            recyReport.ownerOf(0),
-            realUser,
-            "NFT should be minted to the real user, not the forwarder"
-        );
+        assertEq(recyReport.ownerOf(0), realUser, "NFT should be minted to the real user, not the forwarder");
     }
 
     function test_mintRecyReportResultViaForwarder() public {
@@ -2092,23 +1745,16 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             recycleShapes,
             uint32(0)
         );
-        bytes memory forwardedCallData = abi.encodePacked(
-            callData,
-            realRecycler
-        );
+        bytes memory forwardedCallData = abi.encodePacked(callData, realRecycler);
 
         vm.prank(forwarder);
-        (bool success, ) = address(recyReport).call(forwardedCallData);
+        (bool success,) = address(recyReport).call(forwardedCallData);
         assertTrue(success, "Forwarded mintRecyReportResult should succeed");
 
         // NFT owned by generator, recycler recorded as realRecycler
         assertEq(recyReport.ownerOf(0), generator);
-        (, address infoRecycler, , , ) = recyReport.info(0);
-        assertEq(
-            infoRecycler,
-            realRecycler,
-            "Recycler should be the real sender, not the forwarder"
-        );
+        (, address infoRecycler,,,) = recyReport.info(0);
+        assertEq(infoRecycler, realRecycler, "Recycler should be the real sender, not the forwarder");
     }
 
     function test_validateRecyReportViaForwarder() public {
@@ -2128,41 +1774,20 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         vm.prank(RECYCLER);
         recyReport.mintRecyReportResult(
-            user,
-            uint64(block.timestamp),
-            1000,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            user, uint64(block.timestamp), 1000, materials, materialAmounts, recycleTypes, recycleShapes, 0
         );
 
         // Validate via forwarder
-        bytes memory callData = abi.encodeWithSelector(
-            RecyReport.validateRecyReport.selector,
-            uint256(0)
-        );
-        bytes memory forwardedCallData = abi.encodePacked(
-            callData,
-            realAuditor
-        );
+        bytes memory callData = abi.encodeWithSelector(RecyReport.validateRecyReport.selector, uint256(0));
+        bytes memory forwardedCallData = abi.encodePacked(callData, realAuditor);
 
         vm.prank(forwarder);
-        (bool success, ) = address(recyReport).call(forwardedCallData);
+        (bool success,) = address(recyReport).call(forwardedCallData);
         assertTrue(success, "Forwarded validateRecyReport should succeed");
 
-        assertEq(
-            recyReport.status(0),
-            RecyConstants.RECYCLE_VALIDATED,
-            "Report should be validated"
-        );
-        (address infoValidator, , , , ) = recyReport.info(0);
-        assertEq(
-            infoValidator,
-            realAuditor,
-            "Validator should be the real sender, not the forwarder"
-        );
+        assertEq(recyReport.status(0), RecyConstants.RECYCLE_VALIDATED, "Report should be validated");
+        (address infoValidator,,,,) = recyReport.info(0);
+        assertEq(infoValidator, realAuditor, "Validator should be the real sender, not the forwarder");
     }
 
     function test_claimRecyReportRewardViaForwarder() public {
@@ -2180,14 +1805,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         vm.prank(RECYCLER);
         recyReport.mintRecyReportResult(
-            user,
-            uint64(block.timestamp),
-            1000,
-            materials,
-            materialAmounts,
-            recycleTypes,
-            recycleShapes,
-            0
+            user, uint64(block.timestamp), 1000, materials, materialAmounts, recycleTypes, recycleShapes, 0
         );
 
         vm.prank(VALIDATOR);
@@ -2197,21 +1815,14 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.warp(block.timestamp + 3601);
 
         // Claim via forwarder as the NFT owner (user)
-        bytes memory callData = abi.encodeWithSelector(
-            RecyReport.claimRecyReportReward.selector,
-            uint256(0)
-        );
+        bytes memory callData = abi.encodeWithSelector(RecyReport.claimRecyReportReward.selector, uint256(0));
         bytes memory forwardedCallData = abi.encodePacked(callData, user);
 
         vm.prank(forwarder);
-        (bool success, ) = address(recyReport).call(forwardedCallData);
+        (bool success,) = address(recyReport).call(forwardedCallData);
         assertTrue(success, "Forwarded claimRecyReportReward should succeed");
 
-        assertEq(
-            recyReport.status(0),
-            RecyConstants.RECYCLE_REWARDED,
-            "Report should be rewarded"
-        );
+        assertEq(recyReport.status(0), RecyConstants.RECYCLE_REWARDED, "Report should be rewarded");
     }
 
     function test_forwarderCannotSpoofWithoutBeingTrusted() public {
@@ -2220,17 +1831,12 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         // Do NOT set as trusted forwarder
 
-        bytes memory callData = abi.encodeWithSelector(
-            RecyReport.mintRecyReport.selector
-        );
+        bytes memory callData = abi.encodeWithSelector(RecyReport.mintRecyReport.selector);
         bytes memory forwardedCallData = abi.encodePacked(callData, realUser);
 
         vm.prank(untrustedForwarder);
-        (bool success, ) = address(recyReport).call(forwardedCallData);
-        assertTrue(
-            success,
-            "Call should succeed but mint to forwarder address"
-        );
+        (bool success,) = address(recyReport).call(forwardedCallData);
+        assertTrue(success, "Call should succeed but mint to forwarder address");
 
         // NFT should be minted to the untrustedForwarder (msg.sender), not realUser
         assertEq(
@@ -2265,17 +1871,11 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             recycleShapes,
             uint32(0)
         );
-        bytes memory forwardedCallData = abi.encodePacked(
-            callData,
-            unauthorizedUser
-        );
+        bytes memory forwardedCallData = abi.encodePacked(callData, unauthorizedUser);
 
         vm.prank(forwarder);
-        (bool success, ) = address(recyReport).call(forwardedCallData);
-        assertFalse(
-            success,
-            "Should revert because real sender lacks RECYCLER_ROLE"
-        );
+        (bool success,) = address(recyReport).call(forwardedCallData);
+        assertFalse(success, "Should revert because real sender lacks RECYCLER_ROLE");
     }
 
     function test_setRecyReportResultViaForwarder() public {
@@ -2307,26 +1907,15 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
             recycleShapes,
             uint32(0)
         );
-        bytes memory forwardedCallData = abi.encodePacked(
-            callData,
-            realRecycler
-        );
+        bytes memory forwardedCallData = abi.encodePacked(callData, realRecycler);
 
         vm.prank(forwarder);
-        (bool success, ) = address(recyReport).call(forwardedCallData);
+        (bool success,) = address(recyReport).call(forwardedCallData);
         assertTrue(success, "Forwarded setRecyReportResult should succeed");
 
-        assertEq(
-            recyReport.status(0),
-            RecyConstants.RECYCLE_COMPLETED,
-            "Report should be completed"
-        );
-        (, address infoRecycler, , , ) = recyReport.info(0);
-        assertEq(
-            infoRecycler,
-            realRecycler,
-            "Recycler should be the real sender"
-        );
+        assertEq(recyReport.status(0), RecyConstants.RECYCLE_COMPLETED, "Report should be completed");
+        (, address infoRecycler,,,) = recyReport.info(0);
+        assertEq(infoRecycler, realRecycler, "Recycler should be the real sender");
     }
 
     function test_directCallStillWorksWithForwarderSet() public {
@@ -2337,11 +1926,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.prank(user);
         recyReport.mintRecyReport();
 
-        assertEq(
-            recyReport.ownerOf(0),
-            user,
-            "Direct call should still use msg.sender"
-        );
+        assertEq(recyReport.ownerOf(0), user, "Direct call should still use msg.sender");
     }
 
     // ===== END TRUSTED FORWARDER TESTS =====
@@ -2355,30 +1940,15 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.prank(validator);
         recyReport.invalidateRecyReport(tokenId);
 
-        assertReportStatus(
-            recyReport,
-            tokenId,
-            RecyConstants.RECYCLE_INVALIDATED
-        );
+        assertReportStatus(recyReport, tokenId, RecyConstants.RECYCLE_INVALIDATED);
 
-        (
-            address infoValidator,
-            ,
-            uint64 recycleDate,
-            uint64 auditDate,
-            uint128 wasteAmount
-        ) = recyReport.info(tokenId);
+        (address infoValidator,, uint64 recycleDate, uint64 auditDate, uint128 wasteAmount) = recyReport.info(tokenId);
         assertEq(infoValidator, validator);
         assertGt(auditDate, 0);
 
-        (uint128 rewardAmount, uint64 rewardUnlockDate) = recyReport.reward(
-            tokenId
-        );
+        (uint128 rewardAmount, uint64 rewardUnlockDate) = recyReport.reward(tokenId);
         assertGt(rewardAmount, 0);
-        assertEq(
-            rewardUnlockDate,
-            uint64(block.timestamp + recyReport.unlockDelay())
-        );
+        assertEq(rewardUnlockDate, uint64(block.timestamp + recyReport.unlockDelay()));
     }
 
     function test_invalidateRecyReportEmitsEvents() public {
@@ -2387,11 +1957,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.grantRole(RecyConstants.AUDITOR_ROLE, validator);
 
         vm.expectEmit(true, true, false, true);
-        emit RecyReport.ReportInvalidated(
-            tokenId,
-            validator,
-            uint64(block.timestamp)
-        );
+        emit RecyReport.ReportInvalidated(tokenId, validator, uint64(block.timestamp));
 
         vm.prank(validator);
         recyReport.invalidateRecyReport(tokenId);
@@ -2505,11 +2071,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         vm.prank(validator);
         recyReport.invalidateRecyReport(tokenId);
 
-        assertReportStatus(
-            recyReport,
-            tokenId,
-            RecyConstants.RECYCLE_INVALIDATED
-        );
+        assertReportStatus(recyReport, tokenId, RecyConstants.RECYCLE_INVALIDATED);
     }
 
     // ===== END INVALIDATE RECY REPORT TESTS =====
