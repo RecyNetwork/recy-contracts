@@ -670,7 +670,7 @@ contract TestHelpers is Test {
         address validator,
         address recycler,
         uint64 recycleDate,
-        uint64 validationDate,
+        uint64 auditDate,
         uint128 wasteAmount
     ) internal pure returns (RecyTypes.RecyInfo memory) {
         return
@@ -678,7 +678,7 @@ contract TestHelpers is Test {
                 validator: validator,
                 recycler: recycler,
                 recycleDate: recycleDate,
-                validationDate: validationDate,
+                auditDate: auditDate,
                 wasteAmount: wasteAmount
             });
     }

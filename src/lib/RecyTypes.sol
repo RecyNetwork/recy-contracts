@@ -9,7 +9,7 @@ library RecyTypes {
         address validator;
         address recycler;
         uint64 recycleDate;
-        uint64 validationDate;
+        uint64 auditDate;
         uint128 wasteAmount; // in miligrams
     }
     struct RecyReward {

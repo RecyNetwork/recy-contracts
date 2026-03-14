@@ -79,7 +79,7 @@ contract RecyReportData {
                             '"}',
                             generateWasteAmountText(_info.wasteAmount),
                             generateRecycleDateText(_info.recycleDate),
-                            generateValidationDateText(_info.validationDate),
+                            generateauditDateText(_info.auditDate),
                             generateRewardText(_status, _reward, _token),
                             generateMaterialsText(_materials),
                             "]}"
@@ -116,7 +116,7 @@ contract RecyReportData {
                 generateStatusText(_status),
                 generateWasteAmountText(_info.wasteAmount),
                 generateRecycleDateText(_info.recycleDate),
-                generateValidationDateText(_info.validationDate),
+                generateauditDateText(_info.auditDate),
                 generateRewardText(_status, _reward, _token),
                 generateMaterialsText(_materials),
                 "]}"
@@ -150,13 +150,13 @@ contract RecyReportData {
         }
     }
 
-    function generateValidationDateText(
-        uint256 _validationDate
-    ) internal pure returns (string memory validationDate) {
-        if (_validationDate > 0) {
-            validationDate = string.concat(
+    function generateauditDateText(
+        uint256 _auditDate
+    ) internal pure returns (string memory auditDate) {
+        if (_auditDate > 0) {
+            auditDate = string.concat(
                 ',{"display_type":"date","trait_type":"Validation Date","value":',
-                Strings.toString(_validationDate),
+                Strings.toString(_auditDate),
                 "}"
             );
         }

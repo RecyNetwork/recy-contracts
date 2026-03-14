@@ -38,6 +38,12 @@ library RecyConstants {
     /// @notice Status indicating rewards have been claimed and distributed
     uint8 public constant RECYCLE_REWARDED = 4;
 
+    /// @notice Status indicating a recycling report has been invalidated, validator rewarded, recycler penalized and remaining rewards returned to the pool
+    uint8 public constant RECYCLE_INVALIDATED = 5;
+
+    /// @notice Status indicating a recycling report has been flagged for review due to suspected issues, pending further investigation
+    uint8 public constant RECYCLE_FLAGGED = 6;
+
     /// @notice ERC4906 interface ID for metadata update events
     bytes4 public constant ERC4906_INTERFACE_ID = 0x49064906;
 

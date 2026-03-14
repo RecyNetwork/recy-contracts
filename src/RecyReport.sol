@@ -63,8 +63,13 @@ contract RecyReport is
     event ReportValidated(
         uint256 indexed tokenId,
         address indexed validator,
-        uint64 validationDate,
+        uint64 auditDate,
         uint128 rewardAmount
+    );
+    event ReportInvalidated(
+        uint256 indexed tokenId,
+        address indexed validator,
+        uint64 inauditDate
     );
     event RewardClaimed(
         uint256 tokenId,
@@ -423,13 +428,14 @@ contract RecyReport is
         uint256 _tokenId
     ) external onlyRole(AUDITOR_ROLE) {
         require(
-            status[_tokenId] == RecyConstants.RECYCLE_COMPLETED,
+            status[_tokenId] == RecyConstants.RECYCLE_COMPLETED ||
+                status[_tokenId] == RecyConstants.RECYCLE_FLAGGED,
             RecyErrors.RecyReportNotCompleted()
         );
 
         RecyTypes.RecyInfo storage _info = info[_tokenId];
         _info.validator = _msgSender();
-        _info.validationDate = uint64(block.timestamp);
+        _info.auditDate = uint64(block.timestamp);
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
 
@@ -446,9 +452,43 @@ contract RecyReport is
         emit ReportValidated(
             _tokenId,
             _msgSender(),
-            _info.validationDate,
+            _info.auditDate,
             _reward.rewardAmount
         );
+    }
+
+    /**
+     * @notice Validates a completed recycling report and calculates rewards
+     * @dev Only accounts with AUDITOR_ROLE can validate reports. Sets reward amount and unlock date
+     * @param _tokenId The ID of the recycling report to validate
+     * @custom:emits ReportValidated Event containing validation and reward details
+     * @custom:emits MetadataUpdate Event for NFT metadata refresh
+     */
+    function invalidateRecyReport(
+        uint256 _tokenId
+    ) external onlyRole(AUDITOR_ROLE) {
+        require(
+            status[_tokenId] == RecyConstants.RECYCLE_COMPLETED ||
+                status[_tokenId] == RecyConstants.RECYCLE_FLAGGED,
+            RecyErrors.RecyReportNotCompleted()
+        );
+
+        RecyTypes.RecyInfo storage _info = info[_tokenId];
+        _info.validator = _msgSender();
+        _info.auditDate = uint64(block.timestamp);
+
+        RecyTypes.RecyReward storage _reward = reward[_tokenId];
+
+        _reward.rewardAmount = RecyReward.calculateReward(
+            _info.wasteAmount,
+            token.totalSupply()
+        );
+        _reward.rewardUnlockDate = uint64(block.timestamp + unlockDelay);
+
+        status[_tokenId] = RecyConstants.RECYCLE_INVALIDATED;
+
+        emit MetadataUpdate(_tokenId);
+        emit ReportInvalidated(_tokenId, _msgSender(), _info.auditDate);
     }
 
     /**

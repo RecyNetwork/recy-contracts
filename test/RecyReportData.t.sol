@@ -39,10 +39,10 @@ contract RecyReportDataHarness is RecyReportData {
         return generateMaterialsText(_materials);
     }
 
-    function exposed_generateValidationDateText(
-        uint256 _validationDate
+    function exposed_generateauditDateText(
+        uint256 _auditDate
     ) external pure returns (string memory) {
-        return generateValidationDateText(_validationDate);
+        return generateauditDateText(_auditDate);
     }
 
     function exposed_generateRecycleDateText(
@@ -204,19 +204,21 @@ contract RecyReportDataTest is Test, TestHelpers {
         );
     }
 
-    function test_generateValidationDateText() public view {
+    function test_generateauditDateText() public view {
         // Test with valid date
         uint256 validDate = 1234567890;
-        string memory result = recyReportData
-            .exposed_generateValidationDateText(validDate);
+        string memory result = recyReportData.exposed_generateauditDateText(
+            validDate
+        );
         assertTrue(
             bytes(result).length > 0,
             "Validation date text should not be empty"
         );
 
         // Test with zero date
-        string memory zeroResult = recyReportData
-            .exposed_generateValidationDateText(0);
+        string memory zeroResult = recyReportData.exposed_generateauditDateText(
+            0
+        );
         assertEq(
             bytes(zeroResult).length,
             0,
@@ -334,7 +336,7 @@ contract RecyReportDataTest is Test, TestHelpers {
             validator: address(0x123),
             recycler: address(0x456),
             recycleDate: 1234567890,
-            validationDate: 1234567890,
+            auditDate: 1234567890,
             wasteAmount: 1000
         });
 
@@ -393,7 +395,7 @@ contract RecyReportDataTest is Test, TestHelpers {
             validator: address(0x789),
             recycler: address(0xABC),
             recycleDate: 1234567890,
-            validationDate: 1234567890,
+            auditDate: 1234567890,
             wasteAmount: 1000
         });
 
@@ -448,10 +450,11 @@ contract RecyReportDataTest is Test, TestHelpers {
         assertTrue(contains(result, "Plastic"));
     }
 
-    function test_generateValidationDateTextWithMaxTimestamp() public view {
+    function test_generateauditDateTextWithMaxTimestamp() public view {
         uint256 maxTimestamp = type(uint256).max;
-        string memory result = recyReportData
-            .exposed_generateValidationDateText(maxTimestamp);
+        string memory result = recyReportData.exposed_generateauditDateText(
+            maxTimestamp
+        );
         assertTrue(bytes(result).length > 0);
     }
 
