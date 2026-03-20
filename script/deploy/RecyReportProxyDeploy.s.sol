@@ -25,7 +25,8 @@ contract RecyReportProxyDeploy is Script, ConfigManager {
         ProxyConfig memory config = getProxyConfig(chainId, proxyName);
 
         require(
-            networkConfig.factory != address(0), "Factory address not found in config. Please deploy the factory first."
+            networkConfig.factory != address(0),
+            "Factory address not found in config. Please deploy the factory first."
         );
 
         console.log("=== Using RecyReportFactory ===");
@@ -34,30 +35,47 @@ contract RecyReportProxyDeploy is Script, ConfigManager {
         console.log("Network:", networkConfig.name);
         console.log("Factory Address:", networkConfig.factory);
 
-        vm.startBroadcast();
-
         RecyReportFactory factory = RecyReportFactory(networkConfig.factory);
 
         console.log("\n=== Factory Information ===");
         console.log("Implementation:", factory.implementation());
         console.log("Data Contract:", factory.dataContract());
-        console.log("Total Deployed Proxies:", factory.getDeployedProxiesCount());
-
-        // Deploy proxy for recycler if they don't have one
-        console.log("\n=== Deploying RecyReportproxy Proxy ===");
-
-        address proxy = factory.deployProxy(
-            proxyName,
-            "RECY",
-            networkConfig.token,
-            networkConfig.protocol,
-            config.unlockDelay,
-            config.shareRecycler,
-            config.shareValidator,
-            config.shareGenerator,
-            config.shareProtocol
+        console.log(
+            "Total Deployed Proxies:",
+            factory.getDeployedProxiesCount()
         );
-        console.log("Success! Proxy deployed at:", proxy);
+
+        // Check if proxy with this name already exists
+        address existingProxy = factory.proxyByName(proxyName);
+
+        address proxy;
+
+        if (existingProxy != address(0)) {
+            console.log("\n=== Proxy already exists, reusing ===");
+            console.log("Proxy name:", proxyName);
+            console.log("Existing proxy address:", existingProxy);
+            proxy = existingProxy;
+        } else {
+            console.log("\n=== Deploying RecyReportproxy Proxy ===");
+
+            vm.startBroadcast();
+
+            proxy = factory.deployProxy(
+                proxyName,
+                "RECY",
+                networkConfig.token,
+                networkConfig.protocol,
+                config.unlockDelay,
+                config.shareRecycler,
+                config.shareValidator,
+                config.shareGenerator,
+                config.shareProtocol
+            );
+
+            vm.stopBroadcast();
+
+            console.log("Success! Proxy deployed at:", proxy);
+        }
 
         // Test the deployed proxy
         RecyReport recyReport1 = RecyReport(proxy);
@@ -67,11 +85,12 @@ contract RecyReportProxyDeploy is Script, ConfigManager {
         console.log("Unlock delay:", recyReport1.unlockDelay(), "seconds");
         console.log("Recycler share:", recyReport1.shareRecycler(), "%");
 
-        vm.stopBroadcast();
-
         // Display final statistics
         console.log("\n=== Final Factory Statistics ===");
-        console.log("Total deployed proxies:", factory.getDeployedProxiesCount());
+        console.log(
+            "Total deployed proxies:",
+            factory.getDeployedProxiesCount()
+        );
 
         // Get all deployed proxies
         address[] memory allProxies = factory.getAllDeployedProxies();
