@@ -22,19 +22,13 @@ contract ManageRoles is Script, ConfigManager {
         ProxyConfig memory proxyConfig = getProxyConfig(chainId, "default");
 
         // Ensure factory address is not zero
-        require(
-            networkConfig.factory != address(0),
-            "Factory address not found in config"
-        );
+        require(networkConfig.factory != address(0), "Factory address not found in config");
 
         factory = RecyReportFactory(networkConfig.factory);
 
         proxy = RecyReport(proxyConfig.proxy);
 
-        console.log(
-            "Using factory address from config:",
-            networkConfig.factory
-        );
+        console.log("Using factory address from config:", networkConfig.factory);
         console.log("Network:", networkConfig.name);
     }
 
@@ -186,20 +180,14 @@ contract ManageRoles is Script, ConfigManager {
         uint256 page = 0;
 
         while (true) {
-            (address[] memory proxies, uint256 total) = factory
-                .getDeployedProxiesPaginated(page, pageSize);
+            (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(page, pageSize);
 
             if (proxies.length == 0) break;
 
             console.log("Page", page, "- Total proxies:", total);
 
             for (uint256 i = 0; i < proxies.length; i++) {
-                console.log(
-                    "  Proxy",
-                    page * pageSize + i + 1,
-                    ":",
-                    proxies[i]
-                );
+                console.log("  Proxy", page * pageSize + i + 1, ":", proxies[i]);
             }
 
             if (proxies.length < pageSize) break;
@@ -224,11 +212,7 @@ contract ManageRoles is Script, ConfigManager {
         console.log("Proxy address:", address(proxy));
 
         // Apply admin roles
-        console.log(
-            "Granting admin roles to",
-            config.admins.length,
-            "addresses:"
-        );
+        console.log("Granting admin roles to", config.admins.length, "addresses:");
         for (uint256 i = 0; i < config.admins.length; i++) {
             address admin = config.admins[i];
             if (factory.hasAdminRole(address(proxy), admin)) {
@@ -240,11 +224,7 @@ contract ManageRoles is Script, ConfigManager {
         }
 
         // Apply recycler roles and fund wallets
-        console.log(
-            "Granting recycler roles to",
-            config.recyclers.length,
-            "addresses:"
-        );
+        console.log("Granting recycler roles to", config.recyclers.length, "addresses:");
         for (uint256 i = 0; i < config.recyclers.length; i++) {
             address recycler = config.recyclers[i];
             if (factory.hasRecyclerRole(address(proxy), recycler)) {
@@ -255,32 +235,19 @@ contract ManageRoles is Script, ConfigManager {
             }
 
             // Set fund wallet if available and not already set
-            if (
-                i < config.recyclerFunds.length &&
-                config.recyclerFunds[i] != address(0)
-            ) {
+            if (i < config.recyclerFunds.length && config.recyclerFunds[i] != address(0)) {
                 address fundWallet = config.recyclerFunds[i];
                 if (proxy.funds(recycler) == fundWallet) {
-                    console.log(
-                        "    Fund wallet already set for recycler:",
-                        fundWallet
-                    );
+                    console.log("    Fund wallet already set for recycler:", fundWallet);
                 } else {
-                    console.log(
-                        "    Setting fund wallet for recycler:",
-                        fundWallet
-                    );
+                    console.log("    Setting fund wallet for recycler:", fundWallet);
                     proxy.setFundsWallet(recycler, fundWallet);
                 }
             }
         }
 
         // Apply auditor roles and fund wallets
-        console.log(
-            "Granting auditor roles to",
-            config.auditors.length,
-            "addresses:"
-        );
+        console.log("Granting auditor roles to", config.auditors.length, "addresses:");
         for (uint256 i = 0; i < config.auditors.length; i++) {
             address auditor = config.auditors[i];
             if (factory.hasAuditorRole(address(proxy), auditor)) {
@@ -291,39 +258,23 @@ contract ManageRoles is Script, ConfigManager {
             }
 
             // Set fund wallet if available and not already set
-            if (
-                i < config.auditorFunds.length &&
-                config.auditorFunds[i] != address(0)
-            ) {
+            if (i < config.auditorFunds.length && config.auditorFunds[i] != address(0)) {
                 address fundWallet = config.auditorFunds[i];
                 if (proxy.funds(auditor) == fundWallet) {
-                    console.log(
-                        "    Fund wallet already set for auditor:",
-                        fundWallet
-                    );
+                    console.log("    Fund wallet already set for auditor:", fundWallet);
                 } else {
-                    console.log(
-                        "    Setting fund wallet for auditor:",
-                        fundWallet
-                    );
+                    console.log("    Setting fund wallet for auditor:", fundWallet);
                     proxy.setFundsWallet(auditor, fundWallet);
                 }
             }
         }
 
         // Apply emergency roles
-        console.log(
-            "Granting emergency roles to",
-            config.emergency.length,
-            "addresses:"
-        );
+        console.log("Granting emergency roles to", config.emergency.length, "addresses:");
         for (uint256 i = 0; i < config.emergency.length; i++) {
             address emergencyAddr = config.emergency[i];
             if (factory.hasEmergencyRole(address(proxy), emergencyAddr)) {
-                console.log(
-                    "  Emergency role already granted to:",
-                    emergencyAddr
-                );
+                console.log("  Emergency role already granted to:", emergencyAddr);
             } else {
                 console.log("  Granting emergency role to:", emergencyAddr);
                 factory.grantEmergencyRole(address(proxy), emergencyAddr);
