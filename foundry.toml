@@ -11,6 +11,7 @@ build_info = true
 extra_output = ["storageLayout"]
 libs = ["lib"]
 verbosity = 3
+evm_version = "cancun"
 optimizer = true
 optimizer_runs = 60_000
 fs_permissions = [{ access = "read-write", path = "./config" }]

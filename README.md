@@ -64,17 +64,6 @@ forge script script/deploy/RecyReportTrustedForwarderDeploy.s.sol:RecyReportTrus
 ##### Deploy on Sepolia
 
 ```sh
-forge script script/RecyReport.s.sol:RecyReportTestnetScript --account deployer --verify --broadcast --rpc-url sepolia
-```
-
-#### Fuji
-
-- make sure you have the `deployer` account set up in your wallets using `cast wallet import [name] --private-key [private-key]` with `[name]` being `deployer` and `[private-key]` being the private key of the sepolia funded deployer account.
-- make sure you have set up the `sepolia` network in `foundry.toml` with the correct RPC URL.
-
-##### Deploy on Sepolia
-
-```sh
 forge script script/deploy/RecyTokenDeploy.s.sol:RecyTokenDeploy --account deployer --verify --broadcast --rpc-url sepolia
 
 forge script script/deploy/RecyReportAttributesDeploy.s.sol:RecyReportAttributesDeploy --account deployer --verify --broadcast --rpc-url sepolia
@@ -213,6 +202,12 @@ forge build
 
 ```sh
 forge script script/deploy/RecyReportProxyUpgrade.s.sol:RecyReportProxyUpgrade --sig 'upgradeProxy(address,address)' --rpc-url sepolia --account deployer --broadcast <proxy> <implementation>
+```
+
+#### Update Data Contract
+
+```sh
+cast send <PROXY_ADDRESS> "setDataContract(address)" <NEW_DATA_CONTRACT_ADDRESS> --rpc-url sepolia --account deployer
 ```
 
 #### List All Proxies

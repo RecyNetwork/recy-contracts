@@ -41,8 +41,8 @@
     "contracts": {
       "token": "0xCAAb4DbD52901bac2CF5a02Fa2041F512C839072",
       "reportAttributes": "0x8a4B4c0919ab22EdF285326e012f623e850A9Ef0",
-      "reportSvg": "0x9fF1255abeB3Bf65419FedF1cBcAf426F00C7A40",
-      "reportData": "0x147dcF98335977505e07F0DCF3E5bD3f1385bece",
+      "reportSvg": "0x5529c9CD2869c6abc51523d411Bc0D8500b71227",
+      "reportData": "0x7CF63765aaFA47BadA0374c23b10EB91F00d46f4",
       "reportImplementation": "0xc2b9a91fD9789ebe93C22b5a4981c2d643C9e6B1",
       "factory": "0x957C90a7E568349005772072Cb75C3dfd3460B51"
     },
