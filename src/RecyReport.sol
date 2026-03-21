@@ -474,6 +474,11 @@ contract RecyReport is
         funds[_signatory] = _fundAddress;
     }
 
+    function setDataContract(address _dataAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_dataAddress == address(0)) revert RecyErrors.AddressInvalid();
+        data = RecyReportData(_dataAddress);
+    }
+
     // =========================================================================
     // ERC-2771 Meta-Transaction Support
     // =========================================================================

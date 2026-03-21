@@ -88,8 +88,6 @@ forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy --account dep
 forge script script/deploy/RecyReportFactoryDeploy.s.sol:RecyReportFactoryDeploy --account deployer --verify --broadcast --rpc-url sepolia
 
 proxy=default forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportProxyDeploy --account deployer --verify --broadcast --rpc-url sepolia
-
-forge script script/deploy/RecyReportTrustedForwarderDeploy.s.sol:RecyReportTrustedForwarderDeploy --account deployer --verify --broadcast --rpc-url sepolia
 ```
 
 ##### Role management
