@@ -102,12 +102,16 @@ contract RecyReportDataTest is Test, TestHelpers {
         // Test RECYCLE_REWARDED status
         string memory rewardedStatus = recyReportData.exposed_getStatus(4); // RecyConstants.RECYCLE_REWARDED
         assertEq(rewardedStatus, "Rewarded", "RECYCLE_REWARDED status mismatch");
+
+        // Test RECYCLE_INVALIDATED status
+        string memory invalidatedStatus = recyReportData.exposed_getStatus(5); // RecyConstants.RECYCLE_INVALIDATED
+        assertEq(invalidatedStatus, "Invalidated", "RECYCLE_INVALIDATED status mismatch");
     }
 
     function test_getStatus_invalidStatus() public {
         // Test invalid status should revert
         vm.expectRevert(RecyErrors.RecyReportInvalidStatus.selector);
-        recyReportData.exposed_getStatus(5); // Invalid status
+        recyReportData.exposed_getStatus(7); // Invalid status
 
         vm.expectRevert(RecyErrors.RecyReportInvalidStatus.selector);
         recyReportData.exposed_getStatus(0); // Invalid status
