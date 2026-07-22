@@ -7,6 +7,7 @@
     "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/"
   ],
   "editor.formatOnSave": true,
+  "solidity.formatter": "forge",
   "[solidity]": {
     "editor.defaultFormatter": "JuanBlanco.solidity"
   }
