@@ -56,6 +56,9 @@ script as a dry run at any time to check where you stand — it sends nothing.
 | `unlockDelay` | **60** seconds |
 | Shares (recycler/validator/generator/protocol) | 60 / 10 / 20 / 10 |
 | `nftNextId` | 66 |
+| `rewardTotal` (read 2026-08-11) | `10368075900090000000000` (~10,368.08 cRECY) |
+| `rewardClaimed` (read 2026-08-11) | `368065900000000000000` (~368.07 cRECY) |
+| Outstanding vs balance (read 2026-08-11) | ~10,000 cRECY owed vs ~10,009,631.93 cRECY held — **solvent, ~1000× headroom**. Matters because the Phase 2 implementation enforces `rewardTotal ≤ balance + rewardClaimed` at every validation; the deploy script re-reads these and **aborts with an exact top-up amount** if the invariant would fail at upgrade time |
 | `tokenURI(1)` | **fails `jq -e .`** — malformed JSON (§3.4) |
 
 ### Role holders (verified with `hasRole`)
@@ -71,6 +74,7 @@ script as a dry run at any time to check where you stand — it sends nothing.
 | `0x37EE01FF…C1e8` | ❌ | ✅ | ❌ | ❌ |
 | `0xF62DaAe4…6C89` | ✅ | ✅ | ✅ | ✅ |
 | `0x957C90a7…0B51` (the factory) | ✅ | ✅ | ✅ | ✅ |
+| `0xa8bf6EAa…5dac` ⚠ | ❌ | ❌ | ❌ | ✅ |
 
 **Four principals hold `RECYCLER` + `AUDITOR`.** That pair on one key is the complete-treasury-drain
 path of §3.1: mint your own report, validate your own report, collect recycler + validator +
@@ -79,6 +83,17 @@ needs no privileged key at all.
 
 Note that `config/contracts.json` previously **understated** this — it listed `0xF62DaAe4…` under
 `admins`/`emergency` only. The config has been corrected.
+
+> ⚠ **`0xa8bf6EAa…5dac` is an undocumented fifth `DEFAULT_ADMIN`.** Discovered from the proxy's
+> full `RoleGranted` event history (block `11279657`, granted by `0xF62DaAe4…`); it appears in no
+> config list and held no role when the §3.1 table was compiled. It has **no operational role**
+> (verified `hasRole`: RECYCLER ❌ AUDITOR ❌ EMERGENCY ❌) and has never sent an upgrade, so it is
+> most plausibly a team ops/deployer key — but admin = upgrade authority, so it must be resolved
+> in Phase 0: **confirm ownership and add it to `admins` in `config/contracts.json`, or revoke it
+> immediately** (`grantRole`/`revokeRole` from any other admin). For provenance: the proxy's full
+> `Upgraded` history is four events (birth `10486981` → `0xbfa18175…` → `0x25b4b744…` →
+> `0xc2b9a91f…`, blocks `10490667`–`10490774`), **all sent by `0x3402ce3b…`** — no foreign key has
+> ever changed this proxy's code, and no `DEFAULT_ADMIN` grant has ever been revoked.
 
 ---
 
@@ -109,7 +124,7 @@ Removes the Critical without shipping a line of Solidity.
 |---|---|---|---|
 | `0x3402ce3b…5BBd` | RECYCLER + AUDITOR + ADMIN + EMERGENCY | ADMIN + EMERGENCY | **Admin keys are not operators.** A key that can grant roles, upgrade the implementation and pause claiming must not also produce or authorise a payout. This address is additionally `addresses.protocol`, so it already receives the 10% protocol leg — leaving it the recycler and validator legs concentrates **100%** of a payout on one key. |
 | `0xF62DaAe4…6C89` | RECYCLER + AUDITOR + ADMIN + EMERGENCY | ADMIN + EMERGENCY | Same rule. Its operational grants were never even recorded in config. |
-| `0x957C90a7…0B51` (factory) | RECYCLER + AUDITOR + ADMIN + EMERGENCY | ADMIN + EMERGENCY | Least privilege. The grants come from `initialize` (`src/RecyReport.sol:138-141`) and are inert — the factory has no code path that uses them. |
+| `0x957C90a7…0B51` (factory) | RECYCLER + AUDITOR + ADMIN + EMERGENCY | ADMIN + EMERGENCY | Least privilege. The grants come from `initialize` (`src/RecyReport.sol:157-160`) and are inert — the factory has no code path that uses them. |
 | `0x5f3CD352…0b64` | RECYCLER + AUDITOR | **RECYCLER** | The one non-admin key holding the pair, i.e. the least supervised. It keeps the *production* capability and loses the *authorisation* capability: `validateRecyReport` is what creates the reward obligation and inflates `rewardTotal`, which in turn drives `RecyDistribution` minting (§3.1, §3.5). Give the unsupervised key the side that cannot mint money. |
 | `0xBdF566d0…`, `0xcC57F5c5…`, `0x607AAD17…` | RECYCLER | RECYCLER | unchanged |
 | `0x20BAe19A…`, `0x37EE01FF…` | AUDITOR | AUDITOR | unchanged |
@@ -300,6 +315,12 @@ CONFIRM_DEPLOY=true forge script \
 ```
 
 This script **only deploys**. It never upgrades — the upgrade is a separate, deliberate transaction.
+Besides the Phase-1 ordering check, the dry run also performs the **solvency pre-flight**: it reads
+`rewardTotal`, `rewardClaimed` and the pool balance from the live proxy and aborts if
+`rewardTotal − rewardClaimed > balance`, because from the moment the upgrade lands the new
+validate-time check enforces exactly that inequality — upgrading an insolvent pool would halt every
+`validateRecyReport` until someone tops it up. The failure message names the exact shortfall to
+transfer before re-running.
 
 ### 3. Upgrade the proxy
 
@@ -336,6 +357,66 @@ on-call.
 
 `unlockDelay` is read at validation time (`:420`), so the change applies to reports validated after
 it lands; already-validated reports keep their existing unlock date.
+
+### 5. Know that the funding model inverts at this upgrade
+
+Before Phase 2, an operator could validate first and top the pool up afterwards — the only check
+was at claim time. After Phase 2, `validateRecyReport` **refuses any promise the pool cannot
+already cover** (`InsufficientRewardBalance`), and a refused validation adds nothing to
+`rewardTotal`, so a later top-up does not retroactively approve it — the auditor simply re-runs
+`validateRecyReport` after the pool is funded. Consequences:
+
+- **Fund BEFORE validating.** Transfer cRECY to the proxy (or, once `RecyDistribution` is deployed
+  and owns the token, call its owner-gated, cap-bounded `fundReport(proxy, amount)`) ahead of the
+  validation that needs it.
+- `RecyDistribution`'s shortfall-driven paths (`mintTokensToReport`, `mintTokensToAllReports`)
+  can never fire against the upgraded proxy — `outstanding ≤ balance` is enforced at every
+  validation, so the gap they mint against cannot open. They exist for legacy/pre-upgrade gaps
+  only; `fundReport` is the ongoing funding path.
+
+---
+
+## Rollback
+
+Both phases are individually reversible, but **only in the reverse of the deploy order**:
+implementation first, data second. The ordering constraint at the top of this document has a
+mirror-image trap here.
+
+### Rolling back Phase 2 (implementation) — safe, one call
+
+```bash
+cast send $F "upgradeProxy(address,address)" $P 0xc2b9a91fD9789ebe93C22b5a4981c2d643C9e6B1
+```
+
+This is layout-safe by construction: the new implementation **appends no storage variables** — the
+layout is the same 13 slots in the same order (`forge inspect RecyReport storage-layout`, recorded
+in §8.1 of the plan). Every slot the old implementation reads means exactly what it meant before
+the upgrade, so downgrading cannot corrupt state. The old implementation never calls
+`data.materialsCount()`, and the new `RecyReportData` still serves every function the old
+implementation uses — so old implementation + new data is a working pair (it is exactly the state
+between Phase 1 and Phase 2).
+
+What you give back up: every Phase 2 guard (dual control, solvency, waste cap, status guard,
+self-service `setFundsWallet`, `setUnlockDelay`). If the rollback is more than momentary, treat the
+Phase 0 role separation as the only remaining defence against §3.1 and do not re-grant any
+overlapping roles while downgraded.
+
+### Rolling back Phase 1 (data contract) — ⚠ ONLY after Phase 2 is rolled back
+
+```bash
+cast send $P "setDataContract(address)" 0x7CF63765aaFA47BadA0374c23b10EB91F00d46f4   # old RecyReportData
+```
+
+**Never do this while the Phase 2 implementation is live.** The upgraded implementation calls
+`data.materialsCount()` on every write path (the §3.3 material-bounds check); the old
+`RecyReportData` does not have that function, so pointing a Phase-2 proxy back at the old data
+contract **bricks `mintRecyReportResult` and `setRecyReportResult` entirely** until the data
+contract is set forward again. An operator troubleshooting bad metadata after both phases are live
+must roll back the implementation first — or better, deploy a corrected `RecyReportData` and move
+forward, since `setDataContract` is repeatable and cheap.
+
+Rolling back Phase 1 also restores the malformed-JSON `tokenURI` (§3.4) and the metadata brick on
+out-of-range material ids (§3.3): it is a last resort, not a clean state.
 
 ---
 
@@ -547,7 +628,7 @@ Both behaviours can be overridden, deliberately and visibly:
 
 | Flag | Meaning |
 |---|---|
-| `ALLOW_STALE_FACTORY=true` | Proceed despite the blessed-code mismatch. The script prints the two remediation calls and marks them **mandatory**. |
+| `ALLOW_STALE_FACTORY=true` | Proceed despite the blessed-code mismatch. The script prints the three remediation calls (`grantAdminRole` → `setDataContract` → `upgradeProxy`) and marks them **mandatory**. |
 | `ALLOW_PROXY_REUSE=true` | Adopt the pre-existing proxy registered under this name. Verify its provenance first. |
 
 If a new plant is genuinely unavoidable before Phase 3, then **immediately** after `deployProxy`,
@@ -580,14 +661,15 @@ cast send $F "upgradeProxy(address,address)" <new proxy> <blessed reportImplemen
 
 - **`RecyDistribution` is not deployed** and has no deploy script. Its mint path trusts `rewardTotal`
   (§3.1, §3.5), so it must not ship until those invariants hold. Nothing here deploys it.
-- **Factory v2 (`RecyReportFactoryV2`) needs a separate migration**, and it is load-bearing, not
-  cleanup — see §5a. Two hard requirements:
-  1. It **must** ship `registerExistingProxy(address,string)`. Every one of the factory's privileged
-     paths gates on `_isDeployedProxy`, and there is no registration entry point, so **a replacement
-     factory can never adopt `0x91e3…66Da`** without it.
-  2. It should read `implementation` / `dataContract` from owner-settable storage (with events)
-     rather than `immutable`, so future fixes propagate without yet another factory migration.
-  Until it exists, "the vulnerability is fixed" is true only of proxy `0x91e3…66Da`.
+- **Factory v2 migration.** `src/RecyReportFactoryV2.sol` now exists and satisfies what this
+  section originally demanded of it: owner-gated `registerExistingProxy(address,string)` (without
+  which no replacement factory could ever adopt `0x91e3…66Da`), owner-settable
+  `implementation`/`dataContract` with events, `Ownable2Step`, a disabled `renounceOwnership`, and
+  a self-revocation guard. The **migration itself remains out of scope here**: the authoritative
+  sequence — including the transfer-ownership-to-multisig precondition (step 0) and the
+  registration-is-permanent warning — is the numbered list in the V2 contract header, and
+  `test_migrateLiveProxyFromLegacyFactoryToV2` simulates it end to end against a real V1 factory.
+  Until that migration runs, new-plant deployments stay frozen per §5a.
 - **`recy-api` changes** are sequenced in §5b: `POST /set-result` starts returning
   409 `REPORT_INVALID_STATUS` for non-`CREATED` tokens at the Phase 2 upgrade, and status `2` may be
   added to `FENCEABLE_STATUSES` only *after* the upgrade is live, version-scoped per proxy.

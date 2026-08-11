@@ -27,7 +27,9 @@ contract RecyReportData {
 
     /**
      * @notice Initializes the RecyReportData contract with required dependency contracts
-     * @dev Sets immutable references to attributes and SVG generation contracts
+     * @dev Sets immutable references to attributes and SVG generation contracts. Both addresses must be
+     *      non-zero and the attributes contract must expose a non-empty material catalogue, otherwise
+     *      deployment reverts.
      * @param _attributesAddress The address of the RecyReportAttributes contract for material data
      * @param _svgAddress The address of the RecyReportSvg contract for image generation
      */
@@ -35,6 +37,16 @@ contract RecyReportData {
         if (_attributesAddress == address(0)) {
             revert RecyErrors.AddressInvalid();
         }
+        if (_svgAddress == address(0)) {
+            revert RecyErrors.AddressInvalid();
+        }
+        // RecyReport bounds material ids at write time by reading materialsCount(). Reject an
+        // attributes contract that cannot answer that query, or whose catalogue is empty, at deploy
+        // time rather than letting every report write revert after the report upgrade.
+        if (RecyReportAttributes(_attributesAddress).getMaterials().length == 0) {
+            revert RecyErrors.AddressInvalid();
+        }
+
         attributes = RecyReportAttributes(_attributesAddress);
         svg = RecyReportSvg(_svgAddress);
     }
@@ -70,9 +82,8 @@ contract RecyReportData {
                         '", "description":"This is a Recycle Report NFT that was obtained by recycling materials."',
                         ',"image":"',
                         image,
-                        '","attributes": [{"trait_type":"Status","value":"',
+                        '","attributes": [',
                         generateStatusText(_status),
-                        '"}',
                         generateWasteAmountText(_info.wasteAmount),
                         generateRecycleDateText(_info.recycleDate),
                         generateauditDateText(_info.auditDate),
@@ -118,6 +129,17 @@ contract RecyReportData {
         );
     }
 
+    /**
+     * @notice Returns the number of materials registered in the attributes catalogue
+     * @dev Derived from RecyReportAttributes.getMaterials, which the currently deployed attributes
+     *      contract also implements; consumed by RecyReport to reject out-of-range material ids at
+     *      write time
+     * @return uint256 Number of catalogue entries; valid material ids are 0 to count - 1
+     */
+    function materialsCount() external view returns (uint256) {
+        return attributes.getMaterials().length;
+    }
+
     function generateSvg(uint8 _status) internal view returns (string memory) {
         if (_status == RecyConstants.RECYCLE_CREATED) {
             return svg.getTrashcan();
@@ -134,10 +156,20 @@ contract RecyReportData {
         returns (string memory materials)
     {
         for (uint256 i = 0; i < _materials.length; i++) {
+            // Read-time tolerance: an id outside the attributes catalogue would otherwise revert and
+            // permanently brick both tokenURI and tokenJson for the token, which is unrecoverable
+            // because materials are push-only and have no repair path.
+            string memory materialName;
+            try attributes.getMaterial(_materials[i].material) returns (string memory name) {
+                materialName = name;
+            } catch {
+                materialName = "Unknown Material";
+            }
+
             materials = string.concat(
                 materials,
                 ',{"trait_type":"',
-                attributes.getMaterial(_materials[i].material),
+                materialName,
                 '","value":',
                 Strings.toString(_materials[i].amountRecycled),
                 ',"max_value":',
@@ -206,8 +238,10 @@ contract RecyReportData {
             return "Invalidated";
         } else if (_status == RecyConstants.RECYCLE_REWARDED) {
             return "Rewarded";
+        } else if (_status == RecyConstants.RECYCLE_FLAGGED) {
+            return "Flagged";
         } else {
-            revert RecyErrors.RecyReportInvalidStatus();
+            return "Unknown";
         }
     }
 }

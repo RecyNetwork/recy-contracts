@@ -15,9 +15,14 @@
     },
     "proxies": {
       "default": {
+        "_notes": {
+          "roleSeparation": "No address may appear in both `recyclers` and `auditors`. RECYCLER produces reports, AUDITOR authorises the payout; one key holding both is the treasury-drain path of docs/plan/security-audit-remediation.md section 3.1. script/ManageRoles.s.sol aborts if this file violates the rule, and addresses in `admins`/`emergency` must not appear in either operational list.",
+          "fundWallets": "ADVISORY ONLY. `recyclerFunds`/`auditorFunds` record the wallet each principal is expected to register; no script applies them. `RecyReport.setFundsWallet(address)` is self-service, so each principal must call it from its own key.",
+          "unlockDelay": "3600 on the local dev chain (the on-chain minimum: the Phase 2 implementation enforces MIN_UNLOCK_DELAY = 1 hour at BOTH initialize and setUnlockDelay, so 60 is no longer deployable). Local claim flows warp time anyway - script/PopulateRecyReport.s.sol warps unlockDelay + 300 automatically. Public networks use 86400."
+        },
         "address": "0x94099942864EA81cCF197E9D71ac53310b1468D8",
         "settings": {
-          "unlockDelay": 60,
+          "unlockDelay": 3600,
           "shareRecycler": 60,
           "shareValidator": 10,
           "shareGenerator": 20,
@@ -48,39 +53,41 @@
     },
     "proxies": {
       "default": {
+        "_notes": {
+          "roleSeparation": "No address may appear in both `recyclers` and `auditors`. RECYCLER produces reports, AUDITOR authorises the payout; one key holding both is the treasury-drain path of docs/plan/security-audit-remediation.md section 3.1. script/ManageRoles.s.sol aborts if this file violates the rule.",
+          "roleSplit": "Phase 0 of the security remediation. Four principals held RECYCLER+AUDITOR live (0x3402ce3b, 0x5f3CD352, 0xF62DaAe4 and the factory 0x957C90a7); this file previously understated that by listing 0xF62DaAe4 under admins/emergency only. Admin keys (0x3402ce3b, 0xF62DaAe4) and the factory now hold no operational role at all; 0x5f3CD352 keeps RECYCLER and loses AUDITOR. Rationale in docs/plan/remediation-runbook.md.",
+          "notInAnyList": "0xF62DaAe4c3f9Fadf689F767716a82dFEe5026C89 and the factory 0x957C90a7E568349005772072Cb75C3dfd3460B51 hold RECYCLER+AUDITOR on chain but appear in no operational list here. Both revocations are in the runbook; `ManageRoles.checkSeparationOnChain()` audits them.",
+          "fundWallets": "ADVISORY ONLY. `recyclerFunds`/`auditorFunds` record the wallet each principal is expected to register; no script applies them. After the Phase 2 upgrade `RecyReport.setFundsWallet(address)` is self-service, so each principal must call it from its own key. `RecyReportFactory.setRecyclerFund`/`setAuditorFund` revert after that upgrade.",
+          "blessedAddresses": "`contracts.reportImplementation` and `contracts.reportData` are the blessed pair. script/deploy/RecyReportProxyDeploy.s.sol asserts the factory's immutables match them and aborts otherwise (security-audit-remediation.md section 5a). Update both entries as Phase 1 and Phase 2 land.",
+          "unlockDelay": "Raised 60 -> 86400 (24h). This value only governs NEW proxies deployed through the factory. The live proxy keeps 60s until the Phase 2 upgrade ships setUnlockDelay(uint64), after which an admin must call setUnlockDelay(86400)."
+        },
         "address": "0x91e3E6F9672E985100b8F0798d2cB55fa53c66Da",
         "settings": {
-          "unlockDelay": 60,
+          "unlockDelay": 86400,
           "shareRecycler": 60,
           "shareValidator": 10,
           "shareGenerator": 20,
           "shareProtocol": 10
         },
         "recyclers": [
-          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
           "0xBdF566d020e206456534e873f5EF385A762aC4FC",
           "0xcC57F5c55A4dd7D183FF530C576ee9B4Af4b9530",
           "0x607AAD172555dE7bA7715fc59A7b3cB023D4140A",
           "0x5f3CD35206c0526b837766d48D022522a9910b64"
         ],
         "recyclerFunds": [
-          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
           "0xBdF566d020e206456534e873f5EF385A762aC4FC",
           "0xcC57F5c55A4dd7D183FF530C576ee9B4Af4b9530",
           "0x607AAD172555dE7bA7715fc59A7b3cB023D4140A",
           "0x5f3CD35206c0526b837766d48D022522a9910b64"
         ],
         "auditors": [
-          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
           "0x20BAe19A7B6Faf0bFc0fd7F29548FB803F1E8FD9",
-          "0x37EE01FFbD857Acc9FBE2ee4090816B224b2C1e8",
-          "0x5f3CD35206c0526b837766d48D022522a9910b64"
+          "0x37EE01FFbD857Acc9FBE2ee4090816B224b2C1e8"
         ],
         "auditorFunds": [
-          "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
           "0x20BAe19A7B6Faf0bFc0fd7F29548FB803F1E8FD9",
-          "0x37EE01FFbD857Acc9FBE2ee4090816B224b2C1e8",
-          "0x5f3CD35206c0526b837766d48D022522a9910b64"
+          "0x37EE01FFbD857Acc9FBE2ee4090816B224b2C1e8"
         ],
         "admins": [
           "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",

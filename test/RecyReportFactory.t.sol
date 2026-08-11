@@ -383,13 +383,24 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         assertEq(report.protocolAddress(), address(0));
     }
 
+    function test_deployProxyRejectsOutOfBoundsUnlockDelay() public {
+        // A proxy must not be BORN outside the unlock-delay bounds: type(uint64).max used to be
+        // accepted here and wrapped the unlock-date sum at validation into the past (no delay at
+        // all). initialize now enforces the same bounds as setUnlockDelay.
+        vm.expectRevert(RecyErrors.UnlockDelayOutOfBounds.selector);
+        factory.deployProxy("max-values-proxy", "RECY", address(token), protocolAddress, type(uint64).max, 100, 0, 0, 0);
+
+        vm.expectRevert(RecyErrors.UnlockDelayOutOfBounds.selector);
+        factory.deployProxy("zero-delay-proxy", "RECY", address(token), protocolAddress, 0, 100, 0, 0, 0);
+    }
+
     function test_deployProxyWithMaxValues() public {
         address proxy = factory.deployProxy(
-            "max-values-proxy", "RECY", address(token), protocolAddress, type(uint64).max, 100, 0, 0, 0
+            "max-values-proxy", "RECY", address(token), protocolAddress, RecyConstants.MAX_UNLOCK_DELAY, 100, 0, 0, 0
         );
 
         RecyReport report = RecyReport(proxy);
-        assertEq(report.unlockDelay(), type(uint64).max);
+        assertEq(report.unlockDelay(), RecyConstants.MAX_UNLOCK_DELAY);
         assertEq(report.shareRecycler(), 100);
     }
 
@@ -803,127 +814,43 @@ contract RecyReportFactoryTest is Test, TestHelpers {
     }
 
     // ===== FUND WALLET MANAGEMENT TESTS =====
+    //
+    // The factory's setRecyclerFund/setAuditorFund passthroughs were removed: they let the factory
+    // owner redirect an already-earned payout, since funds[] is resolved at claim time while the
+    // reward is snapshotted at validation. Fund wallets are now self-service on the proxy and the
+    // factory has no part in them. What is still worth asserting here is that role grants issued
+    // through the factory coexist with proxy-side self-service fund wallets, and that holding the
+    // factory owner key buys no access to anyone else's payout destination.
 
-    function test_setRecyclerFund() public {
-        address proxy = deployTestProxy();
-        address recycler = address(0x1001);
-        address fundWallet = address(0x2001);
-
-        // Set recycler fund wallet
-        factory.setRecyclerFund(proxy, recycler, fundWallet);
-
-        // Verify fund wallet was set
-        RecyReport recyReport = RecyReport(proxy);
-        assertEq(recyReport.funds(recycler), fundWallet);
-    }
-
-    function test_setAuditorFund() public {
-        address proxy = deployTestProxy();
-        address auditor = address(0x1002);
-        address fundWallet = address(0x2002);
-
-        // Set auditor fund wallet
-        factory.setAuditorFund(proxy, auditor, fundWallet);
-
-        // Verify fund wallet was set
-        RecyReport recyReport = RecyReport(proxy);
-        assertEq(recyReport.funds(auditor), fundWallet);
-    }
-
-    function test_setFundWalletOnlyOwner() public {
-        address proxy = deployTestProxy();
-        address user = address(0x999);
-        address fundWallet = address(0x888);
-
-        // Non-owner cannot set fund wallets
-        vm.prank(recycler1);
-        vm.expectRevert();
-        factory.setRecyclerFund(proxy, user, fundWallet);
-
-        vm.prank(recycler1);
-        vm.expectRevert();
-        factory.setAuditorFund(proxy, user, fundWallet);
-    }
-
-    function test_setFundWalletInvalidProxy() public {
-        address fakeProxy = address(0x777);
-        address user = address(0x999);
-        address fundWallet = address(0x888);
-
-        // Should revert for non-deployed proxy
-        vm.expectRevert("Proxy not deployed by factory");
-        factory.setRecyclerFund(fakeProxy, user, fundWallet);
-
-        vm.expectRevert("Proxy not deployed by factory");
-        factory.setAuditorFund(fakeProxy, user, fundWallet);
-    }
-
-    function test_setFundWalletZeroProxyAddress() public {
-        address user = address(0x999);
-        address fundWallet = address(0x888);
-
-        // Should revert for zero proxy address
-        vm.expectRevert("Invalid proxy address");
-        factory.setRecyclerFund(address(0), user, fundWallet);
-
-        vm.expectRevert("Invalid proxy address");
-        factory.setAuditorFund(address(0), user, fundWallet);
-    }
-
-    function test_setFundWalletZeroUserAddress() public {
-        address proxy = deployTestProxy();
-        address fundWallet = address(0x888);
-
-        // Should revert for zero user address
-        vm.expectRevert("Invalid recycler address");
-        factory.setRecyclerFund(proxy, address(0), fundWallet);
-
-        vm.expectRevert("Invalid auditor address");
-        factory.setAuditorFund(proxy, address(0), fundWallet);
-    }
-
-    function test_setFundWalletIntegrationWithRoles() public {
+    function test_fundWalletsAreSelfServiceOnFactoryDeployedProxy() public {
         address proxy = deployTestProxy();
         address recycler = address(0x1001);
         address auditor = address(0x1002);
         address recyclerFund = address(0x2001);
         address auditorFund = address(0x2002);
 
-        // Grant roles first
         factory.grantRecyclerRole(proxy, recycler);
         factory.grantAuditorRole(proxy, auditor);
 
-        // Set fund wallets
-        factory.setRecyclerFund(proxy, recycler, recyclerFund);
-        factory.setAuditorFund(proxy, auditor, auditorFund);
-
-        // Verify both roles and fund wallets are set
         RecyReport recyReport = RecyReport(proxy);
+
+        // Each principal sets its own destination.
+        vm.prank(recycler);
+        recyReport.setFundsWallet(recyclerFund);
+        vm.prank(auditor);
+        recyReport.setFundsWallet(auditorFund);
+
         assertTrue(recyReport.hasRole(recyReport.RECYCLER_ROLE(), recycler));
         assertTrue(recyReport.hasRole(recyReport.AUDITOR_ROLE(), auditor));
         assertEq(recyReport.funds(recycler), recyclerFund);
         assertEq(recyReport.funds(auditor), auditorFund);
-    }
 
-    function test_updateFundWallet() public {
-        address proxy = deployTestProxy();
-        address user = address(0x1001);
-        address fundWallet1 = address(0x2001);
-        address fundWallet2 = address(0x2002);
-
-        // Set initial fund wallet
-        factory.setRecyclerFund(proxy, user, fundWallet1);
-
-        RecyReport recyReport = RecyReport(proxy);
-        assertEq(recyReport.funds(user), fundWallet1);
-
-        // Update fund wallet
-        factory.setRecyclerFund(proxy, user, fundWallet2);
-        assertEq(recyReport.funds(user), fundWallet2);
-
-        // Clear fund wallet (set to zero)
-        factory.setRecyclerFund(proxy, user, address(0));
-        assertEq(recyReport.funds(user), address(0));
+        // address(this) is the factory owner. Its write lands on its own entry only; the
+        // recycler's destination is untouched.
+        recyReport.setFundsWallet(address(0xDEAD));
+        assertEq(recyReport.funds(recycler), recyclerFund);
+        assertEq(recyReport.funds(auditor), auditorFund);
+        assertEq(recyReport.funds(address(this)), address(0xDEAD));
     }
 
     // ===== END FUND WALLET MANAGEMENT TESTS =====

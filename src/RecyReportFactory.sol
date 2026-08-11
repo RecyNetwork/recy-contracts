@@ -9,6 +9,14 @@ import {RecyReport} from "./RecyReport.sol";
  * @title RecyReportFactory
  * @notice Factory contract for deploying RecyReport proxy instances
  * @dev Each deployment creates a new RecyReport proxy with a specified recycler
+ *
+ * @custom:source-divergence This contract is NOT upgradeable, so the source below no longer matches
+ * the bytecode already deployed at 0x957C90a7E568349005772072Cb75C3dfd3460B51. `setRecyclerFund` and
+ * `setAuditorFund` were removed from source as part of the payout-diversion fix, but they remain in
+ * the deployed bytecode and will still appear on a block explorer. They are permanently
+ * non-functional against any proxy running the upgraded RecyReport implementation: they called the
+ * two-argument `setFundsWallet(address,address)`, whose selector no longer exists. Fund wallets are
+ * now self-service — each account calls the one-argument `setFundsWallet(address)` from its own key.
  */
 contract RecyReportFactory is Ownable {
     /// @notice The RecyReport implementation contract
@@ -440,35 +448,5 @@ contract RecyReportFactory is Ownable {
             }
         }
         return false;
-    }
-
-    // ===== FUND WALLET MANAGEMENT FUNCTIONS =====
-
-    /**
-     * @notice Set fund wallet for a recycler on a deployed proxy
-     * @param proxy The proxy address
-     * @param recycler The recycler address
-     * @param fundWallet The fund wallet address (can be zero to clear)
-     */
-    function setRecyclerFund(address proxy, address recycler, address fundWallet) external onlyOwner {
-        require(proxy != address(0), "Invalid proxy address");
-        require(recycler != address(0), "Invalid recycler address");
-        require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
-
-        RecyReport(proxy).setFundsWallet(recycler, fundWallet);
-    }
-
-    /**
-     * @notice Set fund wallet for an auditor on a deployed proxy
-     * @param proxy The proxy address
-     * @param auditor The auditor address
-     * @param fundWallet The fund wallet address (can be zero to clear)
-     */
-    function setAuditorFund(address proxy, address auditor, address fundWallet) external onlyOwner {
-        require(proxy != address(0), "Invalid proxy address");
-        require(auditor != address(0), "Invalid auditor address");
-        require(_isDeployedProxy(proxy), "Proxy not deployed by factory");
-
-        RecyReport(proxy).setFundsWallet(auditor, fundWallet);
     }
 }
