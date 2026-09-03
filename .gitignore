@@ -10,8 +10,17 @@ out/
 # OS
 .DS_Store
 
-# Docs
-docs/
+# Docs — scratch docs stay local, but docs/plan/ is tracked on purpose: it holds
+# the security remediation plan and the operator runbook, whose deploy-ordering
+# constraint must not live only in one working tree.
+# NOTE: this must be `docs/*`, not `docs/` — git cannot re-include anything
+# beneath an excluded DIRECTORY, so a bare `docs/` would defeat the negation.
+docs/*
+!docs/plan/
+# Vendored library docs (OZ + forge-std live in lib/ as plain tracked files, not
+# submodules). Their docs/ dirs were never tracked — the old unanchored `docs/`
+# rule caught them; keep ignoring them now that the docs rule is root-anchored.
+lib/**/docs/
 
 # Dotenv file
 .env

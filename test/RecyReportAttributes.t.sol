@@ -82,7 +82,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         string[] memory shapes = recyReportAttributes.getRecycleShapes();
 
         // spot‐check lengths and contents
-        assertEq(mats.length, 11);
+        assertEq(mats.length, 13);
         assertEq(mats[0], "Undefined");
         assertEq(types.length, 7);
         assertEq(types[0], "Undefined");
@@ -101,11 +101,85 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     /// @notice Test getMaterials returns the complete array
     function test_getMaterials_fullArray() public view {
         string[] memory mats = recyReportAttributes.getMaterials();
-        // expected length per source: 11
-        assertEq(mats.length, 11, "getMaterials length");
+        // expected length per source: 13
+        assertEq(mats.length, 13, "getMaterials length");
         // spot‐check first and last
         assertEq(mats[0], "Undefined", "materials[0]");
-        assertEq(mats[10], "Chemical", "materials[10]");
+        assertEq(mats[12], "Solid Inert Industrial Waste", "materials[12]");
+    }
+
+    /// @notice The full 13-entry catalogue, byte-exact, including the duplicate "Glass" at
+    ///         indices 2 AND 5. 64 live reports store raw indices, so deduplicating or
+    ///         reordering silently relabels every stored index >= the removed slot on the next
+    ///         attributes deployment (plan §3.8/§6: DO NOT RENUMBER). A well-intentioned dedupe
+    ///         must fail here, not in production metadata.
+    function test_materialCatalogueOrderIsFrozen() public view {
+        string[] memory mats = recyReportAttributes.getMaterials();
+        assertEq(mats.length, 13, "catalogue length");
+        assertEq(mats[0], "Undefined", "material[0]");
+        assertEq(mats[1], "Plastic", "material[1]");
+        assertEq(mats[2], "Glass", "material[2]");
+        assertEq(mats[3], "Metal", "material[3]");
+        assertEq(mats[4], "Paper", "material[4]");
+        assertEq(mats[5], "Glass", "material[5] - deliberate live duplicate, do not dedupe");
+        assertEq(mats[6], "E-Waste", "material[6]");
+        assertEq(mats[7], "Organic", "material[7]");
+        assertEq(mats[8], "Textile", "material[8]");
+        assertEq(mats[9], "Hazardous", "material[9]");
+        assertEq(mats[10], "Chemical", "material[10]");
+        assertEq(mats[11], "Leachate", "material[11]");
+        assertEq(mats[12], "Solid Inert Industrial Waste", "material[12]");
+    }
+
+    /// @notice Test getMaterialsCount reports the catalogue size and tracks additions
+    function test_getMaterialsCount() public {
+        assertEq(recyReportAttributes.getMaterialsCount(), 13, "initial materials count");
+        assertEq(
+            recyReportAttributes.getMaterialsCount(),
+            recyReportAttributes.getMaterials().length,
+            "getMaterialsCount vs getMaterials length"
+        );
+
+        recyReportAttributes.addMaterial("NewMaterial", "<svg>new</svg>");
+        assertEq(recyReportAttributes.getMaterialsCount(), 14, "materials count after addMaterial");
+    }
+
+    /// @notice Indices 11 and 12 carry the real SVG paths held by the deployed contract.
+    ///         Flattening them back to the shared placeholder would lose live data on any
+    ///         future attributes deployment.
+    function test_materialSvgRealPathsPreserved() public view {
+        string[] memory svgs = recyReportAttributes.getMaterialSvgs();
+        assertEq(svgs.length, 13, "materialSvg length");
+
+        string memory placeholder = svgs[0];
+        assertEq(bytes(placeholder).length, 85, "placeholder length");
+        for (uint256 i = 0; i <= 10; i++) {
+            assertEq(svgs[i], placeholder, "indices 0-10 share the placeholder");
+        }
+
+        // Content hashes, not just lengths: these two entries were recovered from live state
+        // via cast reads precisely because a naive redeploy would have destroyed them; a
+        // length-preserving corruption must fail here too.
+        assertEq(bytes(svgs[11]).length, 1150, "materialSvg[11] length");
+        assertEq(bytes(svgs[12]).length, 1204, "materialSvg[12] length");
+        assertEq(
+            keccak256(bytes(svgs[11])),
+            0x12811bfbdf2162f283ae1b05728b8f1a52b74d6693eca58e870a3c3341ee3ecd,
+            "materialSvg[11] content hash"
+        );
+        assertEq(
+            keccak256(bytes(svgs[12])),
+            0x557e469a0efab259c82afd850a024bab8028310d994c1c75e92ffd8a8b04bf83,
+            "materialSvg[12] content hash"
+        );
+        assertTrue(
+            keccak256(bytes(svgs[11])) != keccak256(bytes(placeholder)),
+            "materialSvg[11] must not be the placeholder"
+        );
+        assertTrue(
+            keccak256(bytes(svgs[12])) != keccak256(bytes(svgs[11])),
+            "materialSvg[12] must be distinct from materialSvg[11]"
+        );
     }
 
     /// @notice Test getRecycleTypes returns the complete array

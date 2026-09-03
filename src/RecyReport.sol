@@ -2,6 +2,8 @@
 pragma solidity ^0.8.34;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
@@ -41,6 +43,8 @@ contract RecyReport is
     event ReportValidated(uint256 indexed tokenId, address indexed validator, uint64 auditDate, uint128 rewardAmount);
     event ReportInvalidated(uint256 indexed tokenId, address indexed validator, uint64 inauditDate);
     event RewardClaimed(uint256 tokenId, address indexed claimant, uint128 rewardAmount);
+    event UnlockDelayChanged(uint64 oldUnlockDelay, uint64 newUnlockDelay);
+    event ProtocolAddressChanged(address indexed oldProtocolAddress, address indexed newProtocolAddress);
 
     address public protocolAddress;
 
@@ -51,8 +55,23 @@ contract RecyReport is
     uint8 public shareGenerator; // Percentage of the reward that goes to the generator
     uint8 public shareProtocol; // Percentage of the reward that goes to the protocol
 
+    /// @notice Cumulative reward promised by every validation, in token wei
+    /// @dev Invariant: `rewardTotal - rewardClaimed == outstanding claimable obligations`, i.e. the
+    ///      total still owed to holders of reports sitting in RECYCLE_VALIDATED. `rewardTotal` only
+    ///      ever grows, in validateRecyReport; `rewardClaimed` only ever grows, in
+    ///      claimRecyReportReward, so the difference falls back to zero as reports are paid out.
+    ///      Invalidation never touches either: it can only act on a report that was never validated,
+    ///      so nothing was ever added for it and there is nothing to release.
+    ///      RecyDistribution mints real cRECY against this difference, so it is a supply invariant.
     uint256 public rewardTotal;
+
+    /// @custom:deprecated Never read or written. Retained solely to preserve the UUPS storage layout
+    /// of the live proxy; removing it would shift `rewardClaimed` and every mapping below it.
+    /// Do not delete, do not repurpose without an explicit storage-layout review.
     uint256 public rewardMinted;
+
+    /// @notice Cumulative reward actually paid out, in token wei
+    /// @dev See the invariant documented on `rewardTotal`.
     uint256 public rewardClaimed;
 
     mapping(uint256 => RecyTypes.RecyInfo) public info;
@@ -111,6 +130,12 @@ contract RecyReport is
     ) public initializer {
         if (_tokenAddress == address(0) || _dataAddress == address(0)) {
             revert RecyErrors.AddressInvalid();
+        }
+        // A proxy must not be BORN outside the unlock-delay bounds either: the delay is the
+        // EMERGENCY_ROLE reaction window (zero deletes it silently) and near-uint64.max values
+        // wrap the unlock-date sum at validation into the past. Same bounds as setUnlockDelay.
+        if (_unlockDelay < RecyConstants.MIN_UNLOCK_DELAY || _unlockDelay > RecyConstants.MAX_UNLOCK_DELAY) {
+            revert RecyErrors.UnlockDelayOutOfBounds();
         }
 
         __ERC721_init(_name, _symbol);
@@ -197,7 +222,7 @@ contract RecyReport is
      *
      */
     function tokenURI(uint256 _tokenId) public view override returns (string memory _tokenUri) {
-        require(ownerOf(_tokenId) != address(0), RecyErrors.NftNotExists());
+        _requireOwned(_tokenId);
 
         return data.tokenUriAttributes(
             _tokenId, status[_tokenId], token, reward[_tokenId], info[_tokenId], materials[_tokenId]
@@ -211,7 +236,7 @@ contract RecyReport is
      * @return _tokenUri A JSON string containing the metadata of the RecyReport
      */
     function tokenJson(uint256 _tokenId) public view returns (string memory _tokenUri) {
-        require(ownerOf(_tokenId) != address(0), RecyErrors.NftNotExists());
+        _requireOwned(_tokenId);
 
         return data.tokenJson(_tokenId, status[_tokenId], token, reward[_tokenId], info[_tokenId], materials[_tokenId]);
     }
@@ -226,6 +251,42 @@ contract RecyReport is
         _safeMint(_msgSender(), nftId);
         status[nftId] = RecyConstants.RECYCLE_CREATED;
         nftNextId = uint128(nftId + RecyConstants.NFT_ID_INCREMENT);
+    }
+
+    /**
+     * @notice Validates the inputs shared by both report write paths
+     * @dev Reverts on array-length mismatch, an empty report, a waste amount above the per-report
+     *      cap, or a material id outside the catalogue the data contract exposes. An out-of-range
+     *      id would make tokenURI and tokenJson revert forever, and `materials` is push-only, so
+     *      the token could never be repaired — this is the only place it can be stopped.
+     * @param _wasteAmount The total amount of waste recycled in milligrams
+     * @param _materials Array of material type indices referencing RecyReportAttributes
+     * @param _materialAmounts Array of amounts for each material type in milligrams
+     * @param _recycleTypes Array of recycling process types used for each material
+     * @param _recycleShapes Array of material shapes processed for each material
+     */
+    function _validateReportInput(
+        uint128 _wasteAmount,
+        uint32[] memory _materials,
+        uint128[] memory _materialAmounts,
+        uint32[] memory _recycleTypes,
+        uint32[] memory _recycleShapes
+    ) private view {
+        if (
+            _materials.length != _materialAmounts.length || _materials.length != _recycleTypes.length
+                || _materials.length != _recycleShapes.length
+        ) {
+            revert RecyErrors.ArrayLengthMismatch();
+        }
+
+        require(_materials.length > 0, RecyErrors.EmptyMaterialsArray());
+        require(_wasteAmount <= RecyConstants.MAX_WASTE_AMOUNT, RecyErrors.WasteAmountExceedsCap());
+
+        // Read the catalogue size once; it cannot change while this call executes.
+        uint256 materialsCount = data.materialsCount();
+        for (uint256 i = 0; i < _materials.length; i++) {
+            require(_materials[i] < materialsCount, RecyErrors.MaterialIdOutOfRange());
+        }
     }
 
     /**
@@ -253,12 +314,7 @@ contract RecyReport is
         uint32[] memory _recycleShapes,
         uint32 _disposalMethod
     ) external onlyRole(RECYCLER_ROLE) {
-        if (
-            _materials.length != _materialAmounts.length || _materials.length != _recycleTypes.length
-                || _materials.length != _recycleShapes.length
-        ) {
-            revert RecyErrors.ArrayLengthMismatch();
-        }
+        _validateReportInput(_wasteAmount, _materials, _materialAmounts, _recycleTypes, _recycleShapes);
 
         uint256 nftId = nftNextId;
         _safeMint(_generator, nftId);
@@ -312,12 +368,10 @@ contract RecyReport is
         uint32[] memory _recycleShapes,
         uint32 _disposalMethod
     ) external onlyRole(RECYCLER_ROLE) {
-        if (
-            _materials.length != _materialAmounts.length || _materials.length != _recycleTypes.length
-                || _materials.length != _recycleShapes.length
-        ) {
-            revert RecyErrors.ArrayLengthMismatch();
-        }
+        require(_ownerOf(_tokenId) != address(0), RecyErrors.NftNotExists());
+        require(status[_tokenId] == RecyConstants.RECYCLE_CREATED, RecyErrors.RecyReportInvalidStatus());
+
+        _validateReportInput(_wasteAmount, _materials, _materialAmounts, _recycleTypes, _recycleShapes);
 
         RecyTypes.RecyInfo storage _info = info[_tokenId];
         _info.recycler = _msgSender();
@@ -345,7 +399,11 @@ contract RecyReport is
 
     /**
      * @notice Validates a completed recycling report and calculates rewards
-     * @dev Only accounts with AUDITOR_ROLE can validate reports. Sets reward amount and unlock date
+     * @dev Only accounts with AUDITOR_ROLE can validate reports. Sets reward amount and unlock date.
+     *      Requires dual control: the validator must not be the account that recorded the report,
+     *      otherwise a single key holding both RECYCLER_ROLE and AUDITOR_ROLE could sign off on its
+     *      own work and collect the generator, recycler and validator legs of the payout.
+     *      Also refuses to promise more than the contract can pay, see the invariant on rewardTotal.
      * @param _tokenId The ID of the recycling report to validate
      * @custom:emits ReportValidated Event containing validation and reward details
      * @custom:emits MetadataUpdate Event for NFT metadata refresh
@@ -357,6 +415,8 @@ contract RecyReport is
         );
 
         RecyTypes.RecyInfo storage _info = info[_tokenId];
+        require(_msgSender() != _info.recycler, RecyErrors.ValidatorCannotBeRecycler());
+
         _info.validator = _msgSender();
         _info.auditDate = uint64(block.timestamp);
 
@@ -366,6 +426,14 @@ contract RecyReport is
         _reward.rewardUnlockDate = uint64(block.timestamp + unlockDelay);
 
         rewardTotal += _reward.rewardAmount;
+
+        // Solvency: outstanding obligations, which now include the reward added on the line above,
+        // must stay fully covered by the contract's balance. This is `rewardTotal - rewardClaimed
+        // <= balanceOf(this)` with the subtraction moved to the right-hand side so it cannot
+        // underflow. Claimed rewards are deliberately excluded — they have already left the
+        // contract, so counting them would reject validations the pool can comfortably pay.
+        require(rewardTotal <= token.balanceOf(address(this)) + rewardClaimed, RecyErrors.InsufficientRewardBalance());
+
         status[_tokenId] = RecyConstants.RECYCLE_VALIDATED;
 
         emit MetadataUpdate(_tokenId);
@@ -373,10 +441,14 @@ contract RecyReport is
     }
 
     /**
-     * @notice Validates a completed recycling report and calculates rewards
-     * @dev Only accounts with AUDITOR_ROLE can validate reports. Sets reward amount and unlock date
-     * @param _tokenId The ID of the recycling report to validate
-     * @custom:emits ReportValidated Event containing validation and reward details
+     * @notice Invalidates a completed recycling report, closing it with no claimable reward
+     * @dev Only accounts with AUDITOR_ROLE can invalidate reports. Deliberately records a zero
+     *      reward: an invalidated report can never be claimed (claiming requires RECYCLE_VALIDATED),
+     *      and the metadata renders a reward for any status above RECYCLE_COMPLETED, so writing a
+     *      non-zero amount would advertise a payout that will never happen. `rewardTotal` is left
+     *      alone because only validation adds to it and this path never accepts a validated report.
+     * @param _tokenId The ID of the recycling report to invalidate
+     * @custom:emits ReportInvalidated Event containing invalidation details
      * @custom:emits MetadataUpdate Event for NFT metadata refresh
      */
     function invalidateRecyReport(uint256 _tokenId) external onlyRole(AUDITOR_ROLE) {
@@ -391,8 +463,8 @@ contract RecyReport is
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
 
-        _reward.rewardAmount = RecyReward.calculateReward(_info.wasteAmount, token.totalSupply());
-        _reward.rewardUnlockDate = uint64(block.timestamp + unlockDelay);
+        _reward.rewardAmount = 0;
+        _reward.rewardUnlockDate = 0;
 
         status[_tokenId] = RecyConstants.RECYCLE_INVALIDATED;
 
@@ -421,24 +493,31 @@ contract RecyReport is
         RecyTypes.RecyInfo storage _info = info[_tokenId];
 
         address generator = ownerOf(_tokenId);
-        token.transfer(
+        SafeERC20.safeTransfer(
+            IERC20(address(token)),
             funds[generator] == address(0) ? generator : funds[generator],
             (ra * shareGenerator) / RecyConstants.REWARD_TOTAL_PERCENTAGE
         );
 
         address recycler = _info.recycler;
-        token.transfer(
+        SafeERC20.safeTransfer(
+            IERC20(address(token)),
             funds[recycler] == address(0) ? recycler : funds[recycler],
             (ra * shareRecycler) / RecyConstants.REWARD_TOTAL_PERCENTAGE
         );
 
         address auditor = _info.validator;
-        token.transfer(
+        SafeERC20.safeTransfer(
+            IERC20(address(token)),
             funds[auditor] == address(0) ? auditor : funds[auditor],
             (ra * shareValidator) / RecyConstants.REWARD_TOTAL_PERCENTAGE
         );
 
-        token.transfer(protocolAddress, (ra * shareProtocol) / RecyConstants.REWARD_TOTAL_PERCENTAGE);
+        SafeERC20.safeTransfer(
+            IERC20(address(token)),
+            protocolAddress,
+            (ra * shareProtocol) / RecyConstants.REWARD_TOTAL_PERCENTAGE
+        );
 
         emit MetadataUpdate(_tokenId);
         emit RewardClaimed(_tokenId, _msgSender(), ra);
@@ -466,17 +545,56 @@ contract RecyReport is
     }
 
     /**
-     * @notice Sets the fund address for a signatory
-     * @dev Accounts can only set their own fund address
+     * @notice Sets the caller's own fund address
+     * @dev Self-service by design. `funds` is resolved at claim time while the reward amount is
+     *      snapshotted at validation, so an admin able to set this for other accounts could
+     *      redirect an already-earned payout. Only the account itself may change its destination.
+     *      Set to address(0) to be paid directly.
      * @param _fundAddress The fund address to associate with the caller
      */
-    function setFundsWallet(address _signatory, address _fundAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        funds[_signatory] = _fundAddress;
+    function setFundsWallet(address _fundAddress) external {
+        funds[_msgSender()] = _fundAddress;
     }
 
     function setDataContract(address _dataAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (_dataAddress == address(0)) revert RecyErrors.AddressInvalid();
         data = RecyReportData(_dataAddress);
+    }
+
+    /**
+     * @notice Sets the delay in seconds between a report's validation and its reward unlocking
+     * @dev Only accounts with DEFAULT_ADMIN_ROLE can update the delay. It applies to reports
+     *      validated after this call; already-validated reports keep the unlock date snapshotted
+     *      at validation time. Bounded to [MIN_UNLOCK_DELAY, MAX_UNLOCK_DELAY]: the delay is the
+     *      reaction window in which EMERGENCY_ROLE can pause a fraudulent payout, so zero must be
+     *      impossible by typo, and a value near type(uint64).max would wrap the unlock-date sum
+     *      at validation into the past - zero by another name. `initialize` enforces the same
+     *      bounds, so a proxy cannot be born outside them; the live proxy (initialized at 60s
+     *      before the bounds existed) is grandfathered only until this setter is first called.
+     * @param _unlockDelay The new delay in seconds
+     * @custom:emits UnlockDelayChanged Event with the old and new delays
+     */
+    function setUnlockDelay(uint64 _unlockDelay) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_unlockDelay < RecyConstants.MIN_UNLOCK_DELAY || _unlockDelay > RecyConstants.MAX_UNLOCK_DELAY) {
+            revert RecyErrors.UnlockDelayOutOfBounds();
+        }
+        uint64 oldUnlockDelay = unlockDelay;
+        unlockDelay = _unlockDelay;
+        emit UnlockDelayChanged(oldUnlockDelay, _unlockDelay);
+    }
+
+    /**
+     * @notice Sets the address that receives the protocol share of every claimed reward
+     * @dev Only accounts with DEFAULT_ADMIN_ROLE can update it. The zero address is rejected
+     *      because the protocol leg of a claim would then revert, bricking every claim.
+     * @param _protocolAddress The new protocol address
+     * @custom:emits ProtocolAddressChanged Event with the old and new protocol addresses
+     */
+    function setProtocolAddress(address _protocolAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_protocolAddress == address(0)) revert RecyErrors.AddressInvalid();
+        address oldProtocolAddress = protocolAddress;
+        protocolAddress = _protocolAddress;
+        emit ProtocolAddressChanged(oldProtocolAddress, _protocolAddress);
     }
 
     // =========================================================================
