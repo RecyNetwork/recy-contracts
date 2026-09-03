@@ -514,9 +514,7 @@ contract RecyReport is
         );
 
         SafeERC20.safeTransfer(
-            IERC20(address(token)),
-            protocolAddress,
-            (ra * shareProtocol) / RecyConstants.REWARD_TOTAL_PERCENTAGE
+            IERC20(address(token)), protocolAddress, (ra * shareProtocol) / RecyConstants.REWARD_TOTAL_PERCENTAGE
         );
 
         emit MetadataUpdate(_tokenId);

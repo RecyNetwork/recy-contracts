@@ -502,11 +502,11 @@ contract ManageRoles is Script, ConfigManager {
      * @param declaredFunds The fund wallets declared for them, index-parallel to `principals`
      * @return pending The number of principals whose on-chain fund wallet does not match config
      */
-    function _reportFundWalletDriftFor(
-        string memory role,
-        address[] memory principals,
-        address[] memory declaredFunds
-    ) internal view returns (uint256 pending) {
+    function _reportFundWalletDriftFor(string memory role, address[] memory principals, address[] memory declaredFunds)
+        internal
+        view
+        returns (uint256 pending)
+    {
         for (uint256 i = 0; i < principals.length; i++) {
             if (i >= declaredFunds.length || declaredFunds[i] == address(0)) continue;
 

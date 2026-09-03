@@ -40,10 +40,7 @@ contract LiveShapeAttributes {
     }
 
     function getMaterial(uint256 index) external view returns (string memory) {
-        require(
-            index < materials.length,
-            "RecyReportAttributes.getMaterial: Invalid index"
-        );
+        require(index < materials.length, "RecyReportAttributes.getMaterial: Invalid index");
         return materials[index];
     }
 }
@@ -58,58 +55,45 @@ contract EmptyCatalogueAttributes {
 }
 
 contract RecyReportDataHarness is RecyReportData {
-    constructor(
-        address _attributesAddress,
-        address _svgAddress
-    ) RecyReportData(_attributesAddress, _svgAddress) {}
+    constructor(address _attributesAddress, address _svgAddress) RecyReportData(_attributesAddress, _svgAddress) {}
 
-    function exposed_getStatus(
-        uint8 _status
-    ) external pure returns (string memory) {
+    function exposed_getStatus(uint8 _status) external pure returns (string memory) {
         return getStatus(_status);
     }
 
-    function exposed_generateSvg(
-        uint8 _status
-    ) external view returns (string memory) {
+    function exposed_generateSvg(uint8 _status) external view returns (string memory) {
         return generateSvg(_status);
     }
 
-    function exposed_generateMaterialsText(
-        RecyTypes.RecyMaterials[] memory _materials
-    ) external view returns (string memory) {
+    function exposed_generateMaterialsText(RecyTypes.RecyMaterials[] memory _materials)
+        external
+        view
+        returns (string memory)
+    {
         return generateMaterialsText(_materials);
     }
 
-    function exposed_generateauditDateText(
-        uint256 _auditDate
-    ) external pure returns (string memory) {
+    function exposed_generateauditDateText(uint256 _auditDate) external pure returns (string memory) {
         return generateauditDateText(_auditDate);
     }
 
-    function exposed_generateRecycleDateText(
-        uint256 _recycleDate
-    ) external pure returns (string memory) {
+    function exposed_generateRecycleDateText(uint256 _recycleDate) external pure returns (string memory) {
         return generateRecycleDateText(_recycleDate);
     }
 
-    function exposed_generateWasteAmountText(
-        uint256 _wasteAmount
-    ) external pure returns (string memory) {
+    function exposed_generateWasteAmountText(uint256 _wasteAmount) external pure returns (string memory) {
         return generateWasteAmountText(_wasteAmount);
     }
 
-    function exposed_generateRewardText(
-        uint8 _status,
-        RecyTypes.RecyReward memory _reward,
-        ERC20 _token
-    ) external view returns (string memory) {
+    function exposed_generateRewardText(uint8 _status, RecyTypes.RecyReward memory _reward, ERC20 _token)
+        external
+        view
+        returns (string memory)
+    {
         return generateRewardText(_status, _reward, _token);
     }
 
-    function exposed_generateStatusText(
-        uint8 _status
-    ) external pure returns (string memory) {
+    function exposed_generateStatusText(uint8 _status) external pure returns (string memory) {
         return generateStatusText(_status);
     }
 }
@@ -125,18 +109,12 @@ contract RecyReportDataTest is Test, TestHelpers {
         recyReportSvg = new RecyReportSvg();
         mockToken = new MockToken();
 
-        recyReportData = new RecyReportDataHarness(
-            address(attributes),
-            address(recyReportSvg)
-        );
+        recyReportData = new RecyReportDataHarness(address(attributes), address(recyReportSvg));
     }
 
     function test_constructor() public {
         // Test valid constructor
-        RecyReportData newContract = new RecyReportData(
-            address(attributes),
-            address(recyReportSvg)
-        );
+        RecyReportData newContract = new RecyReportData(address(attributes), address(recyReportSvg));
         assertEq(address(newContract.attributes()), address(attributes));
         assertEq(address(newContract.svg()), address(recyReportSvg));
     }
@@ -154,35 +132,19 @@ contract RecyReportDataTest is Test, TestHelpers {
 
         // Test RECYCLE_COMPLETED status
         string memory completedStatus = recyReportData.exposed_getStatus(2); // RecyConstants.RECYCLE_COMPLETED
-        assertEq(
-            completedStatus,
-            "Completed",
-            "RECYCLE_COMPLETED status mismatch"
-        );
+        assertEq(completedStatus, "Completed", "RECYCLE_COMPLETED status mismatch");
 
         // Test RECYCLE_VALIDATED status
         string memory validatedStatus = recyReportData.exposed_getStatus(3); // RecyConstants.RECYCLE_VALIDATED
-        assertEq(
-            validatedStatus,
-            "Validated",
-            "RECYCLE_VALIDATED status mismatch"
-        );
+        assertEq(validatedStatus, "Validated", "RECYCLE_VALIDATED status mismatch");
 
         // Test RECYCLE_REWARDED status
         string memory rewardedStatus = recyReportData.exposed_getStatus(4); // RecyConstants.RECYCLE_REWARDED
-        assertEq(
-            rewardedStatus,
-            "Rewarded",
-            "RECYCLE_REWARDED status mismatch"
-        );
+        assertEq(rewardedStatus, "Rewarded", "RECYCLE_REWARDED status mismatch");
 
         // Test RECYCLE_INVALIDATED status
         string memory invalidatedStatus = recyReportData.exposed_getStatus(5); // RecyConstants.RECYCLE_INVALIDATED
-        assertEq(
-            invalidatedStatus,
-            "Invalidated",
-            "RECYCLE_INVALIDATED status mismatch"
-        );
+        assertEq(invalidatedStatus, "Invalidated", "RECYCLE_INVALIDATED status mismatch");
     }
 
     function test_getStatus_flaggedAndUnknown() public view {
@@ -194,210 +156,107 @@ contract RecyReportDataTest is Test, TestHelpers {
         );
 
         // Statuses outside the state machine degrade to "Unknown" rather than revert
-        assertEq(
-            recyReportData.exposed_getStatus(7),
-            "Unknown",
-            "Unhandled status should render Unknown"
-        );
-        assertEq(
-            recyReportData.exposed_getStatus(0),
-            "Unknown",
-            "Uninitialized status should render Unknown"
-        );
-        assertEq(
-            recyReportData.exposed_getStatus(255),
-            "Unknown",
-            "Max status should render Unknown"
-        );
+        assertEq(recyReportData.exposed_getStatus(7), "Unknown", "Unhandled status should render Unknown");
+        assertEq(recyReportData.exposed_getStatus(0), "Unknown", "Uninitialized status should render Unknown");
+        assertEq(recyReportData.exposed_getStatus(255), "Unknown", "Max status should render Unknown");
     }
 
     function test_generateSvg() public view {
         // Test RECYCLE_CREATED status
-        string memory createdSvg = recyReportData.exposed_generateSvg(
-            RecyConstants.RECYCLE_CREATED
-        );
-        assertTrue(
-            bytes(createdSvg).length > 0,
-            "Created SVG should not be empty"
-        );
+        string memory createdSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_CREATED);
+        assertTrue(bytes(createdSvg).length > 0, "Created SVG should not be empty");
 
         // Test RECYCLE_COMPLETED status
-        string memory completedSvg = recyReportData.exposed_generateSvg(
-            RecyConstants.RECYCLE_COMPLETED
-        );
-        assertTrue(
-            bytes(completedSvg).length > 0,
-            "Completed SVG should not be empty"
-        );
+        string memory completedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_COMPLETED);
+        assertTrue(bytes(completedSvg).length > 0, "Completed SVG should not be empty");
 
         // Test RECYCLE_VALIDATED status (should return coins)
-        string memory validatedSvg = recyReportData.exposed_generateSvg(
-            RecyConstants.RECYCLE_VALIDATED
-        );
-        assertTrue(
-            bytes(validatedSvg).length > 0,
-            "Validated SVG should not be empty"
-        );
+        string memory validatedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_VALIDATED);
+        assertTrue(bytes(validatedSvg).length > 0, "Validated SVG should not be empty");
 
         // Test RECYCLE_REWARDED status (should return coins)
-        string memory rewardedSvg = recyReportData.exposed_generateSvg(
-            RecyConstants.RECYCLE_REWARDED
-        );
-        assertTrue(
-            bytes(rewardedSvg).length > 0,
-            "Rewarded SVG should not be empty"
-        );
+        string memory rewardedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_REWARDED);
+        assertTrue(bytes(rewardedSvg).length > 0, "Rewarded SVG should not be empty");
     }
 
     function test_generateMaterialsText() public view {
         // Create test materials using helper
-        RecyTypes.RecyMaterials[]
-            memory materials = new RecyTypes.RecyMaterials[](2);
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
         materials[0] = createRecyMaterials(1, 1, 1, 1, 100);
         materials[1] = createRecyMaterials(2, 2, 2, 2, 200);
 
-        string memory result = recyReportData.exposed_generateMaterialsText(
-            materials
-        );
-        assertTrue(
-            bytes(result).length > 0,
-            "Materials text should not be empty"
-        );
+        string memory result = recyReportData.exposed_generateMaterialsText(materials);
+        assertTrue(bytes(result).length > 0, "Materials text should not be empty");
 
         // Should contain material information
-        assertTrue(
-            keccak256(bytes(result)) != keccak256(bytes("")),
-            "Materials text should contain data"
-        );
+        assertTrue(keccak256(bytes(result)) != keccak256(bytes("")), "Materials text should contain data");
     }
 
     function test_generateauditDateText() public view {
         // Test with valid date
         uint256 validDate = 1234567890;
-        string memory result = recyReportData.exposed_generateauditDateText(
-            validDate
-        );
-        assertTrue(
-            bytes(result).length > 0,
-            "Validation date text should not be empty"
-        );
+        string memory result = recyReportData.exposed_generateauditDateText(validDate);
+        assertTrue(bytes(result).length > 0, "Validation date text should not be empty");
 
         // Test with zero date
-        string memory zeroResult = recyReportData.exposed_generateauditDateText(
-            0
-        );
-        assertEq(
-            bytes(zeroResult).length,
-            0,
-            "Zero validation date should return empty string"
-        );
+        string memory zeroResult = recyReportData.exposed_generateauditDateText(0);
+        assertEq(bytes(zeroResult).length, 0, "Zero validation date should return empty string");
     }
 
     function test_generateRecycleDateText() public view {
         // Test with valid date
         uint256 validDate = 1234567890;
-        string memory result = recyReportData.exposed_generateRecycleDateText(
-            validDate
-        );
-        assertTrue(
-            bytes(result).length > 0,
-            "Recycle date text should not be empty"
-        );
+        string memory result = recyReportData.exposed_generateRecycleDateText(validDate);
+        assertTrue(bytes(result).length > 0, "Recycle date text should not be empty");
 
         // Test with zero date
-        string memory zeroResult = recyReportData
-            .exposed_generateRecycleDateText(0);
-        assertEq(
-            bytes(zeroResult).length,
-            0,
-            "Zero recycle date should return empty string"
-        );
+        string memory zeroResult = recyReportData.exposed_generateRecycleDateText(0);
+        assertEq(bytes(zeroResult).length, 0, "Zero recycle date should return empty string");
     }
 
     function test_generateWasteAmountText() public view {
         // Test with valid amount
         uint256 validAmount = 1000;
-        string memory result = recyReportData.exposed_generateWasteAmountText(
-            validAmount
-        );
-        assertTrue(
-            bytes(result).length > 0,
-            "Waste amount text should not be empty"
-        );
+        string memory result = recyReportData.exposed_generateWasteAmountText(validAmount);
+        assertTrue(bytes(result).length > 0, "Waste amount text should not be empty");
 
         // Test with zero amount
-        string memory zeroResult = recyReportData
-            .exposed_generateWasteAmountText(0);
-        assertEq(
-            bytes(zeroResult).length,
-            0,
-            "Zero waste amount should return empty string"
-        );
+        string memory zeroResult = recyReportData.exposed_generateWasteAmountText(0);
+        assertEq(bytes(zeroResult).length, 0, "Zero waste amount should return empty string");
     }
 
     function test_generateRewardText() public view {
         // Create test reward using helper
-        RecyTypes.RecyReward memory reward = createRecyReward(
-            uint128(1000 * RecyConstants.ONE_E18),
-            1234567890
-        );
+        RecyTypes.RecyReward memory reward = createRecyReward(uint128(1000 * RecyConstants.ONE_E18), 1234567890);
 
         // Test with status > 2 (VALIDATED)
-        string memory validatedResult = recyReportData
-            .exposed_generateRewardText(
-                RecyConstants.RECYCLE_VALIDATED,
-                reward,
-                mockToken
-            );
-        assertTrue(
-            bytes(validatedResult).length > 0,
-            "Validated reward text should not be empty"
-        );
+        string memory validatedResult =
+            recyReportData.exposed_generateRewardText(RecyConstants.RECYCLE_VALIDATED, reward, mockToken);
+        assertTrue(bytes(validatedResult).length > 0, "Validated reward text should not be empty");
 
         // Test with REWARDED status
-        string memory rewardedResult = recyReportData
-            .exposed_generateRewardText(
-                RecyConstants.RECYCLE_REWARDED,
-                reward,
-                mockToken
-            );
-        assertTrue(
-            bytes(rewardedResult).length > 0,
-            "Rewarded text should not be empty"
-        );
+        string memory rewardedResult =
+            recyReportData.exposed_generateRewardText(RecyConstants.RECYCLE_REWARDED, reward, mockToken);
+        assertTrue(bytes(rewardedResult).length > 0, "Rewarded text should not be empty");
 
         // Test with status <= 2 (CREATED or COMPLETED)
-        string memory createdResult = recyReportData.exposed_generateRewardText(
-            RecyConstants.RECYCLE_CREATED,
-            reward,
-            mockToken
-        );
-        assertEq(
-            bytes(createdResult).length,
-            0,
-            "Created status should return empty reward text"
-        );
+        string memory createdResult =
+            recyReportData.exposed_generateRewardText(RecyConstants.RECYCLE_CREATED, reward, mockToken);
+        assertEq(bytes(createdResult).length, 0, "Created status should return empty reward text");
     }
 
     function test_generateStatusText() public view {
-        string memory result = recyReportData.exposed_generateStatusText(
-            RecyConstants.RECYCLE_CREATED
-        );
+        string memory result = recyReportData.exposed_generateStatusText(RecyConstants.RECYCLE_CREATED);
         assertTrue(bytes(result).length > 0, "Status text should not be empty");
 
         // Should contain "Created"
-        assertTrue(
-            keccak256(bytes(result)) != keccak256(bytes("")),
-            "Status text should contain data"
-        );
+        assertTrue(keccak256(bytes(result)) != keccak256(bytes("")), "Status text should contain data");
     }
 
     function test_tokenUriAttributes() public view {
         // Create test data
-        RecyTypes.RecyReward memory reward = RecyTypes.RecyReward({
-            rewardAmount: uint128(1000 * RecyConstants.ONE_E18),
-            rewardUnlockDate: 1234567890
-        });
+        RecyTypes.RecyReward memory reward =
+            RecyTypes.RecyReward({rewardAmount: uint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1234567890});
 
         RecyTypes.RecyInfo memory info = RecyTypes.RecyInfo({
             validator: address(0x123),
@@ -407,24 +266,13 @@ contract RecyReportDataTest is Test, TestHelpers {
             wasteAmount: 1000
         });
 
-        RecyTypes.RecyMaterials[]
-            memory materials = new RecyTypes.RecyMaterials[](1);
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](1);
         materials[0] = RecyTypes.RecyMaterials({
-            material: 1,
-            recycleType: 1,
-            recycleShape: 1,
-            disposalMethod: 1,
-            amountRecycled: 100
+            material: 1, recycleType: 1, recycleShape: 1, disposalMethod: 1, amountRecycled: 100
         });
 
-        string memory uri = recyReportData.tokenUriAttributes(
-            1,
-            RecyConstants.RECYCLE_VALIDATED,
-            mockToken,
-            reward,
-            info,
-            materials
-        );
+        string memory uri =
+            recyReportData.tokenUriAttributes(1, RecyConstants.RECYCLE_VALIDATED, mockToken, reward, info, materials);
 
         assertTrue(bytes(uri).length > 0, "Token URI should not be empty");
 
@@ -445,18 +293,13 @@ contract RecyReportDataTest is Test, TestHelpers {
             }
         }
 
-        assertTrue(
-            startsWithPrefix,
-            "Token URI should start with data:application/json;base64,"
-        );
+        assertTrue(startsWithPrefix, "Token URI should start with data:application/json;base64,");
     }
 
     function test_tokenUriAttributesTest() public view {
         // Create test data
-        RecyTypes.RecyReward memory reward = RecyTypes.RecyReward({
-            rewardAmount: uint128(1000 * RecyConstants.ONE_E18),
-            rewardUnlockDate: 1234567890
-        });
+        RecyTypes.RecyReward memory reward =
+            RecyTypes.RecyReward({rewardAmount: uint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1234567890});
 
         RecyTypes.RecyInfo memory info = RecyTypes.RecyInfo({
             validator: address(0x789),
@@ -466,76 +309,44 @@ contract RecyReportDataTest is Test, TestHelpers {
             wasteAmount: 1000
         });
 
-        RecyTypes.RecyMaterials[]
-            memory materials = new RecyTypes.RecyMaterials[](1);
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](1);
         materials[0] = RecyTypes.RecyMaterials({
-            material: 1,
-            recycleType: 1,
-            recycleShape: 1,
-            disposalMethod: 1,
-            amountRecycled: 100
+            material: 1, recycleType: 1, recycleShape: 1, disposalMethod: 1, amountRecycled: 100
         });
 
-        string memory result = recyReportData.tokenJson(
-            1,
-            RecyConstants.RECYCLE_VALIDATED,
-            mockToken,
-            reward,
-            info,
-            materials
-        );
+        string memory result =
+            recyReportData.tokenJson(1, RecyConstants.RECYCLE_VALIDATED, mockToken, reward, info, materials);
 
-        assertTrue(
-            bytes(result).length > 0,
-            "Token JSON test should not be empty"
-        );
+        assertTrue(bytes(result).length > 0, "Token JSON test should not be empty");
 
         // Should contain JSON structure
-        assertTrue(
-            keccak256(bytes(result)) != keccak256(bytes("")),
-            "Token URI test should contain data"
-        );
+        assertTrue(keccak256(bytes(result)) != keccak256(bytes("")), "Token URI test should contain data");
     }
 
     // ===== EDGE CASE TESTS =====
 
     function test_generateMaterialsTextWithSingleMaterial() public view {
-        RecyTypes.RecyMaterials[]
-            memory singleMaterial = new RecyTypes.RecyMaterials[](1);
+        RecyTypes.RecyMaterials[] memory singleMaterial = new RecyTypes.RecyMaterials[](1);
         singleMaterial[0] = RecyTypes.RecyMaterials({
-            material: 1,
-            recycleType: 1,
-            recycleShape: 1,
-            disposalMethod: 1,
-            amountRecycled: 500
+            material: 1, recycleType: 1, recycleShape: 1, disposalMethod: 1, amountRecycled: 500
         });
 
-        string memory result = recyReportData.exposed_generateMaterialsText(
-            singleMaterial
-        );
+        string memory result = recyReportData.exposed_generateMaterialsText(singleMaterial);
         assertTrue(bytes(result).length > 0);
         assertTrue(contains(result, "Plastic"));
     }
 
     function test_generateauditDateTextWithMaxTimestamp() public view {
         uint256 maxTimestamp = type(uint256).max;
-        string memory result = recyReportData.exposed_generateauditDateText(
-            maxTimestamp
-        );
+        string memory result = recyReportData.exposed_generateauditDateText(maxTimestamp);
         assertTrue(bytes(result).length > 0);
     }
 
     function test_generateRewardTextWithZeroReward() public view {
-        RecyTypes.RecyReward memory zeroReward = RecyTypes.RecyReward({
-            rewardAmount: 0,
-            rewardUnlockDate: 1234567890
-        });
+        RecyTypes.RecyReward memory zeroReward = RecyTypes.RecyReward({rewardAmount: 0, rewardUnlockDate: 1234567890});
 
-        string memory result = recyReportData.exposed_generateRewardText(
-            RecyConstants.RECYCLE_VALIDATED,
-            zeroReward,
-            mockToken
-        );
+        string memory result =
+            recyReportData.exposed_generateRewardText(RecyConstants.RECYCLE_VALIDATED, zeroReward, mockToken);
         assertTrue(contains(result, "0"));
     }
 
@@ -549,9 +360,7 @@ contract RecyReportDataTest is Test, TestHelpers {
 
     function test_generateWasteAmountTextWithMaxAmount() public view {
         uint256 maxAmount = type(uint256).max;
-        string memory result = recyReportData.exposed_generateWasteAmountText(
-            maxAmount
-        );
+        string memory result = recyReportData.exposed_generateWasteAmountText(maxAmount);
         assertTrue(bytes(result).length > 0);
     }
 
@@ -565,52 +374,32 @@ contract RecyReportDataTest is Test, TestHelpers {
 
     // ===== METADATA INTEGRITY TESTS =====
 
-    function _sampleReward()
-        internal
-        pure
-        returns (RecyTypes.RecyReward memory)
-    {
-        return
-            RecyTypes.RecyReward({
-                rewardAmount: uint128(1000 * RecyConstants.ONE_E18),
-                rewardUnlockDate: 1234567890
-            });
+    function _sampleReward() internal pure returns (RecyTypes.RecyReward memory) {
+        return RecyTypes.RecyReward({rewardAmount: uint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1234567890});
     }
 
     function _sampleInfo() internal pure returns (RecyTypes.RecyInfo memory) {
-        return
-            RecyTypes.RecyInfo({
-                validator: address(0x123),
-                recycler: address(0x456),
-                recycleDate: 1234567890,
-                auditDate: 1234567890,
-                wasteAmount: 1000
-            });
+        return RecyTypes.RecyInfo({
+            validator: address(0x123),
+            recycler: address(0x456),
+            recycleDate: 1234567890,
+            auditDate: 1234567890,
+            wasteAmount: 1000
+        });
     }
 
     /// @dev A report with no dates, no waste amount and no reward, so the rendered
     ///      attributes array is exactly [Status, material] and can be indexed reliably.
     function _minimalInfo() internal pure returns (RecyTypes.RecyInfo memory) {
-        return
-            RecyTypes.RecyInfo({
-                validator: address(0x123),
-                recycler: address(0x456),
-                recycleDate: 0,
-                auditDate: 0,
-                wasteAmount: 0
-            });
+        return RecyTypes.RecyInfo({
+            validator: address(0x123), recycler: address(0x456), recycleDate: 0, auditDate: 0, wasteAmount: 0
+        });
     }
 
-    function _oneMaterial(
-        uint32 materialId
-    ) internal pure returns (RecyTypes.RecyMaterials[] memory materials) {
+    function _oneMaterial(uint32 materialId) internal pure returns (RecyTypes.RecyMaterials[] memory materials) {
         materials = new RecyTypes.RecyMaterials[](1);
         materials[0] = RecyTypes.RecyMaterials({
-            material: materialId,
-            recycleType: 1,
-            recycleShape: 1,
-            disposalMethod: 1,
-            amountRecycled: 100
+            material: materialId, recycleType: 1, recycleShape: 1, disposalMethod: 1, amountRecycled: 100
         });
     }
 
@@ -619,12 +408,7 @@ contract RecyReportDataTest is Test, TestHelpers {
     ///         trait object smuggled into a string value.
     function test_tokenUriAttributesDecodesToValidJson() public view {
         string memory uri = recyReportData.tokenUriAttributes(
-            1,
-            RecyConstants.RECYCLE_REWARDED,
-            mockToken,
-            _sampleReward(),
-            _sampleInfo(),
-            _oneMaterial(1)
+            1, RecyConstants.RECYCLE_REWARDED, mockToken, _sampleReward(), _sampleInfo(), _oneMaterial(1)
         );
 
         string memory json = decodeJsonDataUri(uri);
@@ -639,65 +423,34 @@ contract RecyReportDataTest is Test, TestHelpers {
         assertEq(statusKeys.length, 2, "Status trait key count");
         assertEq(statusKeys[0], "trait_type", "Status trait key 0");
         assertEq(statusKeys[1], "value", "Status trait key 1");
-        assertEq(
-            vm.parseJsonString(json, ".attributes[0].trait_type"),
-            "Status",
-            "Status trait_type"
-        );
-        assertEq(
-            vm.parseJsonString(json, ".attributes[0].value"),
-            "Rewarded",
-            "Status value should be the plain label"
-        );
+        assertEq(vm.parseJsonString(json, ".attributes[0].trait_type"), "Status", "Status trait_type");
+        assertEq(vm.parseJsonString(json, ".attributes[0].value"), "Rewarded", "Status value should be the plain label");
 
         // Regression guard for the double-wrapped trait object.
-        assertFalse(
-            contains(json, '"value":"{'),
-            "Status trait should not be double-wrapped"
-        );
+        assertFalse(contains(json, '"value":"{'), "Status trait should not be double-wrapped");
     }
 
     /// @notice tokenJson and tokenURI must both render a material id outside the
     ///         catalogue instead of reverting; stored ids are push-only and cannot
     ///         be repaired on the report contract.
     function test_metadataSurvivesOutOfRangeMaterialId() public view {
-        RecyTypes.RecyReward memory noReward = RecyTypes.RecyReward({
-            rewardAmount: 0,
-            rewardUnlockDate: 0
-        });
+        RecyTypes.RecyReward memory noReward = RecyTypes.RecyReward({rewardAmount: 0, rewardUnlockDate: 0});
 
         string memory json = recyReportData.tokenJson(
-            1,
-            RecyConstants.RECYCLE_CREATED,
-            mockToken,
-            noReward,
-            _minimalInfo(),
-            _oneMaterial(type(uint32).max)
+            1, RecyConstants.RECYCLE_CREATED, mockToken, noReward, _minimalInfo(), _oneMaterial(type(uint32).max)
         );
         assertEq(
             vm.parseJsonString(json, ".attributes[1].trait_type"),
             "Unknown Material",
             "tokenJson out-of-range material trait"
         );
-        assertEq(
-            vm.parseJsonUint(json, ".attributes[1].value"),
-            100,
-            "tokenJson out-of-range material amount"
-        );
+        assertEq(vm.parseJsonUint(json, ".attributes[1].value"), 100, "tokenJson out-of-range material amount");
 
         string memory uri = recyReportData.tokenUriAttributes(
-            1,
-            RecyConstants.RECYCLE_CREATED,
-            mockToken,
-            noReward,
-            _minimalInfo(),
-            _oneMaterial(type(uint32).max)
+            1, RecyConstants.RECYCLE_CREATED, mockToken, noReward, _minimalInfo(), _oneMaterial(type(uint32).max)
         );
         assertEq(
-            vm.parseJsonString(
-                decodeJsonDataUri(uri),
-                ".attributes[1].trait_type"
-            ),
+            vm.parseJsonString(decodeJsonDataUri(uri), ".attributes[1].trait_type"),
             "Unknown Material",
             "tokenURI out-of-range material trait"
         );
@@ -732,26 +485,12 @@ contract RecyReportDataTest is Test, TestHelpers {
     function test_materialRenderingAtCatalogueBoundary() public view {
         uint32 count = uint32(recyReportData.materialsCount());
 
-        assertEq(
-            _renderMaterialTrait(count - 1),
-            "Solid Inert Industrial Waste",
-            "Last catalogue id should resolve"
-        );
-        assertEq(
-            _renderMaterialTrait(count),
-            "Unknown Material",
-            "First id past the catalogue should degrade"
-        );
-        assertEq(
-            _renderMaterialTrait(1),
-            "Plastic",
-            "In-range id should be unaffected"
-        );
+        assertEq(_renderMaterialTrait(count - 1), "Solid Inert Industrial Waste", "Last catalogue id should resolve");
+        assertEq(_renderMaterialTrait(count), "Unknown Material", "First id past the catalogue should degrade");
+        assertEq(_renderMaterialTrait(1), "Plastic", "In-range id should be unaffected");
     }
 
-    function _renderMaterialTrait(
-        uint32 materialId
-    ) internal view returns (string memory) {
+    function _renderMaterialTrait(uint32 materialId) internal view returns (string memory) {
         string memory json = recyReportData.tokenJson(
             1,
             RecyConstants.RECYCLE_CREATED,
@@ -773,29 +512,13 @@ contract RecyReportDataTest is Test, TestHelpers {
     ///         getMaterialsCount(). Nothing here may depend on that function.
     function test_worksAgainstDeployedAttributesShape() public {
         LiveShapeAttributes liveShape = new LiveShapeAttributes();
-        RecyReportData data = new RecyReportData(
-            address(liveShape),
-            address(recyReportSvg)
-        );
+        RecyReportData data = new RecyReportData(address(liveShape), address(recyReportSvg));
 
-        assertEq(
-            data.materialsCount(),
-            13,
-            "materialsCount against the deployed attributes shape"
-        );
+        assertEq(data.materialsCount(), 13, "materialsCount against the deployed attributes shape");
 
-        RecyTypes.RecyReward memory noReward = RecyTypes.RecyReward({
-            rewardAmount: 0,
-            rewardUnlockDate: 0
-        });
-        string memory json = data.tokenJson(
-            1,
-            RecyConstants.RECYCLE_CREATED,
-            mockToken,
-            noReward,
-            _minimalInfo(),
-            _oneMaterial(12)
-        );
+        RecyTypes.RecyReward memory noReward = RecyTypes.RecyReward({rewardAmount: 0, rewardUnlockDate: 0});
+        string memory json =
+            data.tokenJson(1, RecyConstants.RECYCLE_CREATED, mockToken, noReward, _minimalInfo(), _oneMaterial(12));
         assertEq(
             vm.parseJsonString(json, ".attributes[1].trait_type"),
             "Solid Inert Industrial Waste",
@@ -818,11 +541,7 @@ contract RecyReportDataTest is Test, TestHelpers {
     }
 
     function test_materialsCount() public {
-        assertEq(
-            recyReportData.materialsCount(),
-            13,
-            "materialsCount should mirror the catalogue"
-        );
+        assertEq(recyReportData.materialsCount(), 13, "materialsCount should mirror the catalogue");
         assertEq(
             attributes.getMaterialsCount(),
             attributes.getMaterials().length,
@@ -831,18 +550,11 @@ contract RecyReportDataTest is Test, TestHelpers {
 
         // The passthrough must be live, not a snapshot taken at construction.
         attributes.addMaterial("NewMaterial", "<svg>new</svg>");
-        assertEq(
-            recyReportData.materialsCount(),
-            14,
-            "materialsCount should track catalogue growth"
-        );
+        assertEq(recyReportData.materialsCount(), 14, "materialsCount should track catalogue growth");
     }
 
     // Helper function to check if a string contains a substring
-    function contains(
-        string memory str,
-        string memory substring
-    ) internal pure returns (bool) {
+    function contains(string memory str, string memory substring) internal pure returns (bool) {
         bytes memory strBytes = bytes(str);
         bytes memory subBytes = bytes(substring);
 
@@ -862,15 +574,10 @@ contract RecyReportDataTest is Test, TestHelpers {
     }
 
     /// @dev Strips the data URI prefix and base64-decodes the JSON payload.
-    function decodeJsonDataUri(
-        string memory uri
-    ) internal pure returns (string memory) {
+    function decodeJsonDataUri(string memory uri) internal pure returns (string memory) {
         bytes memory uriBytes = bytes(uri);
         bytes memory prefix = bytes("data:application/json;base64,");
-        require(
-            uriBytes.length > prefix.length,
-            "decodeJsonDataUri: too short"
-        );
+        require(uriBytes.length > prefix.length, "decodeJsonDataUri: too short");
         for (uint256 i = 0; i < prefix.length; i++) {
             require(uriBytes[i] == prefix[i], "decodeJsonDataUri: bad prefix");
         }
@@ -883,13 +590,8 @@ contract RecyReportDataTest is Test, TestHelpers {
     }
 
     /// @dev Standard-alphabet base64 decoder; forge-std only ships an encoder.
-    function base64Decode(
-        bytes memory input
-    ) internal pure returns (bytes memory output) {
-        require(
-            input.length >= 4 && input.length % 4 == 0,
-            "base64Decode: bad length"
-        );
+    function base64Decode(bytes memory input) internal pure returns (bytes memory output) {
+        require(input.length >= 4 && input.length % 4 == 0, "base64Decode: bad length");
 
         uint256 padding;
         if (input[input.length - 1] == "=") padding++;
@@ -898,10 +600,8 @@ contract RecyReportDataTest is Test, TestHelpers {
         output = new bytes((input.length / 4) * 3 - padding);
         uint256 outIndex;
         for (uint256 i = 0; i < input.length; i += 4) {
-            uint256 chunk = (base64Value(input[i]) << 18) |
-                (base64Value(input[i + 1]) << 12) |
-                (base64Value(input[i + 2]) << 6) |
-                base64Value(input[i + 3]);
+            uint256 chunk = (base64Value(input[i]) << 18) | (base64Value(input[i + 1]) << 12)
+                | (base64Value(input[i + 2]) << 6) | base64Value(input[i + 3]);
 
             output[outIndex++] = bytes1(uint8(chunk >> 16));
             if (outIndex < output.length) {

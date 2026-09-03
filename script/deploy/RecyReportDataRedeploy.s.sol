@@ -130,29 +130,17 @@ contract RecyReportDataRedeploy is Script, ConfigManager {
 
         RecyTypes.RecyReward memory reward = RecyTypes.RecyReward({rewardAmount: 1e18, rewardUnlockDate: 1});
         RecyTypes.RecyInfo memory info = RecyTypes.RecyInfo({
-            validator: address(0xA11CE),
-            recycler: address(0xB0B),
-            recycleDate: 1,
-            auditDate: 2,
-            wasteAmount: 10_000_000
+            validator: address(0xA11CE), recycler: address(0xB0B), recycleDate: 1, auditDate: 2, wasteAmount: 10_000_000
         });
 
         // One in-range material and one deliberately out of range: the old data contract reverts
         // on the second, permanently bricking that token's metadata.
         RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
         materials[0] = RecyTypes.RecyMaterials({
-            material: 0,
-            recycleType: 0,
-            recycleShape: 0,
-            disposalMethod: 0,
-            amountRecycled: 5_000_000
+            material: 0, recycleType: 0, recycleShape: 0, disposalMethod: 0, amountRecycled: 5_000_000
         });
         materials[1] = RecyTypes.RecyMaterials({
-            material: POISON_MATERIAL_ID,
-            recycleType: 0,
-            recycleShape: 0,
-            disposalMethod: 0,
-            amountRecycled: 5_000_000
+            material: POISON_MATERIAL_ID, recycleType: 0, recycleShape: 0, disposalMethod: 0, amountRecycled: 5_000_000
         });
 
         // RECYCLE_REWARDED: the status every live token that matters is in.

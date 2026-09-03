@@ -277,7 +277,8 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
     }
 
     function test_registeredAndDeployedProxiesShareOneRegistry() public {
-        address deployed = factory.deployProxy("deployed", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
+        address deployed =
+            factory.deployProxy("deployed", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
         address adopted = _deployStandaloneProxy("adopted");
         factory.registerExistingProxy(adopted, "adopted");
 
@@ -452,8 +453,7 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
 
         assertEq(factory.implementation(), address(newImplementation));
 
-        address afterProxy =
-            factory.deployProxy("after", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
+        address afterProxy = factory.deployProxy("after", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
         assertEq(_proxyImplementation(afterProxy), address(newImplementation));
 
         // Already-deployed proxies are untouched by the setter.
@@ -472,8 +472,7 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
 
         assertEq(factory.dataContract(), address(newData));
 
-        address afterProxy =
-            factory.deployProxy("after", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
+        address afterProxy = factory.deployProxy("after", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
         assertEq(_proxyDataContract(afterProxy), address(newData));
 
         // Already-deployed proxies keep their original wiring.

@@ -173,8 +173,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
             "materialSvg[12] content hash"
         );
         assertTrue(
-            keccak256(bytes(svgs[11])) != keccak256(bytes(placeholder)),
-            "materialSvg[11] must not be the placeholder"
+            keccak256(bytes(svgs[11])) != keccak256(bytes(placeholder)), "materialSvg[11] must not be the placeholder"
         );
         assertTrue(
             keccak256(bytes(svgs[12])) != keccak256(bytes(svgs[11])),

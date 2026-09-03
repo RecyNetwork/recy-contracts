@@ -413,9 +413,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         distribution.removeReportContract(address(mockReport1));
         distribution.whitelistReportContract(address(mockReport1));
 
-        vm.expectRevert(
-            _mintBlocked(address(mockReport1), RecyDistribution.MintBlocker.ExceedsCumulativeCap)
-        );
+        vm.expectRevert(_mintBlocked(address(mockReport1), RecyDistribution.MintBlocker.ExceedsCumulativeCap));
         distribution.mintTokensToReport(address(mockReport1));
         vm.stopPrank();
 
@@ -655,9 +653,7 @@ contract RecyDistributionTest is Test, TestHelpers {
 
         for (uint256 i = 0; i < 3; i++) {
             vm.prank(owner);
-            vm.expectRevert(
-                _mintBlocked(address(mockReport1), RecyDistribution.MintBlocker.ExceedsMaxMintPerCall)
-            );
+            vm.expectRevert(_mintBlocked(address(mockReport1), RecyDistribution.MintBlocker.ExceedsMaxMintPerCall));
             distribution.mintTokensToReport(address(mockReport1));
         }
 
@@ -1599,8 +1595,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         vm.prank(address(realReport));
         realToken.transfer(address(0xD00D), REAL_REWARD_1500MG);
 
-        bytes memory notOwner =
-            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(realDist));
+        bytes memory notOwner = abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(realDist));
 
         // token.mint is trusted infrastructure: its failure aborts, it is never a per-report skip.
         vm.prank(owner);
