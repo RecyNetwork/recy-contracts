@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.1.0) (access/manager/AccessManager.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (access/manager/AccessManager.sol)
 
 pragma solidity ^0.8.20;
 
@@ -10,7 +10,8 @@ import {ContextUpgradeable} from "../../utils/ContextUpgradeable.sol";
 import {MulticallUpgradeable} from "../../utils/MulticallUpgradeable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Time} from "@openzeppelin/contracts/utils/types/Time.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Hashes} from "@openzeppelin/contracts/utils/cryptography/Hashes.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev AccessManager is a central contract to store the permissions of a system.
@@ -69,7 +70,7 @@ contract AccessManagerUpgradeable is Initializable, ContextUpgradeable, Multical
         bool closed;
     }
 
-    // Structure that stores the details for a role/account pair. This structures fit into a single slot.
+    // Structure that stores the details for a role/account pair. This structure fits into a single slot.
     struct Access {
         // Timepoint at which the user gets the permission.
         // If this is either 0 or in the future, then the role permission is not available.
@@ -167,6 +168,11 @@ contract AccessManagerUpgradeable is Initializable, ContextUpgradeable, Multical
             // Caller is AccessManager, this means the call was sent through {execute} and it already checked
             // permissions. We verify that the call "identifier", which is set during {execute}, is correct.
             return (_isExecuting(target, selector), 0);
+        } else if (selector == IAccessManaged.setAuthority.selector) {
+            (bool isAdmin, uint32 executionDelay) = hasRole(ADMIN_ROLE, caller);
+            uint32 adminDelay = getTargetAdminDelay(target);
+            uint32 setAuthorityDelay = uint32(Math.max(executionDelay, adminDelay));
+            return isAdmin ? (setAuthorityDelay == 0, setAuthorityDelay) : (false, 0);
         } else {
             uint64 roleId = getTargetFunctionRole(target, selector);
             (bool isMember, uint32 currentDelay) = hasRole(roleId, caller);
@@ -352,7 +358,7 @@ contract AccessManagerUpgradeable is Initializable, ContextUpgradeable, Multical
      * Emits a {RoleAdminChanged} event.
      *
      * NOTE: Setting the admin role as the `PUBLIC_ROLE` is allowed, but it will effectively allow
-     * anyone to set grant or revoke such role.
+     * anyone to grant or revoke such role.
      */
     function _setRoleAdmin(uint64 roleId, uint64 admin) internal virtual {
         AccessManagerStorage storage $ = _getAccessManagerStorage();
@@ -420,6 +426,11 @@ contract AccessManagerUpgradeable is Initializable, ContextUpgradeable, Multical
      */
     function _setTargetFunctionRole(address target, bytes4 selector, uint64 roleId) internal virtual {
         AccessManagerStorage storage $ = _getAccessManagerStorage();
+        if (selector == IAccessManaged.setAuthority.selector) {
+            // Prevent updating authority using an execute call, instead only allow it through updateAuthority to
+            // ensure the proper delay and admin restrictions are applied.
+            revert AccessManagerLockedFunction(selector);
+        }
         $._targets[target].allowedRoles[selector] = roleId;
         emit TargetFunctionRoleUpdated(target, selector, roleId);
     }
@@ -571,13 +582,8 @@ contract AccessManagerUpgradeable is Initializable, ContextUpgradeable, Multical
         bytes32 operationId = hashOperation(caller, target, data);
         if ($._schedules[operationId].timepoint == 0) {
             revert AccessManagerNotScheduled(operationId);
-        } else if (caller != msgsender) {
-            // calls can only be canceled by the account that scheduled them, a global admin, or by a guardian of the required role.
-            (bool isAdmin, ) = hasRole(ADMIN_ROLE, msgsender);
-            (bool isGuardian, ) = hasRole(getRoleGuardian(getTargetFunctionRole(target, selector)), msgsender);
-            if (!isAdmin && !isGuardian) {
-                revert AccessManagerUnauthorizedCancel(msgsender, caller, target, selector);
-            }
+        } else if (!_canCancel(caller, target, data)) {
+            revert AccessManagerUnauthorizedCancel(msgsender, caller, target, selector);
         }
 
         delete $._schedules[operationId].timepoint; // reset the timepoint, keep the nonce
@@ -753,6 +759,37 @@ contract AccessManagerUpgradeable is Initializable, ContextUpgradeable, Multical
     }
 
     /**
+     * @dev Returns true if a scheduled operation can be canceled by the caller.
+     */
+    function _canCancel(address caller, address target, bytes calldata data) internal view virtual returns (bool) {
+        address msgsender = _msgSender();
+
+        // caller can cancel if they are the msg.sender of the scheduled operation
+        if (caller == msgsender) {
+            return true;
+        }
+
+        // admins can cancel any operation, and guardians of the target function's role can cancel it
+        (bool isAdmin, ) = hasRole(ADMIN_ROLE, msgsender);
+        (bool isGuardian, ) = hasRole(getRoleGuardian(getTargetFunctionRole(target, _checkSelector(data))), msgsender);
+        if (isAdmin || isGuardian) {
+            return true;
+        }
+
+        // if the target is this AccessManager and the call matches an admin-restricted function, allow members
+        // of the admin role returned by _getAdminRestrictions to cancel. ADMIN_ROLE was already checked above.
+        if (target == address(this)) {
+            (bool adminRestricted, uint64 roleId, ) = _getAdminRestrictions(data);
+            if (adminRestricted && roleId != ADMIN_ROLE) {
+                (bool inRole, ) = hasRole(roleId, msgsender);
+                return inRole;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @dev Returns true if a call with `target` and `selector` is being executed via {executed}.
      */
     function _isExecuting(address target, bytes4 selector) private view returns (bool) {
@@ -778,6 +815,6 @@ contract AccessManagerUpgradeable is Initializable, ContextUpgradeable, Multical
      * @dev Hashing function for execute protection
      */
     function _hashExecutionId(address target, bytes4 selector) private pure returns (bytes32) {
-        return keccak256(abi.encode(target, selector));
+        return Hashes.efficientKeccak256(bytes32(uint256(uint160(target))), selector);
     }
 }

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {ERC165Upgradeable} from "../../utils/introspection/ERC165Upgradeable.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 contract ERC1155ReceiverMockUpgradeable is Initializable, ERC165Upgradeable, IERC1155Receiver {
     enum RevertType {
@@ -23,14 +23,14 @@ contract ERC1155ReceiverMockUpgradeable is Initializable, ERC165Upgradeable, IER
     event BatchReceived(address operator, address from, uint256[] ids, uint256[] values, bytes data, uint256 gas);
     error CustomError(bytes4);
 
-    function __ERC1155ReceiverMock_init(bytes4 recRetval, bytes4 batRetval, RevertType error) internal onlyInitializing {
-        __ERC1155ReceiverMock_init_unchained(recRetval, batRetval, error);
+    function __ERC1155ReceiverMock_init(bytes4 recRetval, bytes4 batRetval, RevertType err) internal onlyInitializing {
+        __ERC1155ReceiverMock_init_unchained(recRetval, batRetval, err);
     }
 
-    function __ERC1155ReceiverMock_init_unchained(bytes4 recRetval, bytes4 batRetval, RevertType error) internal onlyInitializing {
+    function __ERC1155ReceiverMock_init_unchained(bytes4 recRetval, bytes4 batRetval, RevertType err) internal onlyInitializing {
         _recRetval = recRetval;
         _batRetval = batRetval;
-        _error = error;
+        _error = err;
     }
 
     function onERC1155Received(

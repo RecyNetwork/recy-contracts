@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (metatx/ERC2771Forwarder.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (metatx/ERC2771Forwarder.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {ERC2771ContextUpgradeable} from "./ERC2771ContextUpgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -9,7 +9,7 @@ import {EIP712Upgradeable} from "../utils/cryptography/EIP712Upgradeable.sol";
 import {NoncesUpgradeable} from "../utils/NoncesUpgradeable.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
-import {Initializable} from "../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev A forwarder compatible with ERC-2771 contracts. See {ERC2771Context}.
@@ -20,7 +20,7 @@ import {Initializable} from "../proxy/utils/Initializable.sol";
  * * `to`: The address that should be called.
  * * `value`: The amount of native token to attach with the requested call.
  * * `gas`: The amount of gas limit that will be forwarded with the requested call.
- * * `nonce`: A unique transaction ordering identifier to avoid replayability and request invalidation.
+ * * `nonce` (implicit): Taken from {Nonces} for `from` and included in the signed typed data.
  * * `deadline`: A timestamp after which the request is not executable anymore.
  * * `data`: Encoded `msg.data` to send with the requested call.
  *
@@ -62,7 +62,7 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
         bytes signature;
     }
 
-    bytes32 internal constant _FORWARD_REQUEST_TYPEHASH =
+    bytes32 internal constant FORWARD_REQUEST_TYPEHASH =
         keccak256(
             "ForwardRequest(address from,address to,uint256 value,uint256 gas,uint256 nonce,uint48 deadline,bytes data)"
         );
@@ -75,6 +75,11 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
      * the requested call to run out of gas.
      */
     event ExecutedForwardRequest(address indexed signer, uint256 nonce, bool success);
+
+    /**
+     * @dev A request in the batch failed and no `refundReceiver` was set to handle the leftover value.
+     */
+    error ERC2771ForwarderNoRefundReceiver();
 
     /**
      * @dev The request `from` doesn't match with the recovered `signer`.
@@ -146,40 +151,37 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
     }
 
     /**
-     * @dev Batch version of {execute} with optional refunding and atomic execution.
+     * @dev Batch version of {execute} with optional refunding.
      *
      * In case a batch contains at least one invalid request (see {verify}), the
      * request will be skipped and the `refundReceiver` parameter will receive back the
      * unused requested value at the end of the execution. This is done to prevent reverting
      * the entire batch when a request is invalid or has already been submitted.
      *
-     * If the `refundReceiver` is the `address(0)`, this function will revert when at least
-     * one of the requests was not valid instead of skipping it. This could be useful if
-     * a batch is required to get executed atomically (at least at the top-level). For example,
-     * refunding (and thus atomicity) can be opt-out if the relayer is using a service that avoids
-     * including reverted transactions.
+     * If the `refundReceiver` is `address(0)`, the function will revert
+     * when any request is invalid or when a valid request's forwarded call fails while
+     * carrying value (since there is no receiver to refund the leftover ETH to).
      *
      * Requirements:
      *
      * - The sum of the requests' values should be equal to the provided `msg.value`.
      * - All of the requests should be valid (see {verify}) when `refundReceiver` is the zero address.
      *
-     * NOTE: Setting a zero `refundReceiver` guarantees an all-or-nothing requests execution only for
-     * the first-level forwarded calls. In case a forwarded request calls to a contract with another
-     * subcall, the second-level call may revert without the top-level call reverting.
+     * NOTE: Setting a zero `refundReceiver` reverts the whole batch if any request is invalid or a value-bearing
+     * call fails, so it should only be used when transaction inclusion is under the caller's control.
      */
     function executeBatch(
         ForwardRequestData[] calldata requests,
         address payable refundReceiver
     ) public payable virtual {
-        bool atomic = refundReceiver == address(0);
+        bool requireValidRequests = refundReceiver == address(0);
 
         uint256 requestsValue;
         uint256 refundValue;
 
         for (uint256 i; i < requests.length; ++i) {
             requestsValue += requests[i].value;
-            bool success = _execute(requests[i], atomic);
+            bool success = _execute(requests[i], requireValidRequests);
             if (!success) {
                 refundValue += requests[i].value;
             }
@@ -192,8 +194,10 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
         }
 
         // Some requests with value were invalid (possibly due to frontrunning).
-        // To avoid leaving ETH in the contract this value is refunded.
+        // To avoid leaving ETH in the contract, this value is refunded.
         if (refundValue != 0) {
+            if (requireValidRequests) revert ERC2771ForwarderNoRefundReceiver();
+
             // We know refundReceiver != address(0) && requestsValue == msg.value
             // meaning we can ensure refundValue is not taken from the original contract's balance
             // and refundReceiver is a known account.
@@ -203,7 +207,7 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
 
     /**
      * @dev Validates if the provided request can be executed at current block timestamp with
-     * the given `request.signature` on behalf of `request.signer`.
+     * the given `request.signature` on behalf of `request.from`.
      */
     function _validate(
         ForwardRequestData calldata request
@@ -222,7 +226,7 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
      * @dev Returns a tuple with the recovered the signer of an EIP712 forward request message hash
      * and a boolean indicating if the signature is valid.
      *
-     * NOTE: The signature is considered valid if {ECDSA-tryRecover} indicates no recover error for it.
+     * NOTE: The signature is considered valid if {ECDSA-tryRecoverCalldata} indicates no recover error for it.
      */
     function _recoverForwardRequestSigner(
         ForwardRequestData calldata request
@@ -230,7 +234,7 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
         (address recovered, ECDSA.RecoverError err, ) = _hashTypedDataV4(
             keccak256(
                 abi.encode(
-                    _FORWARD_REQUEST_TYPEHASH,
+                    FORWARD_REQUEST_TYPEHASH,
                     request.from,
                     request.to,
                     request.value,
@@ -240,7 +244,7 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
                     keccak256(request.data)
                 )
             )
-        ).tryRecover(request.signature);
+        ).tryRecoverCalldata(request.signature);
 
         return (err == ECDSA.RecoverError.NoError, recovered);
     }
@@ -295,7 +299,7 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
             uint256 gasLeft;
 
             assembly ("memory-safe") {
-                success := call(reqGas, to, value, add(data, 0x20), mload(data), 0, 0)
+                success := call(reqGas, to, value, add(data, 0x20), mload(data), 0x00, 0x00)
                 gasLeft := gas()
             }
 
@@ -326,9 +330,9 @@ contract ERC2771ForwarderUpgradeable is Initializable, EIP712Upgradeable, Nonces
             // |-----------|----------|--------------------------------------------------------------------|
             // |           |          |                                                           result ↓ |
             // | 0x00:0x1F | selector | 0x0000000000000000000000000000000000000000000000000000000000000001 |
-            success := staticcall(gas(), target, add(encodedParams, 0x20), mload(encodedParams), 0, 0x20)
+            success := staticcall(gas(), target, add(encodedParams, 0x20), mload(encodedParams), 0x00, 0x20)
             returnSize := returndatasize()
-            returnValue := mload(0)
+            returnValue := mload(0x00)
         }
 
         return success && returnSize >= 0x20 && returnValue > 0;

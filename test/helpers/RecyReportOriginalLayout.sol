@@ -4,8 +4,8 @@ pragma solidity ^0.8.34;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {RecyReportData} from "../../src/RecyReportData.sol";
 import {RecyConstants} from "../../src/lib/RecyConstants.sol";
@@ -65,7 +65,6 @@ contract RecyReportOriginalLayout is
         __ERC721_init(name_, symbol_);
         __AccessControl_init();
         __Pausable_init();
-        __UUPSUpgradeable_init();
 
         data = RecyReportData(dataAddress);
         token = ERC20(tokenAddress);

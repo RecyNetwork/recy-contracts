@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (token/common/ERC2981.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (token/common/ERC2981.sol)
 
 pragma solidity ^0.8.20;
 
 import {IERC2981} from "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165Upgradeable} from "../../utils/introspection/ERC165Upgradeable.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Implementation of the NFT Royalty Standard, a standardized way to retrieve royalty payment information.
@@ -67,16 +68,12 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
 
     function __ERC2981_init_unchained() internal onlyInitializing {
     }
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
+    /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public view virtual override(IERC165, ERC165Upgradeable) returns (bool) {
         return interfaceId == type(IERC2981).interfaceId || super.supportsInterface(interfaceId);
     }
 
-    /**
-     * @inheritdoc IERC2981
-     */
+    /// @inheritdoc IERC2981
     function royaltyInfo(
         uint256 tokenId,
         uint256 salePrice
@@ -91,7 +88,7 @@ abstract contract ERC2981Upgradeable is Initializable, IERC2981, ERC165Upgradeab
             royaltyFraction = $._defaultRoyaltyInfo.royaltyFraction;
         }
 
-        uint256 royaltyAmount = (salePrice * royaltyFraction) / _feeDenominator();
+        uint256 royaltyAmount = Math.mulDiv(salePrice, royaltyFraction, _feeDenominator());
 
         return (royaltyReceiver, royaltyAmount);
     }

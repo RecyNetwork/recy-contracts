@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {GovernorUpgradeable} from "../../governance/GovernorUpgradeable.sol";
 import {GovernorSettingsUpgradeable} from "../../governance/extensions/GovernorSettingsUpgradeable.sol";
 import {GovernorSuperQuorumUpgradeable} from "../../governance/extensions/GovernorSuperQuorumUpgradeable.sol";
 import {GovernorCountingSimpleUpgradeable} from "../../governance/extensions/GovernorCountingSimpleUpgradeable.sol";
 import {GovernorVotesSuperQuorumFractionUpgradeable} from "../../governance/extensions/GovernorVotesSuperQuorumFractionUpgradeable.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 abstract contract GovernorVotesSuperQuorumFractionMockUpgradeable is
     Initializable, GovernorSettingsUpgradeable,

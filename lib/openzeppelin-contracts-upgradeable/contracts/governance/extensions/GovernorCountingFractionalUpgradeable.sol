@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (governance/extensions/GovernorCountingFractional.sol)
+// OpenZeppelin Contracts (last updated v5.4.0) (governance/extensions/GovernorCountingFractional.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 import {GovernorUpgradeable} from "../GovernorUpgradeable.sol";
 import {GovernorCountingSimpleUpgradeable} from "./GovernorCountingSimpleUpgradeable.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Extension of {Governor} for fractional voting.
@@ -71,17 +72,13 @@ abstract contract GovernorCountingFractionalUpgradeable is Initializable, Govern
 
     function __GovernorCountingFractional_init_unchained() internal onlyInitializing {
     }
-    /**
-     * @dev See {IGovernor-COUNTING_MODE}.
-     */
+    /// @inheritdoc IGovernor
     // solhint-disable-next-line func-name-mixedcase
     function COUNTING_MODE() public pure virtual override returns (string memory) {
         return "support=bravo,fractional&quorum=for,abstain&params=fractional";
     }
 
-    /**
-     * @dev See {IGovernor-hasVoted}.
-     */
+    /// @inheritdoc IGovernor
     function hasVoted(uint256 proposalId, address account) public view virtual override returns (bool) {
         return usedVotes(proposalId, account) > 0;
     }
@@ -106,9 +103,7 @@ abstract contract GovernorCountingFractionalUpgradeable is Initializable, Govern
         return (proposalVote.againstVotes, proposalVote.forVotes, proposalVote.abstainVotes);
     }
 
-    /**
-     * @dev See {Governor-_quorumReached}.
-     */
+    /// @inheritdoc GovernorUpgradeable
     function _quorumReached(uint256 proposalId) internal view virtual override returns (bool) {
         GovernorCountingFractionalStorage storage $ = _getGovernorCountingFractionalStorage();
         ProposalVote storage proposalVote = $._proposalVotes[proposalId];

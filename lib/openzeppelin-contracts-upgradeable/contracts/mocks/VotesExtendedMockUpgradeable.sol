@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {VotesExtendedUpgradeable} from "../governance/utils/VotesExtendedUpgradeable.sol";
-import {Initializable} from "../proxy/utils/Initializable.sol";
+import {Time} from "@openzeppelin/contracts/utils/types/Time.sol";
+import {ERC6372Utils} from "@openzeppelin/contracts/utils/ERC6372Utils.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 abstract contract VotesExtendedMockUpgradeable is Initializable, VotesExtendedUpgradeable {
     mapping(address voter => uint256) private _votingUnits;
@@ -43,11 +45,11 @@ abstract contract VotesExtendedTimestampMockUpgradeable is Initializable, VotesE
     function __VotesExtendedTimestampMock_init_unchained() internal onlyInitializing {
     }
     function clock() public view override returns (uint48) {
-        return uint48(block.timestamp);
+        return Time.timestamp();
     }
 
     // solhint-disable-next-line func-name-mixedcase
     function CLOCK_MODE() public view virtual override returns (string memory) {
-        return "mode=timestamp";
+        return ERC6372Utils.timestampClockMode(clock);
     }
 }

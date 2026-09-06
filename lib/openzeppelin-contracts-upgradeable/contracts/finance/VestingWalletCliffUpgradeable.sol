@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.1.0) (finance/VestingWalletCliff.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (finance/VestingWalletCliff.sol)
 
 pragma solidity ^0.8.20;
 
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {VestingWalletUpgradeable} from "./VestingWalletUpgradeable.sol";
-import {Initializable} from "../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Extension of {VestingWallet} that adds a cliff to the vesting schedule.
@@ -42,8 +42,9 @@ abstract contract VestingWalletCliffUpgradeable is Initializable, VestingWalletU
 
     function __VestingWalletCliff_init_unchained(uint64 cliffSeconds) internal onlyInitializing {
         VestingWalletCliffStorage storage $ = _getVestingWalletCliffStorage();
-        if (cliffSeconds > duration()) {
-            revert InvalidCliffDuration(cliffSeconds, duration().toUint64());
+        uint256 vestingDuration = duration();
+        if (cliffSeconds > vestingDuration) {
+            revert InvalidCliffDuration(cliffSeconds, vestingDuration.toUint64());
         }
         $._cliff = start().toUint64() + cliffSeconds;
     }

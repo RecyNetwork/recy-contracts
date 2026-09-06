@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (governance/extensions/GovernorVotesSuperQuorumFraction.sol)
-pragma solidity ^0.8.20;
+// OpenZeppelin Contracts (last updated v5.7.0) (governance/extensions/GovernorVotesSuperQuorumFraction.sol)
+
+pragma solidity ^0.8.24;
 
 import {GovernorUpgradeable} from "../GovernorUpgradeable.sol";
 import {GovernorSuperQuorumUpgradeable} from "./GovernorSuperQuorumUpgradeable.sol";
@@ -8,7 +9,7 @@ import {GovernorVotesQuorumFractionUpgradeable} from "./GovernorVotesQuorumFract
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Checkpoints} from "@openzeppelin/contracts/utils/structs/Checkpoints.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Extension of {GovernorVotesQuorumFraction} with a super quorum expressed as a
@@ -40,7 +41,7 @@ abstract contract GovernorVotesSuperQuorumFractionUpgradeable is Initializable, 
     error GovernorInvalidSuperQuorumFraction(uint256 superQuorumNumerator, uint256 denominator);
 
     /**
-     * @dev The super quorum set is not valid as it is smaller or equal to the quorum.
+     * @dev The super quorum set is not valid as it is smaller than the quorum.
      */
     error GovernorInvalidSuperQuorumTooSmall(uint256 superQuorumNumerator, uint256 quorumNumerator);
 
@@ -53,7 +54,7 @@ abstract contract GovernorVotesSuperQuorumFractionUpgradeable is Initializable, 
      * @dev Initialize super quorum as a fraction of the token's total supply.
      *
      * The super quorum is specified as a fraction of the token's total supply and has to
-     * be greater than the quorum.
+     * be greater than or equal to the quorum.
      */
     function __GovernorVotesSuperQuorumFraction_init(uint256 superQuorumNumeratorValue) internal onlyInitializing {
         __GovernorVotesSuperQuorumFraction_init_unchained(superQuorumNumeratorValue);

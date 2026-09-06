@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.1.0) (access/extensions/AccessControlEnumerable.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (access/extensions/AccessControlEnumerable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {IAccessControlEnumerable} from "@openzeppelin/contracts/access/extensions/IAccessControlEnumerable.sol";
 import {AccessControlUpgradeable} from "../AccessControlUpgradeable.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Extension of {AccessControl} that allows enumerating the members of each role.
@@ -33,9 +34,7 @@ abstract contract AccessControlEnumerableUpgradeable is Initializable, IAccessCo
 
     function __AccessControlEnumerable_init_unchained() internal onlyInitializing {
     }
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
+    /// @inheritdoc IERC165
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(IAccessControlEnumerable).interfaceId || super.supportsInterface(interfaceId);
     }
@@ -54,7 +53,7 @@ abstract contract AccessControlEnumerableUpgradeable is Initializable, IAccessCo
      */
     function getRoleMember(bytes32 role, uint256 index) public view virtual returns (address) {
         AccessControlEnumerableStorage storage $ = _getAccessControlEnumerableStorage();
-        return $._roleMembers[role].at(index);
+        return $._roleMembers[role].pos(index);
     }
 
     /**

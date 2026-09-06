@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/ERC20Burnable.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (token/ERC20/extensions/ERC20Burnable.sol)
 
 pragma solidity ^0.8.20;
 
 import {ERC20Upgradeable} from "../ERC20Upgradeable.sol";
-import {ContextUpgradeable} from "../../../utils/ContextUpgradeable.sol";
-import {Initializable} from "../../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Extension of {ERC20} that allows token holders to destroy both their own
  * tokens and those that they have an allowance for, in a way that can be
  * recognized off-chain (via event analysis).
  */
-abstract contract ERC20BurnableUpgradeable is Initializable, ContextUpgradeable, ERC20Upgradeable {
+abstract contract ERC20BurnableUpgradeable is Initializable, ERC20Upgradeable {
     function __ERC20Burnable_init() internal onlyInitializing {
     }
 
@@ -35,7 +34,7 @@ abstract contract ERC20BurnableUpgradeable is Initializable, ContextUpgradeable,
      *
      * Requirements:
      *
-     * - the caller must have allowance for ``accounts``'s tokens of at least
+     * - the caller must have allowance for `account`'s tokens of at least
      * `value`.
      */
     function burnFrom(address account, uint256 value) public virtual {

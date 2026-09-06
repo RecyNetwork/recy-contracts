@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (governance/extensions/GovernorCountingOverridable.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (governance/extensions/GovernorCountingOverridable.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {VotesExtendedUpgradeable} from "../utils/VotesExtendedUpgradeable.sol";
 import {GovernorVotesUpgradeable} from "./GovernorVotesUpgradeable.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
+import {GovernorUpgradeable} from "../GovernorUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Extension of {Governor} which enables delegators to override the vote of their delegates. This module requires a
  * token that inherits {VotesExtended}.
+ *
+ * NOTE: Override votes can only be cast while the proposal is active. Mechanisms that shorten the voting duration,
+ * such as the early closure implemented in {GovernorSuperQuorum}, may therefore prevent token holders from overriding
+ * the votes cast with their tokens by their delegates.
  */
 abstract contract GovernorCountingOverridableUpgradeable is Initializable, GovernorVotesUpgradeable {
     bytes32 public constant OVERRIDE_BALLOT_TYPEHASH =
@@ -64,9 +70,7 @@ abstract contract GovernorCountingOverridableUpgradeable is Initializable, Gover
 
     function __GovernorCountingOverridable_init_unchained() internal onlyInitializing {
     }
-    /**
-     * @dev See {IGovernor-COUNTING_MODE}.
-     */
+    /// @inheritdoc IGovernor
     // solhint-disable-next-line func-name-mixedcase
     function COUNTING_MODE() public pure virtual override returns (string memory) {
         return "support=bravo,override&quorum=for,abstain&overridable=true";
@@ -104,9 +108,7 @@ abstract contract GovernorCountingOverridableUpgradeable is Initializable, Gover
         return (votes[uint8(VoteType.Against)], votes[uint8(VoteType.For)], votes[uint8(VoteType.Abstain)]);
     }
 
-    /**
-     * @dev See {Governor-_quorumReached}.
-     */
+    /// @inheritdoc GovernorUpgradeable
     function _quorumReached(uint256 proposalId) internal view virtual override returns (bool) {
         GovernorCountingOverridableStorage storage $ = _getGovernorCountingOverridableStorage();
         uint256[3] storage votes = $._proposalVotes[proposalId].votes;

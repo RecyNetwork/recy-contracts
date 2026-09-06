@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.3.0) (governance/extensions/GovernorTimelockCompound.sol)
+// OpenZeppelin Contracts (last updated v5.7.0) (governance/extensions/GovernorTimelockCompound.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 import {GovernorUpgradeable} from "../GovernorUpgradeable.sol";
 import {ICompoundTimelock} from "@openzeppelin/contracts/vendor/compound/ICompoundTimelock.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @dev Extension of {Governor} that binds the execution process to a Compound Timelock. This adds a delay, enforced by
@@ -16,8 +16,8 @@ import {Initializable} from "../../proxy/utils/Initializable.sol";
  * the admin of the timelock for any operation to be performed. A public, unrestricted,
  * {GovernorTimelockCompound-__acceptAdmin} is available to accept ownership of the timelock.
  *
- * Using this model means the proposal will be operated by the {TimelockController} and not by the {Governor}. Thus,
- * the assets and permissions must be attached to the {TimelockController}. Any asset sent to the {Governor} will be
+ * Using this model means the proposal will be operated by the {ICompoundTimelock} and not by the {Governor}. Thus,
+ * the assets and permissions must be attached to the {ICompoundTimelock}. Any asset sent to the {Governor} will be
  * inaccessible from a proposal, unless executed via {Governor-relay}.
  */
 abstract contract GovernorTimelockCompoundUpgradeable is Initializable, GovernorUpgradeable {
@@ -36,7 +36,7 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
     }
 
     /**
-     * @dev Emitted when the timelock controller used for proposal execution is modified.
+     * @dev Emitted when the timelock used for proposal execution is modified.
      */
     event TimelockChange(address oldTimelock, address newTimelock);
 
@@ -73,9 +73,7 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
         return address($._timelock);
     }
 
-    /**
-     * @dev See {IGovernor-proposalNeedsQueuing}.
-     */
+    /// @inheritdoc IGovernor
     function proposalNeedsQueuing(uint256) public view virtual override returns (bool) {
         return true;
     }
@@ -118,9 +116,6 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
     ) internal virtual override {
         GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
         uint256 etaSeconds = proposalEta(proposalId);
-        if (etaSeconds == 0) {
-            revert GovernorNotQueuedProposal(proposalId);
-        }
         Address.sendValue(payable($._timelock), msg.value);
         for (uint256 i = 0; i < targets.length; ++i) {
             $._timelock.executeTransaction(targets[i], values[i], "", calldatas[i], etaSeconds);
@@ -162,7 +157,7 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
     /**
      * @dev Accept admin right over the timelock.
      */
-    // solhint-disable-next-line private-vars-leading-underscore
+    // solhint-disable-next-line openzeppelin/leading-underscore
     function __acceptAdmin() public {
         GovernorTimelockCompoundStorage storage $ = _getGovernorTimelockCompoundStorage();
         $._timelock.acceptAdmin();
@@ -181,7 +176,7 @@ abstract contract GovernorTimelockCompoundUpgradeable is Initializable, Governor
 
      * CAUTION: It is not recommended to change the timelock while there are other queued governance proposals.
      */
-    function updateTimelock(ICompoundTimelock newTimelock) external virtual onlyGovernance {
+    function updateTimelock(ICompoundTimelock newTimelock) public virtual onlyGovernance {
         _updateTimelock(newTimelock);
     }
 

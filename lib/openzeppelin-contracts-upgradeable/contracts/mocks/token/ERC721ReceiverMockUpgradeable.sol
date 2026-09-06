@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 contract ERC721ReceiverMockUpgradeable is Initializable, IERC721Receiver {
     enum RevertType {
@@ -20,13 +20,13 @@ contract ERC721ReceiverMockUpgradeable is Initializable, IERC721Receiver {
     event Received(address operator, address from, uint256 tokenId, bytes data, uint256 gas);
     error CustomError(bytes4);
 
-    function __ERC721ReceiverMock_init(bytes4 retval, RevertType error) internal onlyInitializing {
-        __ERC721ReceiverMock_init_unchained(retval, error);
+    function __ERC721ReceiverMock_init(bytes4 retval, RevertType err) internal onlyInitializing {
+        __ERC721ReceiverMock_init_unchained(retval, err);
     }
 
-    function __ERC721ReceiverMock_init_unchained(bytes4 retval, RevertType error) internal onlyInitializing {
+    function __ERC721ReceiverMock_init_unchained(bytes4 retval, RevertType err) internal onlyInitializing {
         _retval = retval;
-        _error = error;
+        _error = err;
     }
 
     function onERC721Received(

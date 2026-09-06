@@ -3,7 +3,7 @@
 pragma solidity ^0.8.20;
 
 import {IERC1363Receiver} from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
-import {Initializable} from "../../proxy/utils/Initializable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 contract ERC1363ReceiverMockUpgradeable is Initializable, IERC1363Receiver {
     enum RevertType {
@@ -29,9 +29,9 @@ contract ERC1363ReceiverMockUpgradeable is Initializable, IERC1363Receiver {
         _error = RevertType.None;
     }
 
-    function setUp(bytes4 retval, RevertType error) public {
+    function setUp(bytes4 retval, RevertType err) public {
         _retval = retval;
-        _error = error;
+        _error = err;
     }
 
     function onTransferReceived(
