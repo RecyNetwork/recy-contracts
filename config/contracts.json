@@ -4,6 +4,7 @@
     "issuanceChainId": 31337,
     "addresses": {
       "protocol": "0x1234567890123456789012345678901234567890",
+      "tokenOwner": "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
       "lzEndpoint": "0x0000000000000000000000000000000000000000"
     },
     "contracts": {
@@ -43,10 +44,28 @@
     "issuanceChainId": 11155111,
     "addresses": {
       "protocol": "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+      "tokenOwner": "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
       "lzEndpoint": "0x6EDCE65403992e310A62460808c4b910D972f10f"
     },
+    "oft": {
+      "rpcAlias": "sepolia",
+      "eid": 40161,
+      "sendLibrary": "0xcc1ae8cf5d3904cef3360a9532b477529b177cce",
+      "receiveLibrary": "0xdaf00f5ee2158dd58e0d3857851c432e34a3a851",
+      "executor": "0x718b92b5cb0a5552039b593faf724d182a881eda",
+      "maxMessageSize": 10000,
+      "requiredDVNs": [
+        "0x68802e01d6321d5159208478f297d7007a7516ed",
+        "0x8eebf8b423b73bfca51a1db4b7354aa0bfca9193"
+      ],
+      "confirmations": 2,
+      "lzReceiveGas": 100000,
+      "peerChainIds": [
+        84532
+      ]
+    },
     "contracts": {
-      "token": "0x0000000000000000000000000000000000000000",
+      "token": "0x573BA952da488624f3281168FCb310B633A928D9",
       "reportAttributes": "0x0000000000000000000000000000000000000000",
       "reportSvg": "0x0000000000000000000000000000000000000000",
       "reportData": "0x0000000000000000000000000000000000000000",
@@ -100,5 +119,40 @@
         ]
       }
     }
+  },
+  "84532": {
+    "name": "Base Sepolia Testnet",
+    "issuanceChainId": 11155111,
+    "addresses": {
+      "protocol": "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+      "tokenOwner": "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
+      "lzEndpoint": "0x6edce65403992e310a62460808c4b910d972f10f"
+    },
+    "oft": {
+      "rpcAlias": "base-sepolia",
+      "eid": 40245,
+      "sendLibrary": "0xc1868e054425d378095a003ecba3823a5d0135c9",
+      "receiveLibrary": "0x12523de19dc41c91f7d2093e0cfbb76b17012c8d",
+      "executor": "0x8a3d588d9f6ac041476b094f97ff94ec30169d3d",
+      "maxMessageSize": 10000,
+      "requiredDVNs": [
+        "0xd9222cc3ccd1df7c070d700ea377d4ada2b86eb5",
+        "0xe1a12515f9ab2764b887bf60b923ca494ebbb2d6"
+      ],
+      "confirmations": 2,
+      "lzReceiveGas": 100000,
+      "peerChainIds": [
+        11155111
+      ]
+    },
+    "contracts": {
+      "token": "0xC5FcBc6d3e3E0b2FD158cb0BB4Fb3aA716b79E36",
+      "reportAttributes": "0x0000000000000000000000000000000000000000",
+      "reportSvg": "0x0000000000000000000000000000000000000000",
+      "reportData": "0x0000000000000000000000000000000000000000",
+      "reportImplementation": "0x0000000000000000000000000000000000000000",
+      "factory": "0x0000000000000000000000000000000000000000"
+    },
+    "proxies": {}
   }
 }

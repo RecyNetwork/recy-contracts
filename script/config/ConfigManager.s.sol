@@ -13,6 +13,7 @@ contract ConfigManager is Script {
         string name;
         address token;
         address protocol;
+        address tokenOwner;
         address reportImplementation;
         address reportAttributes;
         address reportSvg;
@@ -83,6 +84,12 @@ contract ConfigManager is Script {
         string memory protocolStr = json.readString(string.concat(".", chainIdStr, ".addresses.protocol"));
         if (_isValidAddress(protocolStr)) {
             config.protocol = vm.parseAddress(protocolStr);
+        }
+
+        // Read token owner address
+        string memory tokenOwnerStr = json.readString(string.concat(".", chainIdStr, ".addresses.tokenOwner"));
+        if (_isValidAddress(tokenOwnerStr)) {
+            config.tokenOwner = vm.parseAddress(tokenOwnerStr);
         }
 
         // Read reportImplementation address
