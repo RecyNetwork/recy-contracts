@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "../src/RecyReportFactory.sol";
+import "../src/RecyReportFactoryV2.sol";
 import "./config/ConfigManager.s.sol";
 import "forge-std/Script.sol";
 
@@ -10,10 +10,10 @@ import "forge-std/Script.sol";
  * @notice Example script showing how to use the new role management functions
  */
 contract ManageRoles is Script, ConfigManager {
-    RecyReportFactory factory;
-    RecyReport proxy;
+    RecyReportFactoryV2 internal factory;
+    RecyReport internal proxy;
 
-    function setUp() public {
+    function setUp() public virtual {
         // Get the current chain ID
         uint256 chainId = block.chainid;
 
@@ -24,7 +24,7 @@ contract ManageRoles is Script, ConfigManager {
         // Ensure factory address is not zero
         require(networkConfig.factory != address(0), "Factory address not found in config");
 
-        factory = RecyReportFactory(networkConfig.factory);
+        factory = RecyReportFactoryV2(networkConfig.factory);
 
         proxy = RecyReport(proxyConfig.proxy);
 
@@ -33,10 +33,11 @@ contract ManageRoles is Script, ConfigManager {
     }
 
     /**
-     * @dev Enforces the config role-separation invariant on every entry point that reads
-     *      config/contracts.json or grants a role. Deliberately NOT applied in `setUp()`: forge
-     *      reports a revert raised inside `setUp()` as "<empty revert data>" at default verbosity,
-     *      which hides the reason from the operator.
+     * @dev Enforces the config role-separation invariant on direct config-driven entry points.
+     *      Batch helpers validate their supplied config directly so inheriting deployment scripts
+     *      cannot bypass the same policy. Deliberately NOT applied in `setUp()`: forge reports a
+     *      revert raised inside `setUp()` as "<empty revert data>" at default verbosity, which
+     *      hides the reason from the operator.
      */
     modifier validatedConfig() {
         _assertConfigRoleSeparation(getProxyConfig(block.chainid, "default"));
@@ -205,11 +206,9 @@ contract ManageRoles is Script, ConfigManager {
 
     /**
      * @notice List all deployed proxies (paginated)
-     * @dev `getDeployedProxiesPaginated`'s first parameter is a starting index into
-     *      `deployedProxies` (src/RecyReportFactory.sol:150,155), not a page number. This loop
-     *      previously passed a page number, which returned overlapping windows past page 1 and
-     *      made the `length < pageSize` termination guard unreliable. It now advances the offset
-     *      by the number of entries actually returned and terminates against `total`.
+     * @dev `getDeployedProxiesPaginated`'s first parameter is a starting index into the
+     *      factory registry, not a page number. This loop advances the offset by the number of
+     *      entries actually returned and terminates against `total`.
      */
     function listProxies() public view {
         console.log("Listing deployed proxies...");
@@ -247,17 +246,31 @@ contract ManageRoles is Script, ConfigManager {
      *      config/contracts.json are advisory records only; use `reportFundWalletDrift()` to see
      *      which principals still have to register their own wallet.
      */
-    function applyAllRolesFromConfig() public validatedConfig {
-        // Get the current chain ID and config
+    function applyAllRolesFromConfig() public {
         uint256 chainId = block.chainid;
         NetworkConfig memory networkConfig = getNetworkConfig(chainId);
         ProxyConfig memory config = getProxyConfig(chainId, "default");
 
-        vm.startBroadcast();
-
         console.log("Applying all roles from config...");
         console.log("Network:", networkConfig.name);
         console.log("Proxy address:", address(proxy));
+
+        vm.startBroadcast();
+        _applyRolesFromConfig(config);
+        vm.stopBroadcast();
+
+        // Roles are only half the picture: fund wallets are now self-service.
+        reportFundWalletDrift();
+    }
+
+    /**
+     * @notice Apply every configured role using the inherited factory and proxy
+     * @dev Does not read config or manage a broadcast scope so fresh-deployment scripts can call
+     *      it inside the same transaction batch that created the factory and proxy.
+     * @param config The already-loaded proxy configuration
+     */
+    function _applyRolesFromConfig(ProxyConfig memory config) internal {
+        _assertConfigRoleSeparation(config);
 
         // Apply admin roles
         console.log("Granting admin roles to", config.admins.length, "addresses:");
@@ -336,23 +349,26 @@ contract ManageRoles is Script, ConfigManager {
         // forge-lint: disable-end(calls-loop)
 
         console.log("All roles applied successfully!");
-
-        vm.stopBroadcast();
-
-        // Roles are only half the picture: fund wallets are now self-service.
-        reportFundWalletDrift();
     }
 
     /**
      * @notice Audit the live proxy for the RECYCLER+AUDITOR overlap and revert if any exists
      * @dev Read-only. Covers every address named anywhere in the proxy's config (recyclers,
-     *      auditors, admins, emergency) plus the factory itself, which is granted all four roles
-     *      by `initialize` (src/RecyReport.sol:138-141) and whose operational grants are inert.
-     *      Run this after Phase 0 revocations to prove the drain path of
-     *      docs/plan/security-audit-remediation.md 3.1 is closed.
+     *      auditors, admins, emergency) plus the factory itself, which receives all four roles
+     *      during proxy initialization. Run this after operational-role cleanup to prove the
+     *      configured separation policy holds on chain.
      */
-    function checkSeparationOnChain() public view validatedConfig {
+    function checkSeparationOnChain() public view {
         ProxyConfig memory config = getProxyConfig(block.chainid, "default");
+        _checkSeparationOnChain(config);
+    }
+
+    /**
+     * @notice Check role separation using an already-loaded proxy configuration
+     * @param config The proxy configuration whose principals must be audited
+     */
+    function _checkSeparationOnChain(ProxyConfig memory config) internal view {
+        _assertConfigRoleSeparation(config);
         address[] memory principals = _configuredPrincipals(config);
 
         console.log("=== On-chain RECYCLER/AUDITOR separation audit ===");
@@ -395,23 +411,36 @@ contract ManageRoles is Script, ConfigManager {
     }
 
     /**
-     * @notice Revoke every operational role the config does not authorise (Phase 0 remediation)
+     * @notice Revoke every operational role the config does not authorise
      * @dev Only ever REVOKES, and only RECYCLER_ROLE / AUDITOR_ROLE. Never grants, and never
-     *      touches DEFAULT_ADMIN_ROLE or EMERGENCY_ROLE — `revokeAdminRole(proxy, factory)` is an
-     *      irreversible footgun (src/RecyReportFactory.sol:313) and is deliberately out of scope.
+     *      touches DEFAULT_ADMIN_ROLE or EMERGENCY_ROLE. RecyReportFactoryV2 independently
+     *      prevents revocation of its own DEFAULT_ADMIN_ROLE; this cleanup needs no admin change.
      *      Must be broadcast from the factory owner key.
      */
-    function revokeUnauthorizedOperationalRoles() public validatedConfig {
+    function revokeUnauthorizedOperationalRoles() public {
         ProxyConfig memory config = getProxyConfig(block.chainid, "default");
-
-        address[] memory principals = _configuredPrincipals(config);
 
         console.log("=== Revoking unauthorized operational roles ===");
         console.log("Proxy:", address(proxy));
 
         vm.startBroadcast();
+        uint256 revoked = _revokeUnauthorizedOperationalRoles(config);
+        vm.stopBroadcast();
 
-        uint256 revoked = 0;
+        console.log("Roles revoked:", revoked);
+        console.log("Re-run checkSeparationOnChain() to confirm.");
+    }
+
+    /**
+     * @notice Revoke unauthorized operational roles using an already-loaded configuration
+     * @dev Does not read config or manage a broadcast scope.
+     * @param config The proxy configuration defining the authorized operational principals
+     * @return revoked Number of role revocations issued
+     */
+    function _revokeUnauthorizedOperationalRoles(ProxyConfig memory config) internal returns (uint256 revoked) {
+        _assertConfigRoleSeparation(config);
+        address[] memory principals = _configuredPrincipals(config);
+
         // Each configured principal is read on-chain and any unauthorized role is revoked in this bounded batch.
         // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < principals.length; i++) {
@@ -431,11 +460,6 @@ contract ManageRoles is Script, ConfigManager {
             }
         }
         // forge-lint: disable-end(calls-loop)
-
-        vm.stopBroadcast();
-
-        console.log("Roles revoked:", revoked);
-        console.log("Re-run checkSeparationOnChain() to confirm.");
     }
 
     /**

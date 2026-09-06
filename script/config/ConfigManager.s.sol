@@ -26,6 +26,8 @@ contract ConfigManager is Script {
     }
 
     struct ProxyConfig {
+        string name;
+        string symbol;
         address proxy;
         address[] recyclers;
         address[] recyclerFunds;
@@ -61,6 +63,9 @@ contract ConfigManager is Script {
         string memory chainIdStr = vm.toString(chainId);
 
         ProxyConfig memory config;
+        string memory basePath = string.concat(".", chainIdStr, ".proxies.", proxyName);
+        config.name = json.readString(string.concat(basePath, ".name"));
+        config.symbol = json.readString(string.concat(basePath, ".symbol"));
 
         // Read proxy address
         _readProxyAddress(json, chainIdStr, proxyName, config);

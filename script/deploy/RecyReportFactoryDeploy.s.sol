@@ -1,73 +1,86 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "../../src/RecyReport.sol";
-import "../../src/RecyReportData.sol";
-import "../../src/RecyReportFactory.sol";
-import "../config/ConfigManager.s.sol";
-import "forge-std/Script.sol";
+import {RecyReportFactoryV2} from "../../src/RecyReportFactoryV2.sol";
+import {RecyToken} from "../../src/RecyToken.sol";
+import {ConfigManager} from "../config/ConfigManager.s.sol";
+import {Script} from "forge-std/Script.sol";
+import {VmSafe} from "forge-std/Vm.sol";
+import {console} from "forge-std/console.sol";
 
 contract RecyReportFactoryDeploy is Script, ConfigManager {
     function run() public {
         uint256 chainId = block.chainid;
+        string memory proxyKey = vm.envOr("proxy", string("default"));
+        NetworkConfig memory networkConfig = getNetworkConfig(chainId);
+        ProxyConfig memory proxyConfig = getProxyConfig(chainId, proxyKey);
 
-        // Get network configuration
-        NetworkConfig memory config = getNetworkConfig(chainId);
+        _assertFreshFactoryPlan(networkConfig, proxyConfig);
 
-        console.log("=== Deploying RecyReportFactory ===");
+        address broadcaster = _broadcastSender();
+        require(broadcaster == networkConfig.tokenOwner, "broadcaster is not the configured token owner");
+
+        console.log("=== Deploying RecyReportFactoryV2 ===");
         console.log("Chain ID:", chainId);
-        console.log("Network:", config.name);
-
-        // Check if required contracts are deployed
-        require(config.reportData != address(0), "RecyReportData not deployed");
-        require(config.token != address(0), "Token not deployed");
+        console.log("Network:", networkConfig.name);
+        console.log("Configured owner:", networkConfig.tokenOwner);
+        console.log("Implementation:", networkConfig.reportImplementation);
+        console.log("Data contract:", networkConfig.reportData);
+        console.log("Proxy config key:", proxyKey);
+        console.log("Proxy name:", proxyConfig.name);
+        console.log("Proxy symbol:", proxyConfig.symbol);
 
         vm.startBroadcast();
-
-        // Deploy a new RecyReport implementation if not exists
-        address implementation;
-        if (config.reportImplementation != address(0)) {
-            console.log("Using existing RecyReport implementation at:", config.reportImplementation);
-            implementation = config.reportImplementation;
-        } else {
-            console.log("Deploying new RecyReport implementation...");
-            RecyReport newImplementation = new RecyReport();
-            implementation = address(newImplementation);
-            console.log("RecyReport implementation deployed to:", implementation);
-        }
-
-        // Deploy the factory
-        RecyReportFactory factory = new RecyReportFactory(implementation, config.reportData);
-
+        RecyReportFactoryV2 factory =
+            new RecyReportFactoryV2(networkConfig.reportImplementation, networkConfig.reportData);
         vm.stopBroadcast();
 
-        // Log deployment results
+        require(factory.owner() == networkConfig.tokenOwner, "factory owner mismatch");
+        require(factory.implementation() == networkConfig.reportImplementation, "factory implementation mismatch");
+        require(factory.dataContract() == networkConfig.reportData, "factory data contract mismatch");
+
         console.log("=== Deployment Results ===");
-        console.log("RecyReportFactory deployed to:", address(factory));
-        console.log("Implementation contract:", implementation);
-        console.log("Data contract:", config.reportData);
-        console.log("Token contract:", config.token);
+        console.log("RecyReportFactoryV2 deployed to:", address(factory));
+        console.log("Factory owner:", factory.owner());
+        console.log("Configured NFT name:", proxyConfig.name);
+        console.log("Configured NFT symbol:", proxyConfig.symbol);
+        console.log("Unlock delay:", proxyConfig.unlockDelay);
+        console.log("Recycler share:", proxyConfig.shareRecycler);
+        console.log("Validator share:", proxyConfig.shareValidator);
+        console.log("Generator share:", proxyConfig.shareGenerator);
+        console.log("Protocol share:", proxyConfig.shareProtocol);
+        console.log("Record the factory address in config/contracts.json before running RecyReportProxyDeploy.");
+    }
 
-        // Get default proxy configuration for display
-        ProxyConfig memory proxyConfig = getProxyConfig(chainId, "default");
+    function _assertFreshFactoryPlan(NetworkConfig memory networkConfig, ProxyConfig memory proxyConfig) private view {
+        require(networkConfig.issuanceChainId != 0, "issuance chain is not configured");
+        require(block.chainid == networkConfig.issuanceChainId, "report stack must deploy on the issuance chain");
+        require(networkConfig.tokenOwner != address(0), "token owner is not configured");
+        require(networkConfig.factory == address(0), "factory is already configured");
+        require(proxyConfig.proxy == address(0), "proxy is already configured");
 
-        console.log("\n=== Factory Configuration ===");
-        console.log("Default name: RecyReport");
-        console.log("Default symbol: cRECYr");
-        console.log("Default unlock delay:", proxyConfig.unlockDelay);
-        console.log("Default recycler share:", proxyConfig.shareRecycler);
-        console.log("Default validator share:", proxyConfig.shareValidator);
-        console.log("Default generator share:", proxyConfig.shareGenerator);
-        console.log("Default protocol share:", proxyConfig.shareProtocol);
+        require(networkConfig.reportImplementation != address(0), "report implementation is not configured");
+        require(networkConfig.reportImplementation.code.length != 0, "report implementation has no code");
+        require(networkConfig.reportData != address(0), "report data is not configured");
+        require(networkConfig.reportData.code.length != 0, "report data has no code");
+        require(networkConfig.token != address(0), "token is not configured");
+        require(networkConfig.token.code.length != 0, "token has no code");
 
-        console.log("\n=== Usage Instructions ===");
-        console.log("To deploy a proxy, call:");
-        console.log(
-            "factory.deployProxy(name, symbol, tokenAddress, protocolAddress, unlockDelay, shareRecycler, shareValidator, shareGenerator, shareProtocol)"
-        );
-        console.log("\nTo check if a recycler has a proxy:");
-        console.log("factory.hasRecyclerRole(proxyAddress, recyclerAddress)");
-        console.log("\nTo get a recycler's proxy address:");
-        console.log("factory.getProxyForRecycler(recyclerAddress)");
+        require(bytes(proxyConfig.name).length != 0, "proxy name is not configured");
+        require(bytes(proxyConfig.symbol).length != 0, "proxy symbol is not configured");
+
+        RecyToken token = RecyToken(networkConfig.token);
+        require(token.issuanceChainId() == networkConfig.issuanceChainId, "token issuance chain mismatch");
+        require(token.owner() == networkConfig.tokenOwner, "token owner mismatch");
+    }
+
+    function _broadcastSender() private returns (address broadcaster) {
+        vm.startBroadcast();
+        // forge-lint: disable-next-line(unused-return)
+        (VmSafe.CallerMode mode, address sender,) = vm.readCallers();
+        vm.stopBroadcast();
+
+        require(mode == VmSafe.CallerMode.RecurrentBroadcast, "Foundry broadcast signer is unavailable");
+        return sender;
     }
 }

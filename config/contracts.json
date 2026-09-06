@@ -19,9 +19,12 @@
       "default": {
         "_notes": {
           "roleSeparation": "No address may appear in both `recyclers` and `auditors`. RECYCLER produces reports, AUDITOR authorises the payout; one key holding both is the treasury-drain path of docs/plan/security-audit-remediation.md section 3.1. script/ManageRoles.s.sol aborts if this file violates the rule, and addresses in `admins`/`emergency` must not appear in either operational list.",
+          "deployment": "RecyReportDeploy is fresh-only: after the local token, endpoint and token owner are configured, its broadcast preparation automatically records all six planned report-stack addresses. Dry runs preserve this file; interrupted sends must retain the recorded values and Foundry artifacts for --resume. Standalone component scripts still require manual address recording.",
           "fundWallets": "ADVISORY ONLY. `recyclerFunds`/`auditorFunds` record the wallet each principal is expected to register; no script applies them. `RecyReport.setFundsWallet(address)` is self-service, so each principal must call it from its own key.",
           "unlockDelay": "3600 on the local dev chain (the on-chain minimum: the Phase 2 implementation enforces MIN_UNLOCK_DELAY = 1 hour at BOTH initialize and setUnlockDelay, so 60 is no longer deployable). Local claim flows warp time anyway - script/PopulateRecyReport.s.sol warps unlockDelay + 300 automatically. Public networks use 86400."
         },
+        "name": "RecyReport",
+        "symbol": "cRECYr",
         "address": "0x0000000000000000000000000000000000000000",
         "settings": {
           "unlockDelay": 3600,
@@ -76,11 +79,13 @@
       "default": {
         "_notes": {
           "roleSeparation": "No address may appear in both `recyclers` and `auditors`. RECYCLER produces reports, AUDITOR authorises the payout; one key holding both is the treasury-drain path of docs/plan/security-audit-remediation.md section 3.1. script/ManageRoles.s.sol aborts if this file violates the rule.",
-          "deployment": "Fresh testnet deployment required. Historical contracts and proxies are abandoned; never upgrade them to this implementation. Record each newly deployed contract address before deploying dependants.",
+          "deployment": "RecyReportDeploy is fresh-only and automatically records all six planned Sepolia report-stack addresses during broadcast preparation; they are not live until every receipt succeeds. Dry runs preserve this file, and interrupted sends must retain the recorded values and Foundry artifacts for --resume. Standalone component scripts still require manual address recording.",
           "fundWallets": "ADVISORY ONLY. `recyclerFunds`/`auditorFunds` record each principal's intended wallet. `RecyReport.setFundsWallet(address)` is self-service; each principal must call it from its own key.",
           "blessedAddresses": "`contracts.reportImplementation` and `contracts.reportData` must identify fresh deployments. RecyReportProxyDeploy verifies the new factory uses that pair.",
           "unlockDelay": "86400 (24h) for newly initialized public-testnet proxies."
         },
+        "name": "RecyReport",
+        "symbol": "cRECYr",
         "address": "0x0000000000000000000000000000000000000000",
         "settings": {
           "unlockDelay": 86400,

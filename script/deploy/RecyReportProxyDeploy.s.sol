@@ -1,193 +1,139 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "../../src/RecyReport.sol";
-import "../../src/RecyReportFactory.sol";
-import "../config/ConfigManager.s.sol";
-import "forge-std/Script.sol";
+import {RecyReport} from "../../src/RecyReport.sol";
+import {RecyReportFactoryV2} from "../../src/RecyReportFactoryV2.sol";
+import {RecyToken} from "../../src/RecyToken.sol";
+import {ConfigManager} from "../config/ConfigManager.s.sol";
+import {Script} from "forge-std/Script.sol";
+import {VmSafe} from "forge-std/Vm.sol";
+import {console} from "forge-std/console.sol";
 
 /**
  * @title RecyReportProxyDeploy
- * @notice Script to deploy new proxies for the RecyReport implementation using the RecyReportFactory
- * @dev Factory address is automatically loaded from the config file.
- *
- *      Environment flags:
- *      - `proxy`                 name of the proxy config to deploy (default: "default")
- *      - `ALLOW_PROXY_REUSE`     opt in to adopting a pre-existing proxy registered under that name
- *      - `ALLOW_STALE_FACTORY`   opt in to deploying through a factory whose immutable
- *                                implementation/dataContract are not the blessed pair in config
- *
- *      Both flags default to false: this script fails loudly rather than silently producing a
- *      proxy of unknown provenance or a proxy born without the Phase 1/2 security fixes.
+ * @notice Deploys a fresh configured RecyReport proxy through RecyReportFactoryV2
+ * @dev The `proxy` environment variable selects the config object (default: "default").
+ *      This entry point never adopts or reuses an existing config slot or factory name.
  */
 contract RecyReportProxyDeploy is Script, ConfigManager {
     function run() public {
         uint256 chainId = block.chainid;
-
-        // Get the proxy parameter or use "default" if not provided
-        string memory proxyName = vm.envOr("proxy", string("default"));
-
-        // Get network and proxy configuration
+        string memory proxyKey = vm.envOr("proxy", string("default"));
         NetworkConfig memory networkConfig = getNetworkConfig(chainId);
-        ProxyConfig memory config = getProxyConfig(chainId, proxyName);
+        ProxyConfig memory proxyConfig = getProxyConfig(chainId, proxyKey);
 
-        require(
-            networkConfig.factory != address(0), "Factory address not found in config. Please deploy the factory first."
-        );
+        require(networkConfig.factory != address(0), "factory is not configured");
+        require(networkConfig.factory.code.length != 0, "factory has no code");
+        RecyReportFactoryV2 factory = RecyReportFactoryV2(networkConfig.factory);
 
-        console.log("=== Using RecyReportFactory ===");
+        _assertFreshProxyPlan(factory, networkConfig, proxyConfig);
+
+        address broadcaster = _broadcastSender();
+        require(broadcaster == networkConfig.tokenOwner, "broadcaster is not the configured token owner");
+
+        console.log("=== Deploying RecyReport proxy through RecyReportFactoryV2 ===");
         console.log("Chain ID:", chainId);
-        console.log("Proxy Config:", proxyName);
         console.log("Network:", networkConfig.name);
-        console.log("Factory Address:", networkConfig.factory);
-
-        RecyReportFactory factory = RecyReportFactory(networkConfig.factory);
-
-        console.log("\n=== Factory Information ===");
+        console.log("Proxy config key:", proxyKey);
+        console.log("Proxy name:", proxyConfig.name);
+        console.log("Proxy symbol:", proxyConfig.symbol);
+        console.log("Factory:", address(factory));
+        console.log("Factory owner:", factory.owner());
         console.log("Implementation:", factory.implementation());
-        console.log("Data Contract:", factory.dataContract());
-        console.log("Total Deployed Proxies:", factory.getDeployedProxiesCount());
+        console.log("Data contract:", factory.dataContract());
 
-        _assertFactoryServesBlessedCode(factory, networkConfig);
+        vm.startBroadcast();
+        address proxyAddress = factory.deployProxy(
+            proxyConfig.name,
+            proxyConfig.symbol,
+            networkConfig.token,
+            networkConfig.protocol,
+            proxyConfig.unlockDelay,
+            proxyConfig.shareRecycler,
+            proxyConfig.shareValidator,
+            proxyConfig.shareGenerator,
+            proxyConfig.shareProtocol
+        );
+        vm.stopBroadcast();
 
-        // Check if proxy with this name already exists
-        address existingProxy = factory.proxyByName(proxyName);
+        RecyReport deployedProxy = RecyReport(proxyAddress);
+        _assertDeployedProxy(factory, deployedProxy, networkConfig, proxyConfig);
 
-        address proxy;
-
-        if (existingProxy != address(0)) {
-            // `deployProxy` is permissionless (src/RecyReportFactory.sol:96) and proxy names are
-            // first-come-first-served, so a pre-existing proxy under this name is not necessarily
-            // ours: whoever registered it chose its token address, protocol address and shares.
-            // Silently adopting it is how a squatted, attacker-configured contract becomes "the
-            // deployment" (security-audit-remediation.md 3.8). Require an explicit opt-in.
-            require(
-                vm.envOr("ALLOW_PROXY_REUSE", false),
-                string.concat(
-                    "REFUSING TO REUSE EXISTING PROXY: name '",
-                    proxyName,
-                    "' already resolves to ",
-                    vm.toString(existingProxy),
-                    ". Verify its provenance (token, protocolAddress, shares, role holders) and ",
-                    "re-run with ALLOW_PROXY_REUSE=true, or deploy under a different name."
-                )
-            );
-
-            console.log("\n=== Proxy already exists, reusing (ALLOW_PROXY_REUSE=true) ===");
-            console.log("Proxy name:", proxyName);
-            console.log("Existing proxy address:", existingProxy);
-            console.log("Operator has accepted responsibility for this proxy's provenance.");
-            proxy = existingProxy;
-        } else {
-            console.log("\n=== Deploying RecyReportproxy Proxy ===");
-
-            vm.startBroadcast();
-
-            proxy = factory.deployProxy(
-                proxyName,
-                "RECY",
-                networkConfig.token,
-                networkConfig.protocol,
-                config.unlockDelay,
-                config.shareRecycler,
-                config.shareValidator,
-                config.shareGenerator,
-                config.shareProtocol
-            );
-
-            vm.stopBroadcast();
-
-            console.log("Success! Proxy deployed at:", proxy);
-        }
-
-        // Test the deployed proxy
-        RecyReport recyReport1 = RecyReport(proxy);
-        console.log("Proxy label:", proxyName);
-        console.log("Proxy reportName:", recyReport1.name());
-        console.log("Proxy symbol:", recyReport1.symbol());
-        console.log("Unlock delay:", recyReport1.unlockDelay(), "seconds");
-        console.log("Recycler share:", recyReport1.shareRecycler(), "%");
-
-        // Display final statistics
-        console.log("\n=== Final Factory Statistics ===");
-        console.log("Total deployed proxies:", factory.getDeployedProxiesCount());
-
-        // Get all deployed proxies
-        address[] memory allProxies = factory.getAllDeployedProxies();
-        if (allProxies.length > 0) {
-            console.log("\nAll deployed proxies:");
-            for (uint256 i = 0; i < allProxies.length; i++) {
-                console.log("  [%d] Proxy: %s ", i + 1, allProxies[i]);
-            }
-        }
-
-        console.log("\n=== Completed ===");
+        console.log("=== Deployment Results ===");
+        console.log("RecyReport proxy deployed to:", proxyAddress);
+        console.log("Proxy name:", deployedProxy.name());
+        console.log("Proxy symbol:", deployedProxy.symbol());
+        console.log("Unlock delay:", deployedProxy.unlockDelay(), "seconds");
+        console.log("Recycler share:", deployedProxy.shareRecycler(), "%");
+        console.log("Total factory proxies:", factory.getDeployedProxiesCount());
+        console.log("Record the proxy address in the selected config entry before running ManageRoles.");
     }
 
-    /**
-     * @notice Abort unless the factory's baked-in code addresses are the blessed ones from config
-     * @dev `implementation` and `dataContract` are `immutable` on the factory
-     *      (src/RecyReportFactory.sol:15,18) and are wired into every proxy it deploys — the data
-     *      contract through the initializer payload (:107) and the implementation into the
-     *      ERC1967Proxy itself (:117). Neither `setDataContract` on the live proxy nor a UUPS
-     *      upgrade of the live proxy changes them, so a factory left holding pre-remediation
-     *      addresses keeps minting proxies that are born with the malformed-`tokenURI` data
-     *      contract and the unguarded implementation, with nothing at deploy time to say so.
-     *      That is the silent regression of security-audit-remediation.md 5a; this turns it into
-     *      a failed script.
-     *
-     *      `ALLOW_STALE_FACTORY=true` is the 5a-item-2 interim path only: deploy anyway, then
-     *      immediately run the three remediation calls printed below, then re-verify the new proxy.
-     *      The first of the three grants the operator `DEFAULT_ADMIN_ROLE` on the new proxy, which
-     *      `deployProxy` does not do — `initialize` grants every role to the factory, not to the
-     *      caller (src/RecyReport.sol:157-160).
-     * @param factory The factory that would mint the proxy
-     * @param networkConfig The network config carrying the blessed addresses
-     */
-    function _assertFactoryServesBlessedCode(RecyReportFactory factory, NetworkConfig memory networkConfig)
-        internal
-        view
-    {
-        address factoryImpl = factory.implementation();
-        address factoryData = factory.dataContract();
-        bool implOk = factoryImpl == networkConfig.reportImplementation;
-        bool dataOk = factoryData == networkConfig.reportData;
+    function _assertFreshProxyPlan(
+        RecyReportFactoryV2 factory,
+        NetworkConfig memory networkConfig,
+        ProxyConfig memory proxyConfig
+    ) private view {
+        require(networkConfig.issuanceChainId != 0, "issuance chain is not configured");
+        require(block.chainid == networkConfig.issuanceChainId, "report proxy must deploy on the issuance chain");
+        require(networkConfig.tokenOwner != address(0), "token owner is not configured");
+        require(networkConfig.protocol != address(0), "protocol address is not configured");
 
-        if (implOk && dataOk) {
-            console.log("Blessed-code check: PASS (factory serves the config's implementation and data contract)");
-            return;
-        }
+        require(networkConfig.token != address(0), "token is not configured");
+        require(networkConfig.token.code.length != 0, "token has no code");
+        RecyToken token = RecyToken(networkConfig.token);
+        require(token.issuanceChainId() == networkConfig.issuanceChainId, "token issuance chain mismatch");
+        require(token.owner() == networkConfig.tokenOwner, "token owner mismatch");
 
-        console.log("\n=== BLESSED-CODE CHECK FAILED ===");
-        if (!implOk) {
-            console.log("  factory.implementation():   ", factoryImpl);
-            console.log("  blessed reportImplementation:", networkConfig.reportImplementation);
-        }
-        if (!dataOk) {
-            console.log("  factory.dataContract():     ", factoryData);
-            console.log("  blessed reportData:         ", networkConfig.reportData);
-        }
-        console.log("  Any proxy deployed now is born with that code and none of the Phase 1/2 fixes.");
-        console.log("  Proper fix: deploy the Phase 3 v2 factory carrying the blessed pair.");
-        console.log("  Interim override: ALLOW_STALE_FACTORY=true, then IMMEDIATELY run all three,");
-        console.log("  in this order (1 and 3 from the factory owner, 2 from <operator>):");
-        console.log("    1. factory.grantAdminRole(<new proxy>, <operator>)");
-        console.log("       Required: deployProxy grants the CALLER nothing. initialize gives all");
-        console.log("       four roles to _msgSender(), which here is the factory");
-        console.log("       (src/RecyReport.sol:157-160), and the factory has no setDataContract");
-        console.log("       passthrough. Without this, step 2 reverts AccessControlUnauthorizedAccount.");
-        console.log("    2. <new proxy>.setDataContract(", networkConfig.reportData, ")");
-        console.log("    3. factory.upgradeProxy(<new proxy>,", networkConfig.reportImplementation, ")");
+        require(networkConfig.reportImplementation != address(0), "report implementation is not configured");
+        require(networkConfig.reportImplementation.code.length != 0, "report implementation has no code");
+        require(networkConfig.reportData != address(0), "report data is not configured");
+        require(networkConfig.reportData.code.length != 0, "report data has no code");
+        require(factory.implementation() == networkConfig.reportImplementation, "factory implementation is not blessed");
+        require(factory.dataContract() == networkConfig.reportData, "factory data contract is not blessed");
+        require(factory.owner() == networkConfig.tokenOwner, "factory owner mismatch");
 
+        require(bytes(proxyConfig.name).length != 0, "proxy name is not configured");
+        require(bytes(proxyConfig.name).length <= factory.MAX_PROXY_NAME_LENGTH(), "proxy name is too long");
+        require(bytes(proxyConfig.symbol).length != 0, "proxy symbol is not configured");
+        require(proxyConfig.proxy == address(0), "proxy is already configured");
+        require(factory.proxyByName(proxyConfig.name) == address(0), "proxy name is already registered");
+    }
+
+    function _assertDeployedProxy(
+        RecyReportFactoryV2 factory,
+        RecyReport deployedProxy,
+        NetworkConfig memory networkConfig,
+        ProxyConfig memory proxyConfig
+    ) private view {
+        address proxyAddress = address(deployedProxy);
+        require(proxyAddress.code.length != 0, "deployed proxy has no code");
+        require(factory.isDeployedProxy(proxyAddress), "factory did not register deployed proxy");
+        require(factory.proxyByName(proxyConfig.name) == proxyAddress, "factory name mapping mismatch");
         require(
-            vm.envOr("ALLOW_STALE_FACTORY", false),
-            string.concat(
-                "FACTORY SERVES STALE CODE: factory.implementation()/dataContract() do not match the ",
-                "blessed addresses in config/contracts.json (security-audit-remediation.md 5a). Set ",
-                "ALLOW_STALE_FACTORY=true to override and accept the mandatory post-deploy remediation."
-            )
+            keccak256(bytes(deployedProxy.name())) == keccak256(bytes(proxyConfig.name)), "deployed proxy name mismatch"
         );
+        require(
+            keccak256(bytes(deployedProxy.symbol())) == keccak256(bytes(proxyConfig.symbol)),
+            "deployed proxy symbol mismatch"
+        );
+        require(address(deployedProxy.token()) == networkConfig.token, "deployed proxy token mismatch");
+        require(deployedProxy.protocolAddress() == networkConfig.protocol, "deployed proxy protocol mismatch");
+        require(deployedProxy.unlockDelay() == proxyConfig.unlockDelay, "deployed proxy unlock delay mismatch");
+        require(deployedProxy.shareRecycler() == proxyConfig.shareRecycler, "deployed proxy recycler share mismatch");
+        require(deployedProxy.shareValidator() == proxyConfig.shareValidator, "deployed proxy validator share mismatch");
+        require(deployedProxy.shareGenerator() == proxyConfig.shareGenerator, "deployed proxy generator share mismatch");
+        require(deployedProxy.shareProtocol() == proxyConfig.shareProtocol, "deployed proxy protocol share mismatch");
+        require(factory.hasAdminRole(proxyAddress, address(factory)), "factory lacks proxy admin role");
+    }
 
-        console.log("  ALLOW_STALE_FACTORY=true - proceeding. The three calls above are now MANDATORY.");
+    function _broadcastSender() private returns (address broadcaster) {
+        vm.startBroadcast();
+        // forge-lint: disable-next-line(unused-return)
+        (VmSafe.CallerMode mode, address sender,) = vm.readCallers();
+        vm.stopBroadcast();
+
+        require(mode == VmSafe.CallerMode.RecurrentBroadcast, "Foundry broadcast signer is unavailable");
+        return sender;
     }
 }
