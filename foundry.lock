@@ -3,7 +3,7 @@
     "rev": "9c741e7f9790639537b1710a203bcdfd73b0b9ac"
   },
   "lib/devtools": {
-    "rev": "128b697838f4b0fd53ae748093fd66cc409ae5c4"
+    "rev": "72194e5bc3177865bc3043fa54c1d67e599f0fc5"
   },
   "lib/solidity-bytes-utils": {
     "rev": "fc502455bb2a7e26a743378df042612dd50d1eb9"
