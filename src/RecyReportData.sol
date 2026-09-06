@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.34;
+pragma solidity 0.8.36;
 
-import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {RecyReportAttributes} from "./RecyReportAttributes.sol";
 import {RecyReportSvg} from "./RecyReportSvg.sol";
 import {RecyConstants} from "./lib/RecyConstants.sol";
-import {RecyTypes} from "./lib/RecyTypes.sol";
 import {RecyErrors} from "./lib/RecyErrors.sol";
+import {RecyTypes} from "./lib/RecyTypes.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @title RecyReportData
@@ -160,6 +160,9 @@ contract RecyReportData {
             // permanently brick both tokenURI and tokenJson for the token, which is unrecoverable
             // because materials are push-only and have no repair path.
             string memory materialName;
+            // Every material has a distinct live catalogue lookup; the catch is required so one
+            // malformed entry cannot brick rendering for the entire report.
+            // forge-lint: disable-next-line(calls-loop)
             try attributes.getMaterial(_materials[i].material) returns (string memory name) {
                 materialName = name;
             } catch {

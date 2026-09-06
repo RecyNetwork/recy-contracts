@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {VmSafe} from "forge-std/Vm.sol";
-import {console2} from "forge-std/console2.sol";
-import {ILayerZeroEndpointV2} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {RecyToken} from "../../src/RecyToken.sol";
 import {RecyTokenOFTWiring} from "../config/RecyTokenOFTWiring.s.sol";
+import {ILayerZeroEndpointV2} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import {VmSafe} from "forge-std/Vm.sol";
+import {console2} from "forge-std/console2.sol";
 
 contract RecyTokenDeploy is RecyTokenOFTWiring {
     string private constant TOKEN_NAME = "RecyToken";
@@ -44,13 +44,17 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
     function check() public {
         DeploymentState memory state = _loadState();
 
-        for (uint256 i; i < state.chainIds.length; ++i) {
+        // The script must select and fail-fast validate every configured fork; this
+        // bounded chain set comes from static deployment configuration, not user input.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
+        for (uint256 i = 0; i < state.chainIds.length; ++i) {
             vm.selectFork(state.forkIds[i]);
             require(state.networks[i].token != address(0), "token is not configured");
             _validateToken(state.networks[i], state.oftConfigs[i]);
             _validateTokenIdentity(state.networks[i].token);
             state.tokenAddresses[i] = state.networks[i].token;
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
 
         _checkRoutes(state);
         console2.log("All configured live OFT routes are valid.");
@@ -68,7 +72,10 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
         state.needsDeployment = new bool[](count);
         state.needsRecording = new bool[](count);
 
-        for (uint256 i; i < count; ++i) {
+        // Cross-chain config is intentionally validated entry by entry before any
+        // broadcast; one inconsistent network must abort the deployment plan.
+        // forge-lint: disable-start(require-revert-in-loop)
+        for (uint256 i = 0; i < count; ++i) {
             state.networks[i] = getNetworkConfig(state.chainIds[i]);
             state.oftConfigs[i] = getOFTConfig(state.chainIds[i]);
             require(state.networks[i].tokenOwner != address(0), "token owner is not configured");
@@ -82,9 +89,12 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
                 );
             }
         }
+        // forge-lint: disable-end(require-revert-in-loop)
 
-        // Open and verify every RPC before any broadcast scope is entered.
-        for (uint256 i; i < count; ++i) {
+        // Preflight must open and validate every configured RPC before any broadcast;
+        // bounded cheatcode and endpoint calls plus fail-fast checks are the safety boundary.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
+        for (uint256 i = 0; i < count; ++i) {
             state.forkIds[i] = vm.createSelectFork(state.oftConfigs[i].rpcAlias);
             require(block.chainid == state.chainIds[i], "RPC alias resolves to the wrong chain");
             require(state.networks[i].lzEndpoint.code.length != 0, "endpoint has no code");
@@ -93,10 +103,14 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
                 "endpoint EID mismatch"
             );
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
     }
 
     function _preflightTokenPlan(DeploymentState memory state) private {
-        for (uint256 i; i < state.chainIds.length; ++i) {
+        // Address planning is per fork because nonce and code state are chain-local;
+        // bounded cheatcode reads and CREATE-address mismatches must abort the plan.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
+        for (uint256 i = 0; i < state.chainIds.length; ++i) {
             vm.selectFork(state.forkIds[i]);
             address configured = state.networks[i].token;
 
@@ -123,10 +137,14 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
             state.needsDeployment[i] = true;
             console2.log("Token address", planned);
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
     }
 
     function _broadcastSender() private returns (address broadcaster) {
         vm.startBroadcast();
+        // readCallers also reports tx.origin, but signer selection intentionally uses
+        // Foundry's recurrent mode and msg.sender rather than adding an origin policy.
+        // forge-lint: disable-next-line(unused-return)
         (VmSafe.CallerMode mode, address sender,) = vm.readCallers();
         vm.stopBroadcast();
 
@@ -135,7 +153,10 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
     }
 
     function _deployTokens(DeploymentState memory state) private {
-        for (uint256 i; i < state.chainIds.length; ++i) {
+        // Each selected chain needs its own fork and broadcast scope; deployment
+        // readbacks and fail-fast postconditions prevent recording an invalid plan.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
+        for (uint256 i = 0; i < state.chainIds.length; ++i) {
             if (!state.needsDeployment[i]) continue;
             vm.selectFork(state.forkIds[i]);
 
@@ -154,12 +175,16 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
             console2.log("Locally simulated planned token on chain", state.chainIds[i]);
             console2.log("Token address", address(token));
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
     }
 
     function _configureRoutes(DeploymentState memory state) private {
-        for (uint256 i; i < state.chainIds.length; ++i) {
+        // Route configuration runs once per configured chain and peer on its selected
+        // fork; the closed deployment graph bounds this script-only batch.
+        // forge-lint: disable-start(calls-loop)
+        for (uint256 i = 0; i < state.chainIds.length; ++i) {
             vm.selectFork(state.forkIds[i]);
-            for (uint256 j; j < state.oftConfigs[i].peerChainIds.length; ++j) {
+            for (uint256 j = 0; j < state.oftConfigs[i].peerChainIds.length; ++j) {
                 uint256 remoteChainId = state.oftConfigs[i].peerChainIds[j];
                 uint256 remoteIndex = _networkIndex(state.chainIds, remoteChainId);
                 _configureRoute(
@@ -171,12 +196,16 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
                 );
             }
         }
+        // forge-lint: disable-end(calls-loop)
     }
 
     function _wireRoutes(DeploymentState memory state) private {
-        for (uint256 i; i < state.chainIds.length; ++i) {
+        // Peer wiring runs once per configured chain and peer on its selected fork;
+        // the closed deployment graph bounds this script-only batch.
+        // forge-lint: disable-start(calls-loop)
+        for (uint256 i = 0; i < state.chainIds.length; ++i) {
             vm.selectFork(state.forkIds[i]);
-            for (uint256 j; j < state.oftConfigs[i].peerChainIds.length; ++j) {
+            for (uint256 j = 0; j < state.oftConfigs[i].peerChainIds.length; ++j) {
                 uint256 remoteChainId = state.oftConfigs[i].peerChainIds[j];
                 uint256 remoteIndex = _networkIndex(state.chainIds, remoteChainId);
                 _wireRoute(
@@ -188,15 +217,19 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
                 );
             }
         }
+        // forge-lint: disable-end(calls-loop)
     }
 
     function _checkRoutes(DeploymentState memory state) private {
-        for (uint256 i; i < state.chainIds.length; ++i) {
+        // Complete readback must visit every configured chain and peer; these bounded
+        // calls are the cross-chain postcondition, not user-controlled iteration.
+        // forge-lint: disable-start(calls-loop)
+        for (uint256 i = 0; i < state.chainIds.length; ++i) {
             vm.selectFork(state.forkIds[i]);
             _validateToken(state.networks[i], state.oftConfigs[i]);
             _validateTokenIdentity(state.networks[i].token);
 
-            for (uint256 j; j < state.oftConfigs[i].peerChainIds.length; ++j) {
+            for (uint256 j = 0; j < state.oftConfigs[i].peerChainIds.length; ++j) {
                 uint256 remoteChainId = state.oftConfigs[i].peerChainIds[j];
                 uint256 remoteIndex = _networkIndex(state.chainIds, remoteChainId);
                 _checkRoute(
@@ -209,6 +242,7 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
                 );
             }
         }
+        // forge-lint: disable-end(calls-loop)
     }
 
     function _recordPlannedAddresses(DeploymentState memory state) private {
@@ -217,8 +251,11 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
             return;
         }
 
-        bool recorded;
-        for (uint256 i; i < state.chainIds.length; ++i) {
+        bool recorded = false;
+        // Broadcast-mode persistence writes every newly planned chain address so the
+        // bounded deployment config remains synchronized with broadcast output.
+        // forge-lint: disable-start(calls-loop)
+        for (uint256 i = 0; i < state.chainIds.length; ++i) {
             if (!state.needsRecording[i]) continue;
             vm.writeJson(
                 string.concat("\"", vm.toString(state.tokenAddresses[i]), "\""),
@@ -229,6 +266,7 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
             console2.log("Recorded planned token address for chain", state.chainIds[i]);
             console2.log("Token address", state.tokenAddresses[i]);
         }
+        // forge-lint: disable-end(calls-loop)
 
         if (recorded) {
             console2.log("Recorded addresses are planned until their broadcast receipts succeed.");
@@ -237,16 +275,25 @@ contract RecyTokenDeploy is RecyTokenOFTWiring {
         }
     }
 
+    // This validator is intentionally reached from each selected-chain loop; its
+    // metadata reads and fail-fast mismatches protect token reuse and deployment.
+    // forge-lint: disable-start(calls-loop, require-revert-in-loop)
     function _validateTokenIdentity(address tokenAddress) private view {
         RecyToken token = RecyToken(tokenAddress);
         require(keccak256(bytes(token.name())) == keccak256(bytes(TOKEN_NAME)), "token name mismatch");
         require(keccak256(bytes(token.symbol())) == keccak256(bytes(TOKEN_SYMBOL)), "token symbol mismatch");
     }
 
+    // forge-lint: disable-end(calls-loop, require-revert-in-loop)
+
+    // Route loops require a total lookup over the closed configured graph; a missing
+    // peer is invalid deployment input and must stop the entire script immediately.
+    // forge-lint: disable-start(require-revert-in-loop)
     function _networkIndex(uint256[] memory chainIds, uint256 chainId) private pure returns (uint256 index) {
-        for (uint256 i; i < chainIds.length; ++i) {
+        for (uint256 i = 0; i < chainIds.length; ++i) {
             if (chainIds[i] == chainId) return i;
         }
         revert("peer chain is not selected");
     }
+    // forge-lint: disable-end(require-revert-in-loop)
 }

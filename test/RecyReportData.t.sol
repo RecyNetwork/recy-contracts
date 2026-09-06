@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {Test, console} from "forge-std/Test.sol";
-import {RecyReportData} from "../src/RecyReportData.sol";
 import {RecyReportAttributes} from "../src/RecyReportAttributes.sol";
+import {RecyReportData} from "../src/RecyReportData.sol";
 import {RecyReportSvg} from "../src/RecyReportSvg.sol";
+import {RecyConstants} from "../src/lib/RecyConstants.sol";
 import {RecyErrors} from "../src/lib/RecyErrors.sol";
 import {RecyTypes} from "../src/lib/RecyTypes.sol";
-import {RecyConstants} from "../src/lib/RecyConstants.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./helpers/TestHelpers.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Test, console} from "forge-std/Test.sol";
 
 contract MockToken is ERC20 {
     constructor() ERC20("Mock Token", "MOCK") {}
@@ -194,7 +195,7 @@ contract RecyReportDataTest is Test, TestHelpers {
 
     function test_generateauditDateText() public view {
         // Test with valid date
-        uint256 validDate = 1234567890;
+        uint256 validDate = 1_234_567_890;
         string memory result = recyReportData.exposed_generateauditDateText(validDate);
         assertTrue(bytes(result).length > 0, "Validation date text should not be empty");
 
@@ -205,7 +206,7 @@ contract RecyReportDataTest is Test, TestHelpers {
 
     function test_generateRecycleDateText() public view {
         // Test with valid date
-        uint256 validDate = 1234567890;
+        uint256 validDate = 1_234_567_890;
         string memory result = recyReportData.exposed_generateRecycleDateText(validDate);
         assertTrue(bytes(result).length > 0, "Recycle date text should not be empty");
 
@@ -227,7 +228,8 @@ contract RecyReportDataTest is Test, TestHelpers {
 
     function test_generateRewardText() public view {
         // Create test reward using helper
-        RecyTypes.RecyReward memory reward = createRecyReward(uint128(1000 * RecyConstants.ONE_E18), 1234567890);
+        RecyTypes.RecyReward memory reward =
+            createRecyReward(SafeCast.toUint128(1000 * RecyConstants.ONE_E18), 1_234_567_890);
 
         // Test with status > 2 (VALIDATED)
         string memory validatedResult =
@@ -255,14 +257,15 @@ contract RecyReportDataTest is Test, TestHelpers {
 
     function test_tokenUriAttributes() public view {
         // Create test data
-        RecyTypes.RecyReward memory reward =
-            RecyTypes.RecyReward({rewardAmount: uint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1234567890});
+        RecyTypes.RecyReward memory reward = RecyTypes.RecyReward({
+            rewardAmount: SafeCast.toUint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1_234_567_890
+        });
 
         RecyTypes.RecyInfo memory info = RecyTypes.RecyInfo({
             validator: address(0x123),
             recycler: address(0x456),
-            recycleDate: 1234567890,
-            auditDate: 1234567890,
+            recycleDate: 1_234_567_890,
+            auditDate: 1_234_567_890,
             wasteAmount: 1000
         });
 
@@ -298,14 +301,15 @@ contract RecyReportDataTest is Test, TestHelpers {
 
     function test_tokenUriAttributesTest() public view {
         // Create test data
-        RecyTypes.RecyReward memory reward =
-            RecyTypes.RecyReward({rewardAmount: uint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1234567890});
+        RecyTypes.RecyReward memory reward = RecyTypes.RecyReward({
+            rewardAmount: SafeCast.toUint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1_234_567_890
+        });
 
         RecyTypes.RecyInfo memory info = RecyTypes.RecyInfo({
             validator: address(0x789),
             recycler: address(0xABC),
-            recycleDate: 1234567890,
-            auditDate: 1234567890,
+            recycleDate: 1_234_567_890,
+            auditDate: 1_234_567_890,
             wasteAmount: 1000
         });
 
@@ -343,7 +347,8 @@ contract RecyReportDataTest is Test, TestHelpers {
     }
 
     function test_generateRewardTextWithZeroReward() public view {
-        RecyTypes.RecyReward memory zeroReward = RecyTypes.RecyReward({rewardAmount: 0, rewardUnlockDate: 1234567890});
+        RecyTypes.RecyReward memory zeroReward =
+            RecyTypes.RecyReward({rewardAmount: 0, rewardUnlockDate: 1_234_567_890});
 
         string memory result =
             recyReportData.exposed_generateRewardText(RecyConstants.RECYCLE_VALIDATED, zeroReward, mockToken);
@@ -364,6 +369,8 @@ contract RecyReportDataTest is Test, TestHelpers {
         assertTrue(bytes(result).length > 0);
     }
 
+    // This bounded four-status sweep intentionally renders once per status.
+    // forge-lint: disable-next-item(calls-loop)
     function test_generateSvgWithAllStatuses() public view {
         for (uint8 i = 0; i <= 3; i++) {
             string memory result = recyReportData.exposed_generateSvg(i);
@@ -375,15 +382,17 @@ contract RecyReportDataTest is Test, TestHelpers {
     // ===== METADATA INTEGRITY TESTS =====
 
     function _sampleReward() internal pure returns (RecyTypes.RecyReward memory) {
-        return RecyTypes.RecyReward({rewardAmount: uint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1234567890});
+        return RecyTypes.RecyReward({
+            rewardAmount: SafeCast.toUint128(1000 * RecyConstants.ONE_E18), rewardUnlockDate: 1_234_567_890
+        });
     }
 
     function _sampleInfo() internal pure returns (RecyTypes.RecyInfo memory) {
         return RecyTypes.RecyInfo({
             validator: address(0x123),
             recycler: address(0x456),
-            recycleDate: 1234567890,
-            auditDate: 1234567890,
+            recycleDate: 1_234_567_890,
+            auditDate: 1_234_567_890,
             wasteAmount: 1000
         });
     }
@@ -483,7 +492,7 @@ contract RecyReportDataTest is Test, TestHelpers {
     /// @notice The catalogue boundary: the last valid id still resolves, the first
     ///         invalid id degrades, and in-range ids are unaffected by the fallback.
     function test_materialRenderingAtCatalogueBoundary() public view {
-        uint32 count = uint32(recyReportData.materialsCount());
+        uint32 count = SafeCast.toUint32(recyReportData.materialsCount());
 
         assertEq(_renderMaterialTrait(count - 1), "Solid Inert Industrial Waste", "Last catalogue id should resolve");
         assertEq(_renderMaterialTrait(count), "Unknown Material", "First id past the catalogue should degrade");
@@ -579,6 +588,8 @@ contract RecyReportDataTest is Test, TestHelpers {
         bytes memory prefix = bytes("data:application/json;base64,");
         require(uriBytes.length > prefix.length, "decodeJsonDataUri: too short");
         for (uint256 i = 0; i < prefix.length; i++) {
+            // Prefix validation must reject the first mismatching byte.
+            // forge-lint: disable-next-line(require-revert-in-loop)
             require(uriBytes[i] == prefix[i], "decodeJsonDataUri: bad prefix");
         }
 
@@ -593,26 +604,30 @@ contract RecyReportDataTest is Test, TestHelpers {
     function base64Decode(bytes memory input) internal pure returns (bytes memory output) {
         require(input.length >= 4 && input.length % 4 == 0, "base64Decode: bad length");
 
-        uint256 padding;
+        uint256 padding = 0;
         if (input[input.length - 1] == "=") padding++;
         if (input[input.length - 2] == "=") padding++;
 
+        // This division is exact because the length invariant above requires complete four-byte groups.
+        // forge-lint: disable-next-line(divide-before-multiply)
         output = new bytes((input.length / 4) * 3 - padding);
-        uint256 outIndex;
+        uint256 outIndex = 0;
         for (uint256 i = 0; i < input.length; i += 4) {
             uint256 chunk = (base64Value(input[i]) << 18) | (base64Value(input[i + 1]) << 12)
                 | (base64Value(input[i + 2]) << 6) | base64Value(input[i + 3]);
 
-            output[outIndex++] = bytes1(uint8(chunk >> 16));
+            output[outIndex++] = bytes1(uint8((chunk >> 16) & 0xff));
             if (outIndex < output.length) {
-                output[outIndex++] = bytes1(uint8(chunk >> 8));
+                output[outIndex++] = bytes1(uint8((chunk >> 8) & 0xff));
             }
             if (outIndex < output.length) {
-                output[outIndex++] = bytes1(uint8(chunk));
+                output[outIndex++] = bytes1(uint8(chunk & 0xff));
             }
         }
     }
 
+    // Invalid alphabet bytes must still revert when this helper is reached from the decode loop.
+    // forge-lint: disable-next-item(require-revert-in-loop)
     function base64Value(bytes1 char) internal pure returns (uint256) {
         uint8 code = uint8(char);
         if (code >= 0x41 && code <= 0x5A) return code - 0x41; // A-Z

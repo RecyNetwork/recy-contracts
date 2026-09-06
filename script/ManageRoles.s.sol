@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Script.sol";
 import "../src/RecyReportFactory.sol";
 import "./config/ConfigManager.s.sol";
+import "forge-std/Script.sol";
 
 /**
  * @title ManageRoles
@@ -217,6 +217,8 @@ contract ManageRoles is Script, ConfigManager {
         uint256 pageSize = 10;
         uint256 offset = 0;
 
+        // Each page is deliberately fetched from the factory; `total` bounds this read-only pagination loop.
+        // forge-lint: disable-start(calls-loop)
         while (true) {
             (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(offset, pageSize);
 
@@ -231,6 +233,7 @@ contract ManageRoles is Script, ConfigManager {
             offset += proxies.length;
             if (offset >= total) break;
         }
+        // forge-lint: disable-end(calls-loop)
     }
 
     /**
@@ -258,6 +261,8 @@ contract ManageRoles is Script, ConfigManager {
 
         // Apply admin roles
         console.log("Granting admin roles to", config.admins.length, "addresses:");
+        // Each configured admin is deliberately checked and granted in this bounded deployment batch.
+        // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < config.admins.length; i++) {
             address admin = config.admins[i];
             if (factory.hasAdminRole(address(proxy), admin)) {
@@ -267,9 +272,12 @@ contract ManageRoles is Script, ConfigManager {
                 factory.grantAdminRole(address(proxy), admin);
             }
         }
+        // forge-lint: disable-end(calls-loop)
 
         // Apply recycler roles
         console.log("Granting recycler roles to", config.recyclers.length, "addresses:");
+        // Each recycler is checked on-chain before grant; the per-entry revert preserves role separation.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
         for (uint256 i = 0; i < config.recyclers.length; i++) {
             address recycler = config.recyclers[i];
             if (factory.hasRecyclerRole(address(proxy), recycler)) {
@@ -287,9 +295,12 @@ contract ManageRoles is Script, ConfigManager {
                 factory.grantRecyclerRole(address(proxy), recycler);
             }
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
 
         // Apply auditor roles
         console.log("Granting auditor roles to", config.auditors.length, "addresses:");
+        // Each auditor is checked on-chain before grant; the per-entry revert preserves role separation.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
         for (uint256 i = 0; i < config.auditors.length; i++) {
             address auditor = config.auditors[i];
             if (factory.hasAuditorRole(address(proxy), auditor)) {
@@ -307,9 +318,12 @@ contract ManageRoles is Script, ConfigManager {
                 factory.grantAuditorRole(address(proxy), auditor);
             }
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
 
         // Apply emergency roles
         console.log("Granting emergency roles to", config.emergency.length, "addresses:");
+        // Each emergency address is deliberately checked and granted in this bounded deployment batch.
+        // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < config.emergency.length; i++) {
             address emergencyAddr = config.emergency[i];
             if (factory.hasEmergencyRole(address(proxy), emergencyAddr)) {
@@ -319,6 +333,7 @@ contract ManageRoles is Script, ConfigManager {
                 factory.grantEmergencyRole(address(proxy), emergencyAddr);
             }
         }
+        // forge-lint: disable-end(calls-loop)
 
         console.log("All roles applied successfully!");
 
@@ -345,6 +360,8 @@ contract ManageRoles is Script, ConfigManager {
         console.log("Principals audited:", principals.length);
 
         uint256 violations = 0;
+        // Auditing each configured principal requires two live role reads in this bounded read-only batch.
+        // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < principals.length; i++) {
             address principal = principals[i];
             bool isRecycler = factory.hasRecyclerRole(address(proxy), principal);
@@ -361,6 +378,7 @@ contract ManageRoles is Script, ConfigManager {
                 console.log("  ok (no operational role):", principal);
             }
         }
+        // forge-lint: disable-end(calls-loop)
 
         require(
             violations == 0,
@@ -394,6 +412,8 @@ contract ManageRoles is Script, ConfigManager {
         vm.startBroadcast();
 
         uint256 revoked = 0;
+        // Each configured principal is read on-chain and any unauthorized role is revoked in this bounded batch.
+        // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < principals.length; i++) {
             address principal = principals[i];
             bool wantRecycler = _contains(config.recyclers, principal);
@@ -410,6 +430,7 @@ contract ManageRoles is Script, ConfigManager {
                 revoked++;
             }
         }
+        // forge-lint: disable-end(calls-loop)
 
         vm.stopBroadcast();
 
@@ -453,6 +474,8 @@ contract ManageRoles is Script, ConfigManager {
      * @param config The proxy config to validate
      */
     function _assertConfigRoleSeparation(ProxyConfig memory config) internal pure {
+        // Each recycler keeps its own separation check; vm.toString only identifies the offending config entry.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
         for (uint256 i = 0; i < config.recyclers.length; i++) {
             address recycler = config.recyclers[i];
             require(
@@ -465,6 +488,7 @@ contract ManageRoles is Script, ConfigManager {
                 )
             );
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
         _assertNoOperationalRole(config, config.admins, "admins");
         _assertNoOperationalRole(config, config.emergency, "emergency");
     }
@@ -479,6 +503,8 @@ contract ManageRoles is Script, ConfigManager {
         internal
         pure
     {
+        // Each privileged key keeps its own separation check; vm.toString only identifies the offending entry.
+        // forge-lint: disable-start(calls-loop, require-revert-in-loop)
         for (uint256 i = 0; i < privileged.length; i++) {
             address key = privileged[i];
             require(
@@ -493,6 +519,7 @@ contract ManageRoles is Script, ConfigManager {
                 )
             );
         }
+        // forge-lint: disable-end(calls-loop, require-revert-in-loop)
     }
 
     /**
@@ -507,6 +534,8 @@ contract ManageRoles is Script, ConfigManager {
         view
         returns (uint256 pending)
     {
+        // Each configured principal needs one live funds read and script-only command formatting in this drift report.
+        // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < principals.length; i++) {
             if (i >= declaredFunds.length || declaredFunds[i] == address(0)) continue;
 
@@ -531,6 +560,7 @@ contract ManageRoles is Script, ConfigManager {
                 )
             );
         }
+        // forge-lint: disable-end(calls-loop)
     }
 
     /**

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {stdJson} from "forge-std/StdJson.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ConfigManager} from "./ConfigManager.s.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 
 contract RecyTokenOFTConfig is ConfigManager {
     using stdJson for string;
@@ -24,19 +24,21 @@ contract RecyTokenOFTConfig is ConfigManager {
         uint256[] peerChainIds;
     }
 
+    // This script intentionally parses each configured chain inside a finite discovery pass.
+    // forge-lint: disable-start(calls-loop)
     function getOFTChainIds() public view returns (uint256[] memory chainIds) {
         string memory json = vm.readFile(CONFIG_PATH);
         string[] memory rootKeys = vm.parseJsonKeys(json, "$");
-        uint256 count;
+        uint256 count = 0;
 
-        for (uint256 i; i < rootKeys.length; ++i) {
+        for (uint256 i = 0; i < rootKeys.length; ++i) {
             if (json.keyExists(string.concat(".", rootKeys[i], ".oft"))) ++count;
         }
         require(count != 0, "no OFT networks configured");
 
         chainIds = new uint256[](count);
-        uint256 index;
-        for (uint256 i; i < rootKeys.length; ++i) {
+        uint256 index = 0;
+        for (uint256 i = 0; i < rootKeys.length; ++i) {
             if (json.keyExists(string.concat(".", rootKeys[i], ".oft"))) {
                 chainIds[index++] = vm.parseUint(rootKeys[i]);
             }
@@ -46,6 +48,10 @@ contract RecyTokenOFTConfig is ConfigManager {
         _validateOFTNetworkSet(json, chainIds);
     }
 
+    // forge-lint: disable-end(calls-loop)
+
+    // Deployment scripts read and decode the config once for each selected chain.
+    // forge-lint: disable-start(calls-loop)
     function getOFTConfig(uint256 chainId) public view returns (OFTConfig memory config) {
         string memory json = vm.readFile(CONFIG_PATH);
         config = _readOFTConfig(json, chainId);
@@ -68,6 +74,10 @@ contract RecyTokenOFTConfig is ConfigManager {
         _validateOFTConfig(chainId, config);
     }
 
+    // forge-lint: disable-end(calls-loop)
+
+    // Finite config discovery invokes this fail-fast validation for every chain entry.
+    // forge-lint: disable-start(require-revert-in-loop)
     function _validateOFTConfig(uint256 chainId, OFTConfig memory config) internal pure {
         require(bytes(config.rpcAlias).length != 0, "OFT RPC alias is empty");
         require(config.eid != 0, "OFT eid is zero");
@@ -83,29 +93,33 @@ contract RecyTokenOFTConfig is ConfigManager {
         require(config.requiredDVNs.length == REQUIRED_DVN_COUNT, "OFT requires exactly two DVNs");
         require(config.peerChainIds.length != 0, "OFT requires at least one peer chain");
 
-        address previous;
-        for (uint256 i; i < config.requiredDVNs.length; ++i) {
+        address previous = address(0);
+        for (uint256 i = 0; i < config.requiredDVNs.length; ++i) {
             address dvn = config.requiredDVNs[i];
             require(dvn > previous, "OFT DVNs must be nonzero and sorted");
             previous = dvn;
         }
 
-        for (uint256 i; i < config.peerChainIds.length; ++i) {
+        for (uint256 i = 0; i < config.peerChainIds.length; ++i) {
             uint256 peerChainId = config.peerChainIds[i];
             require(peerChainId != 0, "OFT peer chain is zero");
             require(peerChainId != chainId, "OFT cannot peer with itself");
-            for (uint256 j; j < i; ++j) {
+            for (uint256 j = 0; j < i; ++j) {
                 require(config.peerChainIds[j] != peerChainId, "OFT peer chain is duplicated");
             }
         }
     }
 
+    // forge-lint: disable-end(require-revert-in-loop)
+
+    // This bounded script pass must read and validate every configured chain and reciprocal peer.
+    // forge-lint: disable-start(calls-loop, require-revert-in-loop)
     function _validateOFTNetworkSet(string memory json, uint256[] memory chainIds) private pure {
         OFTConfig[] memory configs = new OFTConfig[](chainIds.length);
-        address sharedOwner;
-        uint256 sharedIssuanceChainId;
+        address sharedOwner = address(0);
+        uint256 sharedIssuanceChainId = 0;
 
-        for (uint256 i; i < chainIds.length; ++i) {
+        for (uint256 i = 0; i < chainIds.length; ++i) {
             uint256 chainId = chainIds[i];
             configs[i] = _readOFTConfig(json, chainId);
             string memory prefix = string.concat(".", vm.toString(chainId));
@@ -122,13 +136,13 @@ contract RecyTokenOFTConfig is ConfigManager {
                 require(issuanceChainId == sharedIssuanceChainId, "OFT issuance chain IDs differ");
             }
 
-            for (uint256 j; j < i; ++j) {
+            for (uint256 j = 0; j < i; ++j) {
                 require(configs[j].eid != configs[i].eid, "OFT EIDs must be unique");
             }
         }
 
-        for (uint256 i; i < chainIds.length; ++i) {
-            for (uint256 j; j < configs[i].peerChainIds.length; ++j) {
+        for (uint256 i = 0; i < chainIds.length; ++i) {
+            for (uint256 j = 0; j < configs[i].peerChainIds.length; ++j) {
                 uint256 peerChainId = configs[i].peerChainIds[j];
                 (bool selected, uint256 peerIndex) = _findChainId(chainIds, peerChainId);
                 require(selected, "OFT peer chain is not configured");
@@ -136,15 +150,20 @@ contract RecyTokenOFTConfig is ConfigManager {
             }
         }
     }
+    // forge-lint: disable-end(calls-loop, require-revert-in-loop)
 
     function _findChainId(uint256[] memory chainIds, uint256 chainId) private pure returns (bool found, uint256 index) {
-        for (uint256 i; i < chainIds.length; ++i) {
-            if (chainIds[i] == chainId) return (true, i);
+        for (uint256 i = 0; i < chainIds.length; ++i) {
+            found = chainIds[i] == chainId;
+            if (found) {
+                index = i;
+                break;
+            }
         }
     }
 
     function _hasPeer(OFTConfig memory config, uint256 chainId) private pure returns (bool) {
-        for (uint256 i; i < config.peerChainIds.length; ++i) {
+        for (uint256 i = 0; i < config.peerChainIds.length; ++i) {
             if (config.peerChainIds[i] == chainId) return true;
         }
         return false;

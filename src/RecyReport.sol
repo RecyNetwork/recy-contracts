@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
-import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ERC2771ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
-import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {RecyReportData} from "./RecyReportData.sol";
 import {RecyToken} from "./RecyToken.sol";
 import {RecyConstants} from "./lib/RecyConstants.sol";
-import {RecyTypes} from "./lib/RecyTypes.sol";
 import {RecyErrors} from "./lib/RecyErrors.sol";
 import {RecyReward} from "./lib/RecyReward.sol";
+import {RecyTypes} from "./lib/RecyTypes.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ERC2771ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {IERC165} from "@openzeppelin/contracts/interfaces/IERC165.sol";
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract RecyReport is
     Initializable,
@@ -114,11 +114,13 @@ contract RecyReport is
      * @notice Initializes the upgradeable contract
      * @dev Replaces the constructor for upgradeable contracts. Rewards exist only on the token's
      *      issuance chain, so initialization rejects every other chain without changing this ABI.
+     *      The protocol recipient must be non-zero even when its share is zero because claims
+     *      unconditionally execute that ERC20 transfer.
      * @param _name The name of the nft
      * @param _symbol The symbol of the nft
      * @param _tokenAddress The address of the RECY OFT token.
      * @param _dataAddress The address of the data contract.
-     * @param _protocolAddress The address of the protocol
+     * @param _protocolAddress The non-zero address that receives the protocol reward share
      * @param _unlockDelay The delay in seconds before the reward can be claimed
      * @param _shareRecycler Percentage of the reward that goes to the recycler
      * @param _shareValidator Percentage of the reward that goes to the validator
@@ -138,7 +140,7 @@ contract RecyReport is
         uint8 _shareGenerator,
         uint8 _shareProtocol
     ) public initializer {
-        if (_tokenAddress == address(0) || _dataAddress == address(0)) {
+        if (_tokenAddress == address(0) || _dataAddress == address(0) || _protocolAddress == address(0)) {
             revert RecyErrors.AddressInvalid();
         }
         if (RecyToken(_tokenAddress).issuanceChainId() != block.chainid) {
@@ -262,6 +264,8 @@ contract RecyReport is
         uint256 nftId = nftNextId;
         _safeMint(_msgSender(), nftId);
         status[nftId] = RecyConstants.RECYCLE_CREATED;
+        // nftId comes from this uint128 counter; exhausting 2^128 sequential mints is unreachable.
+        /// forge-lint: disable-next-line(unsafe-typecast)
         nftNextId = uint128(nftId + RecyConstants.NFT_ID_INCREMENT);
     }
 
@@ -297,6 +301,9 @@ contract RecyReport is
         // Read the catalogue size once; it cannot change while this call executes.
         uint256 materialsCount = data.materialsCount();
         for (uint256 i = 0; i < _materials.length; i++) {
+            // Each material must independently reference the current catalogue; fail at the first
+            // invalid entry rather than copying or transforming the caller's arrays.
+            /// forge-lint: disable-next-line(require-revert-in-loop)
             require(_materials[i] < materialsCount, RecyErrors.MaterialIdOutOfRange());
         }
     }
@@ -330,6 +337,8 @@ contract RecyReport is
 
         uint256 nftId = nftNextId;
         _safeMint(_generator, nftId);
+        // nftId comes from this uint128 counter; exhausting 2^128 sequential mints is unreachable.
+        /// forge-lint: disable-next-line(unsafe-typecast)
         nftNextId = uint128(nftId + RecyConstants.NFT_ID_INCREMENT);
 
         RecyTypes.RecyInfo storage _info = info[nftId];
@@ -352,8 +361,13 @@ contract RecyReport is
 
         status[nftId] = RecyConstants.RECYCLE_COMPLETED;
 
+        // The safe-mint callback completes while this report's status is still unset, so it cannot
+        // advance the same report. A callback failure unwinds the mint; these logs therefore still
+        // describe only a successfully received and fully populated report.
+        /// forge-lint: disable-start(reentrancy-events)
         emit MetadataUpdate(nftId);
         emit ReportResult(nftId, _msgSender(), _info.recycleDate, _info.wasteAmount);
+        /// forge-lint: disable-end(reentrancy-events)
     }
 
     /**
@@ -405,8 +419,12 @@ contract RecyReport is
 
         status[_tokenId] = RecyConstants.RECYCLE_COMPLETED;
 
+        // The catalogue staticcall in _validateReportInput completes before any report write, and
+        // this path performs no external interaction after the state transition.
+        /// forge-lint: disable-start(reentrancy-events)
         emit MetadataUpdate(_tokenId);
         emit ReportResult(_tokenId, _msgSender(), _info.recycleDate, _info.wasteAmount);
+        /// forge-lint: disable-end(reentrancy-events)
     }
 
     /**
@@ -430,6 +448,8 @@ contract RecyReport is
         require(_msgSender() != _info.recycler, RecyErrors.ValidatorCannotBeRecycler());
 
         _info.validator = _msgSender();
+        // Unix time cannot approach uint64's ~584-billion-year range on any viable chain.
+        /// forge-lint: disable-next-line(unsafe-typecast)
         _info.auditDate = uint64(block.timestamp);
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
@@ -437,6 +457,8 @@ contract RecyReport is
         // Bridging and burning change circulating supply but never the cumulative issuance that
         // selects a reward epoch.
         _reward.rewardAmount = RecyReward.calculateReward(_info.wasteAmount, token.totalIssued());
+        // unlockDelay is capped at one year, while viable Unix time is far below uint64's limit.
+        /// forge-lint: disable-next-line(unsafe-typecast)
         _reward.rewardUnlockDate = uint64(block.timestamp + unlockDelay);
 
         rewardTotal += _reward.rewardAmount;
@@ -450,8 +472,12 @@ contract RecyReport is
 
         status[_tokenId] = RecyConstants.RECYCLE_VALIDATED;
 
+        // Both configured-token getters above are static calls that finish before report effects;
+        // no external interaction follows the state transition.
+        /// forge-lint: disable-start(reentrancy-events)
         emit MetadataUpdate(_tokenId);
         emit ReportValidated(_tokenId, _msgSender(), _info.auditDate, _reward.rewardAmount);
+        /// forge-lint: disable-end(reentrancy-events)
     }
 
     /**
@@ -473,6 +499,8 @@ contract RecyReport is
 
         RecyTypes.RecyInfo storage _info = info[_tokenId];
         _info.validator = _msgSender();
+        // Unix time cannot approach uint64's ~584-billion-year range on any viable chain.
+        /// forge-lint: disable-next-line(unsafe-typecast)
         _info.auditDate = uint64(block.timestamp);
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
@@ -482,8 +510,12 @@ contract RecyReport is
 
         status[_tokenId] = RecyConstants.RECYCLE_INVALIDATED;
 
+        // This path has no external interaction; inherited role and context checks finish before
+        // the report is mutated.
+        /// forge-lint: disable-start(reentrancy-events)
         emit MetadataUpdate(_tokenId);
         emit ReportInvalidated(_tokenId, _msgSender(), _info.auditDate);
+        /// forge-lint: disable-end(reentrancy-events)
     }
 
     /**
@@ -497,6 +529,9 @@ contract RecyReport is
         require(status[_tokenId] == RecyConstants.RECYCLE_VALIDATED, RecyErrors.RecyReportNotValidated());
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
+        // Reward availability is intentionally time-gated. The enforced one-hour minimum delay is
+        // far larger than realistic validator timestamp skew.
+        /// forge-lint: disable-next-line(block-timestamp)
         require(_reward.rewardUnlockDate <= block.timestamp, RecyErrors.RewardNotUnlocked());
         uint128 ra = _reward.rewardAmount;
         require(token.balanceOf(address(this)) >= ra, RecyErrors.InsufficientRewardBalance());
@@ -531,8 +566,13 @@ contract RecyReport is
             IERC20(address(token)), protocolAddress, (ra * shareProtocol) / RecyConstants.REWARD_TOTAL_PERCENTAGE
         );
 
+        // The report is marked REWARDED before transfers, RecyToken has no recipient hooks, and
+        // SafeERC20 reverts the whole transaction on failure. Completion logs after those transfers
+        // therefore cannot be fabricated by reentry or survive a failed payout.
+        /// forge-lint: disable-start(reentrancy-events)
         emit MetadataUpdate(_tokenId);
         emit RewardClaimed(_tokenId, _msgSender(), ra);
+        /// forge-lint: disable-end(reentrancy-events)
     }
 
     /**
@@ -592,6 +632,8 @@ contract RecyReport is
         }
         uint64 oldUnlockDelay = unlockDelay;
         unlockDelay = _unlockDelay;
+        // onlyRole/context checks complete before the write; no external interaction follows it.
+        /// forge-lint: disable-next-line(reentrancy-events)
         emit UnlockDelayChanged(oldUnlockDelay, _unlockDelay);
     }
 
@@ -606,6 +648,8 @@ contract RecyReport is
         if (_protocolAddress == address(0)) revert RecyErrors.AddressInvalid();
         address oldProtocolAddress = protocolAddress;
         protocolAddress = _protocolAddress;
+        // onlyRole/context checks complete before the write; no external interaction follows it.
+        /// forge-lint: disable-next-line(reentrancy-events)
         emit ProtocolAddressChanged(oldProtocolAddress, _protocolAddress);
     }
 
@@ -632,6 +676,8 @@ contract RecyReport is
         ForwarderStorage storage $ = _getForwarderStorage();
         address oldForwarder = $.trustedForwarder;
         $.trustedForwarder = _forwarder;
+        // onlyRole/context checks complete before the write; no external interaction follows it.
+        /// forge-lint: disable-next-line(reentrancy-events)
         emit TrustedForwarderChanged(oldForwarder, _forwarder);
     }
 

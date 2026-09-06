@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
+import {RecyToken} from "./RecyToken.sol";
+import {RecyErrors} from "./lib/RecyErrors.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {RecyErrors} from "./lib/RecyErrors.sol";
-import {RecyToken} from "./RecyToken.sol";
 
 /**
  * @title IRecyReportAccounting
@@ -142,9 +142,10 @@ contract RecyDistribution is Ownable2Step {
     function setMaxMintPerCall(uint256 _maxMintPerCall) external onlyOwner {
         if (_maxMintPerCall == 0) revert ZeroCap();
 
-        emit MaxMintPerCallUpdated(maxMintPerCall, _maxMintPerCall);
-
+        uint256 previousValue = maxMintPerCall;
         maxMintPerCall = _maxMintPerCall;
+
+        emit MaxMintPerCallUpdated(previousValue, _maxMintPerCall);
     }
 
     /**
@@ -156,9 +157,10 @@ contract RecyDistribution is Ownable2Step {
     function setMaxCumulativeMintPerReport(uint256 _maxCumulativeMintPerReport) external onlyOwner {
         if (_maxCumulativeMintPerReport == 0) revert ZeroCap();
 
-        emit MaxCumulativeMintPerReportUpdated(maxCumulativeMintPerReport, _maxCumulativeMintPerReport);
-
+        uint256 previousValue = maxCumulativeMintPerReport;
         maxCumulativeMintPerReport = _maxCumulativeMintPerReport;
+
+        emit MaxCumulativeMintPerReportUpdated(previousValue, _maxCumulativeMintPerReport);
     }
 
     /**
@@ -293,6 +295,9 @@ contract RecyDistribution is Ownable2Step {
             if (blocker != MintBlocker.None) {
                 skippedCount++;
 
+                // `_quoteMint` reaches only static reads, so nothing can reenter and fabricate
+                // this diagnostic before it is emitted.
+                // forge-lint: disable-next-line(reentrancy-events)
                 emit ReportMintSkipped(reportContract, blocker);
 
                 continue;
@@ -312,6 +317,9 @@ contract RecyDistribution is Ownable2Step {
         // ReportMintSkipped logs that are the operator's only record of what went wrong.
         if (totalMinted == 0 && skippedCount == 0) revert NoMintNeeded();
 
+        // Untrusted reports are read-only and RecyToken.mint has no callback; final batch counts
+        // are only known after the loop.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit BatchMintCompleted(totalMinted, mintedCount, skippedCount);
     }
 
@@ -476,6 +484,8 @@ contract RecyDistribution is Ownable2Step {
         if (claimedRewards > totalRewards) return (0, MintBlocker.AccountingInverted);
 
         uint256 outstanding = totalRewards - claimedRewards;
+        // A fixed-size static balance read per report is intrinsic to shortfall accounting.
+        // forge-lint: disable-next-line(calls-loop)
         uint256 contractBalance = token.balanceOf(_reportContract);
 
         // Already funded for everything it owes.
@@ -505,13 +515,13 @@ contract RecyDistribution is Ownable2Step {
         returns (bool readable, uint256 totalRewards, uint256 claimedRewards)
     {
         (bool totalOk, uint256 total) = _staticReadUint(_reportContract, IRecyReportAccounting.rewardTotal.selector);
-        if (!totalOk) return (false, 0, 0);
+        if (!totalOk) return (totalOk, 0, 0);
 
         (bool claimedOk, uint256 claimed) =
             _staticReadUint(_reportContract, IRecyReportAccounting.rewardClaimed.selector);
-        if (!claimedOk) return (false, 0, 0);
+        if (!claimedOk) return (claimedOk, 0, 0);
 
-        return (true, total, claimed);
+        return (claimedOk, total, claimed);
     }
 
     /**
@@ -520,24 +530,34 @@ contract RecyDistribution is Ownable2Step {
      * @return value The decoded word, or 0
      * @dev A low-level staticcall rather than try/catch: Solidity's try/catch does not catch a
      *      failure to decode the callee's return data, so a report contract answering with
-     *      malformed data would abort the whole batch sweep. The gas stipend keeps a report
-     *      contract that loops forever, or returns a huge blob, from doing the same
+     *      malformed data would abort the whole batch sweep. The call copies at most one word
+     *      and separately requires the exact return-data size, so an oversized answer cannot
+     *      turn the gas stipend into an unbounded caller-side copy
      */
+    // This call is deliberately reachable from the batch. Its gas and output copy are bounded,
+    // and every call failure becomes an unreadable-report skip.
+    // forge-lint: disable-next-item(calls-loop)
     function _staticReadUint(address _target, bytes4 _selector) private view returns (bool ok, uint256 value) {
-        (bool success, bytes memory returnData) =
-            _target.staticcall{gas: ACCOUNTING_READ_GAS}(abi.encodeWithSelector(_selector));
+        bytes memory callData = abi.encodeWithSelector(_selector);
 
-        if (!success || returnData.length != 32) return (false, 0);
-
-        return (true, abi.decode(returnData, (uint256)));
+        assembly ("memory-safe") {
+            let success := staticcall(ACCOUNTING_READ_GAS, _target, add(callData, 0x20), mload(callData), 0, 0x20)
+            ok := and(success, eq(returndatasize(), 0x20))
+            if ok { value := mload(0) }
+        }
     }
 
     /// @dev Mint `_amount` to `_reportContract`, recording it against the cumulative cap first
     function _mintTokens(address _reportContract, uint256 _amount) private {
         totalMintedToReport[_reportContract] += _amount;
 
+        // A batch necessarily calls mint once per eligible report. RecyToken is the immutable,
+        // concrete dependency and its mint path performs no external callback.
+        // forge-lint: disable-next-line(calls-loop)
         token.mint(_reportContract, _amount);
 
+        // The same no-callback property makes this post-success receipt non-reentrant.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit TokensMinted(_reportContract, _amount);
     }
 }

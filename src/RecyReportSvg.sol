@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.34;
+pragma solidity 0.8.36;
 
+import {RecyConstants} from "./lib/RecyConstants.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import {RecyConstants} from "./lib/RecyConstants.sol";
 
 contract RecyReportSvg is Ownable {
     constructor() Ownable(msg.sender) {}
@@ -40,9 +40,7 @@ contract RecyReportSvg is Ownable {
         pure
         returns (string memory)
     {
-        return string(
-            abi.encodePacked(getSvgHeader(viewbox, bg), '<path d="', path, '" fill="', color, '" />', svgFooter)
-        );
+        return string.concat(getSvgHeader(viewbox, bg), '<path d="', path, '" fill="', color, '" />', svgFooter);
     }
 
     function getTrashcan() external pure returns (string memory) {

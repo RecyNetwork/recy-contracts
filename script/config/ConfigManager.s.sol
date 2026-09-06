@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 
 contract ConfigManager is Script {
     using stdJson for string;
+    using SafeCast for uint256;
 
     string constant CONFIG_PATH = "./config/contracts.json";
 
@@ -38,6 +40,8 @@ contract ConfigManager is Script {
         uint8 shareProtocol;
     }
 
+    // Multichain scripts deliberately read and select one network config per bounded chain iteration.
+    // forge-lint: disable-next-item(calls-loop)
     function getNetworkConfig(uint256 chainId) public view returns (NetworkConfig memory) {
         string memory json = vm.readFile(CONFIG_PATH);
         string memory chainIdStr = vm.toString(chainId);
@@ -70,6 +74,8 @@ contract ConfigManager is Script {
         return config;
     }
 
+    // Each iterated network must parse its own configured addresses; these are read-only cheatcode calls.
+    // forge-lint: disable-next-item(calls-loop)
     function _readContractAddresses(string memory json, string memory chainIdStr, NetworkConfig memory config)
         internal
         pure
@@ -150,11 +156,11 @@ contract ConfigManager is Script {
     ) internal pure {
         string memory basePath = string.concat(".", chainIdStr, ".proxies.", proxyName, ".settings");
 
-        config.unlockDelay = uint64(json.readUint(string.concat(basePath, ".unlockDelay")));
-        config.shareRecycler = uint8(json.readUint(string.concat(basePath, ".shareRecycler")));
-        config.shareValidator = uint8(json.readUint(string.concat(basePath, ".shareValidator")));
-        config.shareGenerator = uint8(json.readUint(string.concat(basePath, ".shareGenerator")));
-        config.shareProtocol = uint8(json.readUint(string.concat(basePath, ".shareProtocol")));
+        config.unlockDelay = json.readUint(string.concat(basePath, ".unlockDelay")).toUint64();
+        config.shareRecycler = json.readUint(string.concat(basePath, ".shareRecycler")).toUint8();
+        config.shareValidator = json.readUint(string.concat(basePath, ".shareValidator")).toUint8();
+        config.shareGenerator = json.readUint(string.concat(basePath, ".shareGenerator")).toUint8();
+        config.shareProtocol = json.readUint(string.concat(basePath, ".shareProtocol")).toUint8();
     }
 
     function _readRoleArrays(

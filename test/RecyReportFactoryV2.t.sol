@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Test.sol";
+import "../src/RecyReport.sol";
+import "../src/RecyReportAttributes.sol";
+import "../src/RecyReportData.sol";
 import "../src/RecyReportFactory.sol";
 import "../src/RecyReportFactoryV2.sol";
-import "../src/RecyReport.sol";
-import "../src/RecyReportData.sol";
-import "../src/RecyReportAttributes.sol";
 import "../src/RecyReportSvg.sol";
 import "../src/RecyToken.sol";
 import "../src/lib/RecyErrors.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./helpers/TestHelpers.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "forge-std/Test.sol";
+// Expected-event declarations follow vm.expectEmit's cheatcode call; they are test fixtures,
+// not protocol events reachable after an untrusted external call.
+// forge-lint: disable-start(reentrancy-events)
 
 contract RecyReportFactoryV2Test is Test, TestHelpers {
     /// @dev ERC-1967 implementation slot: keccak256("eip1967.proxy.implementation") - 1
@@ -42,7 +45,7 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
         token =
-            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
+            new RecyToken("Test Token", "TEST", 1_000_000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
 
         implementation = new RecyReport();
 
@@ -51,9 +54,14 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
 
     // ===== HELPERS =====
 
+    // Some tests deliberately populate the registry in small fixed-count loops.
+    // forge-lint: disable-next-item(calls-loop)
     function deployTestProxy() internal returns (address) {
-        proxyCounter++;
-        string memory proxyName = string(abi.encodePacked("v2-proxy-", vm.toString(proxyCounter)));
+        uint256 nextProxyId = proxyCounter + 1;
+        proxyCounter = nextProxyId;
+        string memory proxyName = string(abi.encodePacked("v2-proxy-", vm.toString(nextProxyId)));
+        // The counter is committed above; proxy initialization only makes a token STATICCALL.
+        // forge-lint: disable-next-line(reentrancy-no-eth)
         return factory.deployProxy(proxyName, "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
@@ -245,6 +253,8 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         factory.registerExistingProxy(second, "shared");
     }
 
+    // The first deployment only occupies the name; its proxy address is irrelevant to collision handling.
+    // forge-lint: disable-next-item(unused-return)
     function test_registerExistingProxyRejectsNameCollidingWithDeployedProxy() public {
         factory.deployProxy("taken", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
         address adopted = _deployStandaloneProxy("other");
@@ -288,6 +298,8 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
 
     // ===== UNREGISTERED PROXIES ARE REJECTED EVERYWHERE =====
 
+    // The role-query calls below are expected to revert, so they cannot return values to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_unregisteredProxyRejectedOnEveryPrivilegedPath() public {
         address unregistered = _deployStandaloneProxy("not-adopted");
         RecyReport newImplementation = new RecyReport();
@@ -343,7 +355,7 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         address first = deployTestProxy();
 
         uint256 gasBefore = gasleft();
-        factory.isDeployedProxy(first);
+        bool firstRegistered = factory.isDeployedProxy(first);
         uint256 earlyCost = gasBefore - gasleft();
 
         for (uint256 i = 0; i < 20; i++) {
@@ -352,31 +364,41 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         address last = deployTestProxy();
 
         gasBefore = gasleft();
-        factory.isDeployedProxy(last);
+        bool lastRegistered = factory.isDeployedProxy(last);
         uint256 lateCost = gasBefore - gasleft();
 
+        assertTrue(firstRegistered);
+        assertTrue(lastRegistered);
         // A linear scan would make the 22nd entry cost ~22 SLOADs more than the 1st.
         assertApproxEqAbs(lateCost, earlyCost, 200);
     }
 
     // ===== deployProxy GATING AND VALIDATION =====
 
+    // A reverting deployment cannot produce a proxy address to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyRevertsForNonOwner() public {
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         factory.deployProxy("squatted", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
+    // A reverting deployment cannot produce a proxy address to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyRevertsOnZeroProtocolAddress() public {
         vm.expectRevert(RecyReportFactoryV2.InvalidProtocolAddress.selector);
         factory.deployProxy("zero-protocol", "RECY", address(token), address(0), 3600, 25, 25, 25, 25);
     }
 
+    // A reverting deployment cannot produce a proxy address to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyRevertsOnEmptyName() public {
         vm.expectRevert(RecyReportFactoryV2.InvalidProxyName.selector);
         factory.deployProxy("", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
+    // A reverting deployment cannot produce a proxy address to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyRevertsOnNameTooLong() public {
         string memory tooLong = _repeat("b", factory.MAX_PROXY_NAME_LENGTH() + 1);
 
@@ -391,6 +413,8 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         _assertRegistered(proxy, maxName, 0, 1);
     }
 
+    // The first deployment only occupies the name; the second call is expected to revert.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyRevertsOnDuplicateName() public {
         factory.deployProxy("dupe", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
 
@@ -423,7 +447,7 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
         bytes32 signature = keccak256("ProxyDeployed(address,address,string)");
-        bool found;
+        bool found = false;
 
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].topics[0] != signature) continue;
@@ -545,10 +569,14 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         assertEq(RecyReport.initialize.selector, bytes4(0x54de02e5));
         assertEq(
             RecyReport.initialize.selector,
+            // A function selector is defined as the first four bytes of this signature hash.
+            // forge-lint: disable-next-line(unsafe-typecast)
             bytes4(keccak256("initialize(string,string,address,address,address,uint64,uint8,uint8,uint8,uint8)"))
         );
     }
 
+    // The incompatible initializer call is expected to revert before returning a proxy address.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyRevertsWhenImplementationInitializeIncompatible() public {
         // Executable documentation of the INITIALIZE-SELECTOR FREEZE note: point the factory at
         // a contract that has code but no initialize with the frozen selector - the deployment
@@ -600,6 +628,8 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         assertEq(factory.owner(), owner);
     }
 
+    // Rejected deployments cannot return addresses; the successful deployment is observed via the registry.
+    // forge-lint: disable-next-item(unused-return)
     function test_twoStepOwnershipTransfer() public {
         address newOwner = address(0xA11CE);
 
@@ -776,11 +806,13 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         assertEq(first.length, 3);
         assertEq(first[0], deployed[0]);
 
-        (address[] memory last,) = factory.getDeployedProxiesPaginated(3, 3);
+        (address[] memory last, uint256 lastTotal) = factory.getDeployedProxiesPaginated(3, 3);
+        assertEq(lastTotal, 5);
         assertEq(last.length, 2);
         assertEq(last[1], deployed[4]);
 
-        (address[] memory beyond,) = factory.getDeployedProxiesPaginated(5, 1);
+        (address[] memory beyond, uint256 beyondTotal) = factory.getDeployedProxiesPaginated(5, 1);
+        assertEq(beyondTotal, 5);
         assertEq(beyond.length, 0);
     }
 
@@ -798,13 +830,19 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
 
     // ===== LOOKUP FAILURES =====
 
+    // A reverting lookup cannot produce a proxy address to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_getProxyByNameRevertsForUnknownName() public {
         vm.expectRevert(RecyReportFactoryV2.ProxyNotFound.selector);
         factory.getProxyByName("nope");
     }
 
+    // A reverting lookup cannot produce a name to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_getNameByProxyRevertsForUnknownProxy() public {
         vm.expectRevert(RecyReportFactoryV2.ProxyNotFound.selector);
         factory.getNameByProxy(address(0xCAFE));
     }
 }
+
+// forge-lint: disable-end(reentrancy-events)

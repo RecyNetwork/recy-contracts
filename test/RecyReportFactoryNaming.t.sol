@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Test.sol";
-import {RecyReportFactory} from "../src/RecyReportFactory.sol";
 import {RecyReport} from "../src/RecyReport.sol";
-import {RecyToken} from "../src/RecyToken.sol";
-import {RecyReportData} from "../src/RecyReportData.sol";
 import {RecyReportAttributes} from "../src/RecyReportAttributes.sol";
+import {RecyReportData} from "../src/RecyReportData.sol";
+import {RecyReportFactory} from "../src/RecyReportFactory.sol";
 import {RecyReportSvg} from "../src/RecyReportSvg.sol";
+import {RecyToken} from "../src/RecyToken.sol";
 import {TestHelpers} from "./helpers/TestHelpers.sol";
+import "forge-std/Test.sol";
+
+// Expected-event declarations follow vm.expectEmit's cheatcode call; they are test fixtures,
+// not protocol events reachable after an untrusted external call.
+// forge-lint: disable-start(reentrancy-events)
 
 /**
  * @title RecyReportFactoryNamingTest
@@ -29,7 +33,7 @@ contract RecyReportFactoryNamingTest is Test, TestHelpers {
         RecyReportSvg svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
         token =
-            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
+            new RecyToken("Test Token", "TEST", 1_000_000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
 
         // Deploy implementation
         implementation = new RecyReport();
@@ -49,6 +53,8 @@ contract RecyReportFactoryNamingTest is Test, TestHelpers {
         assertTrue(factory.proxyNameExists(proxyName));
     }
 
+    // The first deployment only occupies the name; the second call is expected to revert.
+    // forge-lint: disable-next-item(unused-return)
     function test_cannotDeployProxyWithSameName() public {
         string memory proxyName = "duplicate-proxy";
 
@@ -60,25 +66,34 @@ contract RecyReportFactoryNamingTest is Test, TestHelpers {
         factory.deployProxy(proxyName, "RECY2", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
+    // A reverting call cannot produce a return value to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_cannotDeployProxyWithEmptyName() public {
         vm.expectRevert(RecyReportFactory.InvalidProxyName.selector);
         factory.deployProxy("", "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
+    // A reverting call cannot produce a return value to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_getProxyByNameNotFound() public {
         vm.expectRevert(RecyReportFactory.ProxyNotFound.selector);
         factory.getProxyByName("non-existent-proxy");
     }
 
+    // A reverting call cannot produce a return value to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_getNameByProxyNotFound() public {
         vm.expectRevert(RecyReportFactory.ProxyNotFound.selector);
         factory.getNameByProxy(address(0x999));
     }
 
-    function test_proxyNameExistsReturnsFalse() public {
+    function test_proxyNameExistsReturnsFalse() public view {
         assertFalse(factory.proxyNameExists("non-existent-proxy"));
     }
 
+    // This bounded loop deliberately populates the registry; only names, not returned proxy
+    // addresses, are under test.
+    // forge-lint: disable-next-item(calls-loop, unused-return)
     function test_getAllProxyNames() public {
         string[] memory expectedNames = new string[](3);
         expectedNames[0] = "proxy-1";
@@ -98,6 +113,8 @@ contract RecyReportFactoryNamingTest is Test, TestHelpers {
         }
     }
 
+    // These deployments are setup whose observable result is the registry count.
+    // forge-lint: disable-next-item(unused-return)
     function test_getProxyNamesCount() public {
         assertEq(factory.getProxyNamesCount(), 0);
 
@@ -109,6 +126,8 @@ contract RecyReportFactoryNamingTest is Test, TestHelpers {
         assertEq(factory.getProxyNamesCount(), 2);
     }
 
+    // Event delivery is the observable result; the unpredictable proxy address is wildcarded.
+    // forge-lint: disable-next-item(unused-return)
     function test_proxyNameEventEmission() public {
         string memory proxyName = "event-test-proxy";
 
@@ -133,3 +152,5 @@ contract RecyReportFactoryNamingTest is Test, TestHelpers {
         assertTrue(factory.proxyNameExists(proxyName));
     }
 }
+
+// forge-lint: disable-end(reentrancy-events)

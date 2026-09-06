@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Script.sol";
-import "../../src/RecyReportData.sol";
 import "../../src/RecyReport.sol";
-import "../config/ConfigManager.s.sol";
+import "../../src/RecyReportData.sol";
 import {RecyTypes} from "../../src/lib/RecyTypes.sol";
+import "../config/ConfigManager.s.sol";
+import "forge-std/Script.sol";
 
 /**
  * @title RecyReportDataRedeploy
@@ -35,8 +35,6 @@ import {RecyTypes} from "../../src/lib/RecyTypes.sol";
 contract RecyReportDataRedeploy is Script, ConfigManager {
     /// @dev Deliberately out of catalogue range: proves the new contract's read-time tolerance.
     uint32 private constant POISON_MATERIAL_ID = type(uint32).max;
-
-    function setUp() public {}
 
     function run() public {
         uint256 chainId = block.chainid;
@@ -151,6 +149,8 @@ contract RecyReportDataRedeploy is Script, ConfigManager {
         // The 3.4 proof must be programmatic, not eyeballed: the OLD data contract also returned
         // successfully here - malformed JSON, not a revert, was the defect. vm.parseJson reverts
         // on anything a strict parser rejects, so a wrong-artifact deploy fails right here.
+        // The returned bytes are deliberately discarded; successful strict parsing is the validation.
+        // forge-lint: disable-next-line(unused-return)
         vm.parseJson(json);
         console.log("\ntokenJson parses as strict JSON: PASS");
 
@@ -161,9 +161,12 @@ contract RecyReportDataRedeploy is Script, ConfigManager {
         bytes memory uriBytes = bytes(uri);
         bytes memory prefix = bytes("data:application/json;base64,");
         require(uriBytes.length > prefix.length, "tokenUriAttributes: payload too short");
+        // The script must compare each prefix byte because Solidity has no memory-bytes startsWith operation.
+        // forge-lint: disable-start(require-revert-in-loop)
         for (uint256 i = 0; i < prefix.length; i++) {
             require(uriBytes[i] == prefix[i], "tokenUriAttributes: missing data-URI prefix");
         }
+        // forge-lint: disable-end(require-revert-in-loop)
         console.log("\ntokenUriAttributes carries the data:application/json;base64, prefix: PASS");
         console.log("(Its payload is built from the same attribute fragments tokenJson just");
         console.log(" strict-parsed; the decoded-payload parse is pinned in the unit suite.)");

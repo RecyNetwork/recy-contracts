@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Test.sol";
-import "../src/RecyReportFactory.sol";
 import "../src/RecyReport.sol";
-import "../src/RecyReportData.sol";
 import "../src/RecyReportAttributes.sol";
+import "../src/RecyReportData.sol";
+import "../src/RecyReportFactory.sol";
 import "../src/RecyReportSvg.sol";
 import "../src/RecyToken.sol";
 import "../src/lib/RecyErrors.sol";
 import "./helpers/TestHelpers.sol";
+import "forge-std/Test.sol";
+// Expected-event declarations follow vm.expectEmit's cheatcode call; they are test fixtures,
+// not protocol events reachable after an untrusted external call.
+// forge-lint: disable-start(reentrancy-events)
 
 contract RecyReportFactoryTest is Test, TestHelpers {
     RecyReportFactory factory;
@@ -47,7 +50,7 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         RecyReportSvg svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
         token =
-            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
+            new RecyToken("Test Token", "TEST", 1_000_000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
 
         // Deploy implementation
         implementation = new RecyReport();
@@ -56,10 +59,14 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         factory = new RecyReportFactory(address(implementation), address(dataContract));
     }
 
-    // Helper function for deploying proxies with standard test parameters
+    // Some tests deliberately populate the registry in small fixed-count loops.
+    // forge-lint: disable-next-item(calls-loop)
     function deployTestProxy() internal returns (address) {
-        proxyCounter++;
-        string memory proxyName = string(abi.encodePacked("test-proxy-", vm.toString(proxyCounter)));
+        uint256 nextProxyId = proxyCounter + 1;
+        proxyCounter = nextProxyId;
+        string memory proxyName = string(abi.encodePacked("test-proxy-", vm.toString(nextProxyId)));
+        // The counter is committed above; proxy initialization only makes a token STATICCALL.
+        // forge-lint: disable-next-line(reentrancy-no-eth)
         return factory.deployProxy(proxyName, "RECY", address(token), protocolAddress, 3600, 25, 25, 25, 25);
     }
 
@@ -233,6 +240,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         factory.revokeAdminRole(proxy, auditor);
     }
 
+    // The role-query calls below are expected to revert, so they cannot return values to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_roleManagementInvalidProxy() public {
         address fakeProxy = address(0x777);
         address auditor = address(0x999);
@@ -350,6 +359,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
     // ===== DEPLOYMENT EDGE CASES =====
 
+    // A reverting deployment cannot produce a proxy address to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyWithZeroTokenAddress() public {
         vm.expectRevert();
         factory.deployProxy(
@@ -365,24 +376,15 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         );
     }
 
-    function test_deployProxyWithZeroProtocolAddress() public {
-        // This should succeed - protocol address can be zero
-        address proxy = factory.deployProxy(
-            "zero-protocol-proxy",
-            "RECY",
-            address(token),
-            address(0), // Zero protocol address
-            3600,
-            25,
-            25,
-            25,
-            25
-        );
-
-        RecyReport report = RecyReport(proxy);
-        assertEq(report.protocolAddress(), address(0));
+    // RecyReport rejects a zero protocol recipient even when no reward share is allocated to it.
+    // forge-lint: disable-next-item(unused-return)
+    function test_deployProxyRejectsZeroProtocolAddressWithoutProtocolShare() public {
+        vm.expectRevert(RecyErrors.AddressInvalid.selector);
+        factory.deployProxy("zero-protocol-proxy", "RECY", address(token), address(0), 3600, 100, 0, 0, 0);
     }
 
+    // Reverting deployments cannot produce proxy addresses to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyRejectsOutOfBoundsUnlockDelay() public {
         // A proxy must not be BORN outside the unlock-delay bounds: type(uint64).max used to be
         // accepted here and wrapped the unlock-date sum at validation into the past (no delay at
@@ -404,6 +406,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         assertEq(report.shareRecycler(), 100);
     }
 
+    // A reverting deployment cannot produce a proxy address to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_deployProxyWithZeroShares() public {
         // This should now revert due to invalid share distribution (0+0+0+0 != 100)
         vm.expectRevert(abi.encodeWithSelector(RecyErrors.RecyReportInvalidShareDistribution.selector));
@@ -514,6 +518,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         factory.grantRecyclerRole(fakeProxy, recycler1);
     }
 
+    // The role-query calls below are expected to revert, so they cannot return values to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_hasRoleWithNonExistentProxy() public {
         address fakeProxy = address(0x999);
 
@@ -629,6 +635,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         factory.revokeEmergencyRole(address(0), user);
     }
 
+    // The role-query calls below are expected to revert, so they cannot return values to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_hasRoleWithZeroProxyAddress() public {
         address user = address(0x999);
 
@@ -646,6 +654,8 @@ contract RecyReportFactoryTest is Test, TestHelpers {
         factory.hasEmergencyRole(address(0), user);
     }
 
+    // The role query below is expected to revert, so it cannot return a value to inspect.
+    // forge-lint: disable-next-item(unused-return)
     function test_roleManagementWithNonDeployedProxy() public {
         address fakeProxy = address(0x888);
         address user = address(0x999);
@@ -855,3 +865,5 @@ contract RecyReportFactoryTest is Test, TestHelpers {
 
     // ===== END FUND WALLET MANAGEMENT TESTS =====
 }
+
+// forge-lint: disable-end(reentrancy-events)

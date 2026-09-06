@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {RecyReportData} from "../../src/RecyReportData.sol";
 import {RecyConstants} from "../../src/lib/RecyConstants.sol";
 import {RecyTypes} from "../../src/lib/RecyTypes.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @dev Test-only implementation of the proxy layout that existed before ERC-2771 support was added.
 contract RecyReportOriginalLayout is
@@ -50,6 +50,9 @@ contract RecyReportOriginalLayout is
         _disableInitializers();
     }
 
+    // This compatibility fixture must retain the legacy initializer's acceptance behavior; adding
+    // a modern zero-address check here would no longer model the implementation being upgraded.
+    /// forge-lint: disable-next-item(missing-zero-check)
     function initialize(
         string memory name_,
         string memory symbol_,
@@ -81,6 +84,9 @@ contract RecyReportOriginalLayout is
         _grantRole(EMERGENCY_ROLE, msg.sender);
     }
 
+    // This fixture deliberately reproduces the historical non-safe mint and narrowing increment.
+    // Changing either behavior would stop it from representing state created by the old contract.
+    /// forge-lint: disable-next-item(unsafe-oz-erc721-mint,unsafe-typecast)
     function seedValidatedReport(address generator, address recycler, address validator, address fundWallet)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)

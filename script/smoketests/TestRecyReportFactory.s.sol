@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Script.sol";
-import "../../src/RecyReportFactory.sol";
 import "../../src/RecyReport.sol";
+import "../../src/RecyReportFactory.sol";
 import "./../config/ConfigManager.s.sol";
+import "forge-std/Script.sol";
 
 contract TestRecyReportFactoryScript is Script, ConfigManager {
-    function setUp() public {}
-
     function run() public {
         uint256 chainId = block.chainid;
 

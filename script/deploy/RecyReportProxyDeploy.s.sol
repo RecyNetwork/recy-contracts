@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Script.sol";
-import "../../src/RecyReportFactory.sol";
 import "../../src/RecyReport.sol";
+import "../../src/RecyReportFactory.sol";
 import "../config/ConfigManager.s.sol";
+import "forge-std/Script.sol";
 
 /**
  * @title RecyReportProxyDeploy
@@ -21,8 +21,6 @@ import "../config/ConfigManager.s.sol";
  *      proxy of unknown provenance or a proxy born without the Phase 1/2 security fixes.
  */
 contract RecyReportProxyDeploy is Script, ConfigManager {
-    function setUp() public {}
-
     function run() public {
         uint256 chainId = block.chainid;
 

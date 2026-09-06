@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Script.sol";
-import "../../src/RecyReportFactory.sol";
 import "../../src/RecyReport.sol";
+import "../../src/RecyReportFactory.sol";
 import "../config/ConfigManager.s.sol";
+import "forge-std/Script.sol";
 
 /**
  * @title UpgradeProxy
@@ -101,10 +101,14 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
         // Get all deployed proxies
         uint256 pageSize = 50; // Process in batches
         uint256 page = 0;
+        uint256 offset = 0;
         uint256 totalUpgraded = 0;
 
+        // The factory exposes only paginated reads and per-proxy upgrades, so this fleet operation
+        // must call the factory once per page and once for each proxy that needs the upgrade.
+        // forge-lint: disable-start(calls-loop)
         while (true) {
-            (address[] memory proxies,) = factory.getDeployedProxiesPaginated(page, pageSize);
+            (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(offset, pageSize);
 
             if (proxies.length == 0) break;
 
@@ -124,9 +128,11 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
                 }
             }
 
-            if (proxies.length < pageSize) break;
+            offset += proxies.length;
+            if (offset >= total) break;
             page++;
         }
+        // forge-lint: disable-end(calls-loop)
 
         console.log("SUCCESS: Upgrade complete!");
         console.log("Total proxies upgraded:", totalUpgraded);
@@ -166,9 +172,13 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
 
         uint256 pageSize = 50;
         uint256 page = 0;
+        uint256 offset = 0;
 
+        // A complete fleet listing inherently reads each page and each proxy's implementation slot;
+        // retaining pagination avoids an unbounded all-proxies allocation.
+        // forge-lint: disable-start(calls-loop)
         while (true) {
-            (address[] memory proxies,) = factory.getDeployedProxiesPaginated(page, pageSize);
+            (address[] memory proxies, uint256 total) = factory.getDeployedProxiesPaginated(offset, pageSize);
 
             if (proxies.length == 0) break;
 
@@ -179,13 +189,15 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
                 address proxy = proxies[i];
                 address implementation = _getCurrentImplementation(proxy);
 
-                console.log("  Proxy", page * pageSize + i + 1, ":", proxy);
+                console.log("  Proxy", offset + i + 1, ":", proxy);
                 console.log("    Implementation:", implementation);
             }
 
-            if (proxies.length < pageSize) break;
+            offset += proxies.length;
+            if (offset >= total) break;
             page++;
         }
+        // forge-lint: disable-end(calls-loop)
     }
 
     /**
@@ -215,6 +227,9 @@ contract RecyReportProxyUpgrade is Script, ConfigManager {
         // Use the EIP-1967 standard storage slot for implementation
         bytes32 IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 
+        // calls-loop is context-insensitive here: this helper has no loop and also serves single-proxy reads.
+        // Batch callers still must load one slot per proxy because no aggregate implementation getter exists.
+        // forge-lint: disable-next-line(calls-loop)
         bytes32 implementationBytes = vm.load(proxy, IMPLEMENTATION_SLOT);
         return address(uint160(uint256(implementationBytes)));
     }

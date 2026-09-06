@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {RecyReport} from "../src/RecyReport.sol";
 import {RecyReportAttributes} from "../src/RecyReportAttributes.sol";
 import {RecyReportData} from "../src/RecyReportData.sol";
@@ -11,6 +10,8 @@ import {RecyConstants} from "../src/lib/RecyConstants.sol";
 import {RecyErrors} from "../src/lib/RecyErrors.sol";
 import {RecyReward} from "../src/lib/RecyReward.sol";
 import {TestHelpers} from "./helpers/TestHelpers.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 /// @dev Exposes the pinned OFT bridge hooks without replacing their production behavior.
 contract RecyTokenBridgeHarness is RecyToken {
@@ -98,7 +99,7 @@ contract RecyReportRewardEpochTest is TestHelpers {
             )
         );
 
-        issuanceToken.transfer(address(report), 10 ether);
+        assertTrue(issuanceToken.transfer(address(report), 10 ether), "setup funding transfer failed");
         report.grantRole(RecyConstants.RECYCLER_ROLE, RECYCLER);
         report.grantRole(RecyConstants.AUDITOR_ROLE, RECYCLER);
         report.grantRole(RecyConstants.AUDITOR_ROLE, VALIDATOR);
@@ -195,11 +196,20 @@ contract RecyReportRewardEpochTest is TestHelpers {
 
         vm.prank(RECYCLER);
         report.setRecyReportResult(
-            tokenId, uint64(block.timestamp), WASTE_AMOUNT, materialIds, materialAmounts, recycleTypes, recycleShapes, 0
+            tokenId,
+            SafeCast.toUint64(block.timestamp),
+            WASTE_AMOUNT,
+            materialIds,
+            materialAmounts,
+            recycleTypes,
+            recycleShapes,
+            0
         );
     }
 
     function _assertReward(uint256 tokenId, uint128 expectedReward) internal view {
+        // This assertion concerns only the calculated amount; the unlock date is unrelated.
+        // forge-lint: disable-next-line(unused-return)
         (uint128 rewardAmount,) = report.reward(tokenId);
         assertEq(rewardAmount, expectedReward);
     }

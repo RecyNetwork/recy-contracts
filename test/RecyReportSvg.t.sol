@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.34;
 
-import {Test} from "forge-std/Test.sol";
 import {RecyReportSvg} from "../src/RecyReportSvg.sol";
 import {RecyConstants} from "../src/lib/RecyConstants.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract RecyReportSvgTest is Test {
     RecyReportSvg public svg;
@@ -18,9 +18,9 @@ contract RecyReportSvgTest is Test {
         bytes memory a = bytes(where);
         bytes memory b = bytes(what);
         if (b.length > a.length) return false;
-        for (uint256 i; i <= a.length - b.length; i++) {
+        for (uint256 i = 0; i <= a.length - b.length; i++) {
             bool ok = true;
-            for (uint256 j; j < b.length; j++) {
+            for (uint256 j = 0; j < b.length; j++) {
                 if (a[i + j] != b[j]) {
                     ok = false;
                     break;

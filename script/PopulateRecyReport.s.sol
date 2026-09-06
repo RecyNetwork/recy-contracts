@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Script.sol";
 import "../src/RecyReport.sol";
 import "../src/RecyReportFactory.sol";
 import "../src/RecyToken.sol";
 import "./config/ConfigManager.s.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "forge-std/Script.sol";
 
 contract PopulateRecyReportScript is Script, ConfigManager {
-    function setUp() public {}
+    using SafeCast for uint256;
 
     /**
      * @dev Helper function to add recycling result for NFT #0
@@ -36,7 +37,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
 
         recyReport.setRecyReportResult(
             tokenId,
-            uint64(block.timestamp - 1 days), // recycled yesterday
+            (block.timestamp - 1 days).toUint64(), // recycled yesterday
             8000, // total 8kg
             materials,
             amounts,
@@ -69,7 +70,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
 
         recyReport.setRecyReportResult(
             tokenId,
-            uint64(block.timestamp - 2 days), // recycled 2 days ago
+            (block.timestamp - 2 days).toUint64(), // recycled 2 days ago
             7000, // total 7kg
             materials,
             amounts,
@@ -110,7 +111,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
 
         recyReport.setRecyReportResult(
             tokenId,
-            uint64(block.timestamp - 3 days), // recycled 3 days ago
+            (block.timestamp - 3 days).toUint64(), // recycled 3 days ago
             7000, // total 7kg
             materials,
             amounts,
@@ -135,8 +136,8 @@ contract PopulateRecyReportScript is Script, ConfigManager {
         RecyToken token = RecyToken(networkConfig.token);
 
         // Get the deployed proxy address from the factory
-        (address[] memory proxies,) = factory.getDeployedProxiesPaginated(0, 1);
-        require(proxies.length > 0, "No proxies deployed");
+        (address[] memory proxies, uint256 totalProxies) = factory.getDeployedProxiesPaginated(0, 1);
+        require(totalProxies > 0 && proxies.length > 0, "No proxies deployed");
 
         address proxyAddress = proxies[0];
         RecyReport recyReport = RecyReport(proxyAddress);
@@ -173,10 +174,13 @@ contract PopulateRecyReportScript is Script, ConfigManager {
         console.log("\n=== Step 1: Minting 4 NFTs ===");
         uint256 startTokenId = recyReport.nftNextId();
 
+        // This operator script must submit one transaction per report because no batch mint API exists.
+        // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < 4; i++) {
             recyReport.mintRecyReport();
             console.log("Minted NFT #%d", startTokenId + i);
         }
+        // forge-lint: disable-end(calls-loop)
 
         // Step 2: Add recycling results to 3 of them
         console.log("\n=== Step 2: Adding Results to 3 NFTs ===");
@@ -210,7 +214,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
         if (contractBalance == 0) {
             console.log("Contract has no tokens, minting rewards...");
             // Mint some tokens to the contract for rewards
-            token.mint(address(recyReport), 1000000 * 10 ** 18); // 1M tokens
+            token.mint(address(recyReport), 1_000_000 * 10 ** 18); // 1M tokens
             console.log("Minted 1M tokens to contract for rewards");
         }
 
@@ -230,6 +234,8 @@ contract PopulateRecyReportScript is Script, ConfigManager {
         // Step 6: Display final status
         console.log("\n=== Final Status Summary ===");
 
+        // The summary must read each new report because the contract exposes only per-token getters.
+        // forge-lint: disable-start(calls-loop)
         for (uint256 i = 0; i < 4; i++) {
             uint256 tokenId = startTokenId + i;
             uint8 tokenStatus = recyReport.status(tokenId);
@@ -244,6 +250,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
 
             console.log("NFT #%d - Status: %s - Owner: %s", tokenId, statusText, vm.toString(owner));
         }
+        // forge-lint: disable-end(calls-loop)
 
         console.log("\n=== Population Complete ===");
         console.log("* 4 NFTs minted");

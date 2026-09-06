@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Test.sol";
-import "../src/RecyToken.sol";
-import "./helpers/TestHelpers.sol";
-import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
-import {
-    EndpointV2Mock as BridgingEndpointV2Mock
-} from "@layerzerolabs/test-devtools-evm-hardhat/contracts/mocks/EndpointV2Mock.sol";
-import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
-import {IOAppCore} from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppCore.sol";
-import {MessagingFee} from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
-import {SendParam, OFTReceipt} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
-import {OFTMsgCodec} from "@layerzerolabs/oft-evm/contracts/libs/OFTMsgCodec.sol";
+import {RecyToken} from "../src/RecyToken.sol";
+import {TestHelpers} from "./helpers/TestHelpers.sol";
 import {Origin} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
+import {OAppReceiver} from "@layerzerolabs/oapp-evm/contracts/oapp/OAppReceiver.sol";
+import {MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp-evm/contracts/oapp/OAppSender.sol";
+import {IOAppCore} from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppCore.sol";
+import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
+import {OFTReceipt, SendParam} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
+import {OFTMsgCodec} from "@layerzerolabs/oft-evm/contracts/libs/OFTMsgCodec.sol";
+import {TestHelperOz5} from "@layerzerolabs/test-devtools-evm-foundry/contracts/TestHelperOz5.sol";
+import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {Test} from "forge-std/Test.sol";
 
 contract RecyTokenTest is Test, TestHelpers {
     RecyToken public token;
@@ -25,25 +25,25 @@ contract RecyTokenTest is Test, TestHelpers {
     function setUp() public {
         issuanceChain = block.chainid;
         endpoint = deployTestEndpoint(TEST_EID);
-        token = new RecyToken("Test Token", "TEST", 1000000, address(endpoint), owner, issuanceChain);
+        token = new RecyToken("Test Token", "TEST", 1_000_000, address(endpoint), owner, issuanceChain);
     }
 
     function testTokenInitialization() public view {
         assertEq(token.name(), "Test Token");
         assertEq(token.symbol(), "TEST");
         assertEq(token.decimals(), 18);
-        assertEq(token.totalSupply(), 1000000 * 10 ** 18);
+        assertEq(token.totalSupply(), 1_000_000 * 10 ** 18);
         assertEq(token.owner(), owner);
-        assertEq(token.balanceOf(owner), 1000000 * 10 ** 18);
-        assertEq(token.totalIssued(), 1000000 * 10 ** 18);
+        assertEq(token.balanceOf(owner), 1_000_000 * 10 ** 18);
+        assertEq(token.totalIssued(), 1_000_000 * 10 ** 18);
     }
 
     function testMinting() public {
         mintAsOwner(token, user, 1000 * 10 ** 18, owner);
 
         assertBalanceChange(token, user, 1000 * 10 ** 18);
-        assertTotalSupplyChange(token, 1001000 * 10 ** 18);
-        assertEq(token.totalIssued(), 1001000 * 10 ** 18);
+        assertTotalSupplyChange(token, 1_001_000 * 10 ** 18);
+        assertEq(token.totalIssued(), 1_001_000 * 10 ** 18);
     }
 
     function testMintingOnlyOwner() public {
@@ -55,45 +55,47 @@ contract RecyTokenTest is Test, TestHelpers {
     function testBurning() public {
         burnAsOwner(token, 1000 * 10 ** 18, owner);
 
-        assertBalanceChange(token, owner, 999000 * 10 ** 18);
-        assertTotalSupplyChange(token, 999000 * 10 ** 18);
-        assertEq(token.totalIssued(), 1000000 * 10 ** 18);
+        assertBalanceChange(token, owner, 999_000 * 10 ** 18);
+        assertTotalSupplyChange(token, 999_000 * 10 ** 18);
+        assertEq(token.totalIssued(), 1_000_000 * 10 ** 18);
     }
 
     function testBurnFrom() public {
         // Owner approves user to burn tokens
         vm.prank(owner);
-        token.approve(user, 1000 * 10 ** 18);
+        assertTrue(token.approve(user, 1000 * 10 ** 18));
 
         // User burns tokens from owner's balance
         vm.prank(user);
         token.burnFrom(owner, 1000 * 10 ** 18);
 
-        assertBalanceChange(token, owner, 999000 * 10 ** 18);
-        assertTotalSupplyChange(token, 999000 * 10 ** 18);
-        assertEq(token.totalIssued(), 1000000 * 10 ** 18);
+        assertBalanceChange(token, owner, 999_000 * 10 ** 18);
+        assertTotalSupplyChange(token, 999_000 * 10 ** 18);
+        assertEq(token.totalIssued(), 1_000_000 * 10 ** 18);
     }
 
     function testTransfer() public {
         vm.prank(owner);
-        token.transfer(user, 1000 * 10 ** 18);
+        assertTrue(token.transfer(user, 1000 * 10 ** 18));
 
-        assertBalanceChange(token, owner, 999000 * 10 ** 18);
+        assertBalanceChange(token, owner, 999_000 * 10 ** 18);
         assertBalanceChange(token, user, 1000 * 10 ** 18);
     }
 
     function testAllowanceAndTransferFrom() public {
         // Owner approves user to spend tokens
         vm.prank(owner);
-        token.approve(user, 1000 * 10 ** 18);
+        assertTrue(token.approve(user, 1000 * 10 ** 18));
 
         assertEq(token.allowance(owner, user), 1000 * 10 ** 18);
 
         // User transfers tokens on behalf of owner
         vm.prank(user);
-        token.transferFrom(owner, user, 500 * 10 ** 18);
+        // This call deliberately tests ERC20 allowance spending from the approved token owner.
+        // forge-lint: disable-next-line(arbitrary-send-erc20)
+        assertTrue(token.transferFrom(owner, user, 500 * 10 ** 18));
 
-        assertBalanceChange(token, owner, 999500 * 10 ** 18);
+        assertBalanceChange(token, owner, 999_500 * 10 ** 18);
         assertBalanceChange(token, user, 500 * 10 ** 18);
         assertEq(token.allowance(owner, user), 500 * 10 ** 18);
     }
@@ -110,19 +112,20 @@ contract RecyTokenTest is Test, TestHelpers {
     }
 
     function test_constructorWithMaxSupply() public {
-        // Test with max supply that won't overflow
-        uint256 maxSupply = type(uint256).max / (10 ** 18);
+        uint256 tokenUnit = 10 ** token.decimals();
+        uint256 maxSupply = type(uint256).max / tokenUnit;
+        uint256 expectedSupply = type(uint256).max - (type(uint256).max % tokenUnit);
 
         RecyToken maxSupplyToken =
             new RecyToken("Max Supply Token", "MST", maxSupply, address(endpoint), owner, issuanceChain);
 
-        assertEq(maxSupplyToken.totalSupply(), maxSupply * 10 ** 18);
-        assertEq(maxSupplyToken.totalIssued(), maxSupply * 10 ** 18);
+        assertEq(maxSupplyToken.totalSupply(), expectedSupply);
+        assertEq(maxSupplyToken.totalIssued(), expectedSupply);
     }
 
     function test_constructorWithZeroOwner() public {
         vm.expectRevert();
-        new RecyToken("Zero Owner Token", "ZOT", 1000000, address(endpoint), address(0), issuanceChain);
+        new RecyToken("Zero Owner Token", "ZOT", 1_000_000, address(endpoint), address(0), issuanceChain);
     }
 
     function test_constructorRejectsZeroIssuanceChainId() public {
@@ -156,14 +159,14 @@ contract RecyTokenTest is Test, TestHelpers {
     }
 
     function test_constructorWithEmptyName() public {
-        RecyToken emptyNameToken = new RecyToken("", "ENT", 1000000, address(endpoint), owner, issuanceChain);
+        RecyToken emptyNameToken = new RecyToken("", "ENT", 1_000_000, address(endpoint), owner, issuanceChain);
         assertEq(emptyNameToken.name(), "");
         assertEq(emptyNameToken.symbol(), "ENT");
     }
 
     function test_constructorWithEmptySymbol() public {
         RecyToken emptySymbolToken =
-            new RecyToken("Empty Symbol Token", "", 1000000, address(endpoint), owner, issuanceChain);
+            new RecyToken("Empty Symbol Token", "", 1_000_000, address(endpoint), owner, issuanceChain);
 
         assertEq(emptySymbolToken.name(), "Empty Symbol Token");
         assertEq(emptySymbolToken.symbol(), "");
@@ -216,6 +219,8 @@ contract RecyTokenTest is Test, TestHelpers {
         assertEq(token.balanceOf(contractAddress), mintAmount);
     }
 
+    // Repeated issuance is the behavior under test, so each loop iteration intentionally calls the token.
+    // forge-lint: disable-next-item(calls-loop)
     function test_mintMultipleTimes() public {
         uint256 mintAmount = 1000 * 10 ** 18;
 
@@ -293,7 +298,7 @@ contract RecyTokenTest is Test, TestHelpers {
         token.mint(user, userBalance);
 
         vm.prank(user);
-        token.approve(spender, allowanceAmount);
+        assertTrue(token.approve(spender, allowanceAmount));
 
         vm.prank(spender);
         vm.expectRevert();
@@ -309,7 +314,7 @@ contract RecyTokenTest is Test, TestHelpers {
         token.mint(user, userBalance);
 
         vm.prank(user);
-        token.approve(spender, allowanceAmount);
+        assertTrue(token.approve(spender, allowanceAmount));
 
         vm.prank(spender);
         token.burnFrom(user, allowanceAmount);
@@ -326,7 +331,7 @@ contract RecyTokenTest is Test, TestHelpers {
         token.mint(user, userBalance);
 
         vm.prank(user);
-        token.approve(spender, type(uint256).max);
+        assertTrue(token.approve(spender, type(uint256).max));
 
         vm.prank(spender);
         token.burnFrom(user, userBalance);
@@ -344,7 +349,7 @@ contract RecyTokenTest is Test, TestHelpers {
         token.mint(user, userBalance);
 
         vm.prank(user);
-        token.approve(spender, 100);
+        assertTrue(token.approve(spender, 100));
 
         vm.prank(spender);
         token.burnFrom(user, 0);
@@ -360,7 +365,7 @@ contract RecyTokenTest is Test, TestHelpers {
         uint256 initialBalance = token.balanceOf(owner);
 
         vm.prank(owner);
-        token.transfer(owner, transferAmount);
+        assertTrue(token.transfer(owner, transferAmount));
 
         assertEq(token.balanceOf(owner), initialBalance);
     }
@@ -370,7 +375,7 @@ contract RecyTokenTest is Test, TestHelpers {
         uint256 initialUserBalance = token.balanceOf(user);
 
         vm.prank(owner);
-        token.transfer(user, 0);
+        assertTrue(token.transfer(user, 0));
 
         assertEq(token.balanceOf(owner), initialOwnerBalance);
         assertEq(token.balanceOf(user), initialUserBalance);
@@ -379,6 +384,8 @@ contract RecyTokenTest is Test, TestHelpers {
     function test_transferToZeroAddress() public {
         vm.prank(owner);
         vm.expectRevert();
+        // The transfer is expected to revert, so there is no return value available to check.
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         token.transfer(address(0), 1000);
     }
 
@@ -387,6 +394,8 @@ contract RecyTokenTest is Test, TestHelpers {
 
         vm.prank(owner);
         vm.expectRevert();
+        // The transfer is expected to revert, so there is no return value available to check.
+        // forge-lint: disable-next-line(erc20-unchecked-transfer)
         token.transfer(user, ownerBalance + 1);
     }
 
@@ -394,7 +403,7 @@ contract RecyTokenTest is Test, TestHelpers {
         uint256 ownerBalance = token.balanceOf(owner);
 
         vm.prank(owner);
-        token.transfer(user, ownerBalance);
+        assertTrue(token.transfer(user, ownerBalance));
 
         assertEq(token.balanceOf(owner), 0);
         assertEq(token.balanceOf(user), ownerBalance);
@@ -406,12 +415,14 @@ contract RecyTokenTest is Test, TestHelpers {
         uint256 transferAmount = 1000 * 10 ** 18;
 
         vm.prank(owner);
-        token.approve(user, transferAmount);
+        assertTrue(token.approve(user, transferAmount));
 
         uint256 initialBalance = token.balanceOf(owner);
 
         vm.prank(user);
-        token.transferFrom(owner, owner, transferAmount);
+        // This call deliberately tests ERC20 allowance spending from the approved token owner.
+        // forge-lint: disable-next-line(arbitrary-send-erc20)
+        assertTrue(token.transferFrom(owner, owner, transferAmount));
 
         assertEq(token.balanceOf(owner), initialBalance);
         assertEq(token.allowance(owner, user), 0);
@@ -420,15 +431,21 @@ contract RecyTokenTest is Test, TestHelpers {
     function test_transferFromWithZeroAllowance() public {
         vm.prank(user);
         vm.expectRevert();
+        // This negative test deliberately exercises transferFrom with a third-party token owner.
+        // Its expected revert leaves no ERC20 return value to check.
+        // forge-lint: disable-next-line(arbitrary-send-erc20, erc20-unchecked-transfer)
         token.transferFrom(owner, user, 1000);
     }
 
     function test_transferFromToZeroAddress() public {
         vm.prank(owner);
-        token.approve(user, 1000);
+        assertTrue(token.approve(user, 1000));
 
         vm.prank(user);
         vm.expectRevert();
+        // This negative test deliberately exercises transferFrom with a third-party token owner.
+        // Its expected revert leaves no ERC20 return value to check.
+        // forge-lint: disable-next-line(arbitrary-send-erc20, erc20-unchecked-transfer)
         token.transferFrom(owner, address(0), 1000);
     }
 
@@ -436,13 +453,15 @@ contract RecyTokenTest is Test, TestHelpers {
         uint256 allowanceAmount = 1000 * 10 ** 18;
 
         vm.prank(owner);
-        token.approve(user, allowanceAmount);
+        assertTrue(token.approve(user, allowanceAmount));
 
         uint256 initialOwnerBalance = token.balanceOf(owner);
         uint256 initialUserBalance = token.balanceOf(user);
 
         vm.prank(user);
-        token.transferFrom(owner, user, 0);
+        // This call deliberately tests ERC20 allowance spending from the approved token owner.
+        // forge-lint: disable-next-line(arbitrary-send-erc20)
+        assertTrue(token.transferFrom(owner, user, 0));
 
         assertEq(token.balanceOf(owner), initialOwnerBalance);
         assertEq(token.balanceOf(user), initialUserBalance);
@@ -453,21 +472,21 @@ contract RecyTokenTest is Test, TestHelpers {
 
     function test_approveZeroAmount() public {
         vm.prank(owner);
-        token.approve(user, 0);
+        assertTrue(token.approve(user, 0));
 
         assertEq(token.allowance(owner, user), 0);
     }
 
     function test_approveMaxAmount() public {
         vm.prank(owner);
-        token.approve(user, type(uint256).max);
+        assertTrue(token.approve(user, type(uint256).max));
 
         assertEq(token.allowance(owner, user), type(uint256).max);
     }
 
     function test_approveSelf() public {
         vm.prank(owner);
-        token.approve(owner, 1000);
+        assertTrue(token.approve(owner, 1000));
 
         assertEq(token.allowance(owner, owner), 1000);
     }
@@ -476,20 +495,22 @@ contract RecyTokenTest is Test, TestHelpers {
         vm.prank(owner);
         // OpenZeppelin ERC20 now prevents approving to zero address
         vm.expectRevert();
+        // The approval is expected to revert, so there is no return value available to check.
+        // forge-lint: disable-next-line(unused-return)
         token.approve(address(0), 1000);
     }
 
     function test_multipleApprovals() public {
         vm.prank(owner);
-        token.approve(user, 1000);
+        assertTrue(token.approve(user, 1000));
         assertEq(token.allowance(owner, user), 1000);
 
         vm.prank(owner);
-        token.approve(user, 2000);
+        assertTrue(token.approve(user, 2000));
         assertEq(token.allowance(owner, user), 2000);
 
         vm.prank(owner);
-        token.approve(user, 0);
+        assertTrue(token.approve(user, 0));
         assertEq(token.allowance(owner, user), 0);
     }
 
@@ -546,6 +567,8 @@ contract RecyTokenTest is Test, TestHelpers {
 
     // ===== GAS OPTIMIZATION TESTS =====
 
+    // This test intentionally applies and observes a transfer for every fixture recipient.
+    // forge-lint: disable-next-item(calls-loop)
     function test_batchTransfers() public {
         address[] memory recipients = new address[](5);
         recipients[0] = user;
@@ -558,7 +581,7 @@ contract RecyTokenTest is Test, TestHelpers {
 
         vm.startPrank(owner);
         for (uint256 i = 0; i < recipients.length; i++) {
-            token.transfer(recipients[i], amount);
+            assertTrue(token.transfer(recipients[i], amount));
         }
         vm.stopPrank();
 
@@ -576,10 +599,10 @@ contract RecyTokenTest is Test, TestHelpers {
         uint256 paymentAmount = 1000 * 10 ** 18;
 
         vm.prank(owner);
-        token.transfer(user, paymentAmount);
+        assertTrue(token.transfer(user, paymentAmount));
 
         vm.prank(user);
-        token.approve(address(paymentContract), paymentAmount);
+        assertTrue(token.approve(address(paymentContract), paymentAmount));
 
         vm.prank(user);
         paymentContract.makePayment(paymentAmount);
@@ -589,7 +612,7 @@ contract RecyTokenTest is Test, TestHelpers {
     }
 }
 
-contract RecyTokenOFTTest is Test {
+contract RecyTokenOFTTest is TestHelperOz5 {
     using OptionsBuilder for bytes;
 
     uint32 internal constant SOURCE_EID = 1;
@@ -599,15 +622,18 @@ contract RecyTokenOFTTest is Test {
     uint256 internal constant INITIAL_SUPPLY = 1_000_000;
     uint256 internal constant INITIAL_SUPPLY_WEI = INITIAL_SUPPLY * 1 ether;
     address internal constant RECIPIENT = address(0xBEEF);
+    address internal constant UNTRUSTED_CALLER = address(0xCAFE);
 
-    BridgingEndpointV2Mock internal sourceEndpoint;
-    BridgingEndpointV2Mock internal satelliteEndpoint;
+    EndpointV2Mock internal sourceEndpoint;
+    EndpointV2Mock internal satelliteEndpoint;
     RecyToken internal issuanceToken;
     RecyToken internal satelliteToken;
 
-    function setUp() public {
-        sourceEndpoint = new BridgingEndpointV2Mock(SOURCE_EID);
-        satelliteEndpoint = new BridgingEndpointV2Mock(SATELLITE_EID);
+    function setUp() public virtual override {
+        super.setUp();
+        setUpEndpoints(2, LibraryType.UltraLightNode);
+        sourceEndpoint = endpointSetup.endpointList[0];
+        satelliteEndpoint = endpointSetup.endpointList[1];
 
         vm.chainId(ISSUANCE_CHAIN_ID);
         issuanceToken = new RecyToken(
@@ -618,19 +644,21 @@ contract RecyTokenOFTTest is Test {
         satelliteToken =
             new RecyToken("RecyToken", "RECY", 0, address(satelliteEndpoint), address(this), ISSUANCE_CHAIN_ID);
 
-        sourceEndpoint.setDestLzEndpoint(address(satelliteToken), address(satelliteEndpoint));
-        satelliteEndpoint.setDestLzEndpoint(address(issuanceToken), address(sourceEndpoint));
         issuanceToken.setPeer(SATELLITE_EID, _addressToBytes32(address(satelliteToken)));
         satelliteToken.setPeer(SOURCE_EID, _addressToBytes32(address(issuanceToken)));
         vm.deal(address(this), 1 ether);
     }
 
+    // Both payable sends invoke fixture-controlled OFTs with exactly quoted native endpoint fees.
+    // forge-lint: disable-next-item(arbitrary-send-eth)
     function test_bridgeRoundTripRetainsDustAndDoesNotChangeIssuedCounters() public {
         uint256 requestedAmount = 10 ether + 123;
         uint256 bridgeableAmount = 10 ether;
 
-        OFTReceipt memory receipt = _sendToSatellite(requestedAmount, bridgeableAmount);
+        (MessagingReceipt memory outboundMessagingReceipt, OFTReceipt memory receipt) =
+            _sendToSatellite(requestedAmount, bridgeableAmount);
 
+        assertEq(outboundMessagingReceipt.nonce, 1);
         assertEq(receipt.amountSentLD, bridgeableAmount);
         assertEq(receipt.amountReceivedLD, bridgeableAmount);
         assertEq(requestedAmount - receipt.amountSentLD, 123);
@@ -653,9 +681,11 @@ contract RecyTokenOFTTest is Test {
         MessagingFee memory returnFee = satelliteToken.quoteSend(returnParam, false);
         vm.deal(RECIPIENT, 1 ether);
         vm.prank(RECIPIENT);
-        (, OFTReceipt memory returnReceipt) =
+        (MessagingReceipt memory returnMessagingReceipt, OFTReceipt memory returnReceipt) =
             satelliteToken.send{value: returnFee.nativeFee}(returnParam, returnFee, RECIPIENT);
+        verifyPackets(SOURCE_EID, address(issuanceToken));
 
+        assertEq(returnMessagingReceipt.nonce, 1);
         assertEq(returnReceipt.amountSentLD, bridgeableAmount);
         assertEq(satelliteToken.balanceOf(RECIPIENT), 0);
         assertEq(issuanceToken.balanceOf(address(this)), INITIAL_SUPPLY_WEI);
@@ -668,9 +698,7 @@ contract RecyTokenOFTTest is Test {
     function test_inboundCreditAuthenticatesConfiguredPeerWithoutIssuingTokens() public {
         uint256 bridgeAmount = 2 ether;
         bytes32 sourcePeer = _addressToBytes32(address(issuanceToken));
-        (bytes memory message,) = OFTMsgCodec.encode(
-            _addressToBytes32(RECIPIENT), uint64(bridgeAmount / satelliteToken.decimalConversionRate()), bytes("")
-        );
+        bytes memory message = _encodeCreditMessage(bridgeAmount);
         Origin memory origin = Origin({srcEid: SOURCE_EID, sender: sourcePeer, nonce: 1});
         bytes32 guid = keccak256("peer-auth");
 
@@ -691,22 +719,51 @@ contract RecyTokenOFTTest is Test {
         assertEq(satelliteToken.totalIssued(), 0);
     }
 
-    function _sendToSatellite(uint256 amountLD, uint256 minAmountLD) internal returns (OFTReceipt memory oftReceipt) {
+    function test_inboundCreditRejectsCallerOtherThanEndpoint() public {
+        uint256 bridgeAmount = 2 ether;
+        bytes32 sourcePeer = _addressToBytes32(address(issuanceToken));
+        bytes memory message = _encodeCreditMessage(bridgeAmount);
+        Origin memory origin = Origin({srcEid: SOURCE_EID, sender: sourcePeer, nonce: 1});
+        bytes32 guid = keccak256("endpoint-auth");
+
+        vm.prank(UNTRUSTED_CALLER);
+        vm.expectRevert(abi.encodeWithSelector(OAppReceiver.OnlyEndpoint.selector, UNTRUSTED_CALLER));
+        satelliteToken.lzReceive(origin, guid, message, address(0), bytes(""));
+
+        assertEq(satelliteToken.balanceOf(RECIPIENT), 0);
+        assertEq(issuanceToken.totalIssued(), INITIAL_SUPPLY_WEI);
+        assertEq(satelliteToken.totalIssued(), 0);
+    }
+
+    // The payable call targets the fixture-deployed issuance OFT and forwards only its quoted endpoint fee.
+    // forge-lint: disable-next-item(arbitrary-send-eth)
+    function _sendToSatellite(uint256 amountLd, uint256 minAmountLd)
+        internal
+        returns (MessagingReceipt memory messagingReceipt, OFTReceipt memory oftReceipt)
+    {
         bytes memory options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(200_000, 0);
         SendParam memory sendParam = SendParam({
             dstEid: SATELLITE_EID,
             to: _addressToBytes32(RECIPIENT),
-            amountLD: amountLD,
-            minAmountLD: minAmountLD,
+            amountLD: amountLd,
+            minAmountLD: minAmountLd,
             extraOptions: options,
             composeMsg: bytes(""),
             oftCmd: bytes("")
         });
         MessagingFee memory fee = issuanceToken.quoteSend(sendParam, false);
-        (, oftReceipt) = issuanceToken.send{value: fee.nativeFee}(sendParam, fee, address(this));
+        (messagingReceipt, oftReceipt) = issuanceToken.send{value: fee.nativeFee}(sendParam, fee, address(this));
+        verifyPackets(SATELLITE_EID, address(satelliteToken));
+    }
+
+    function _encodeCreditMessage(uint256 amountLd) internal view returns (bytes memory message) {
+        uint256 conversionRate = satelliteToken.decimalConversionRate();
+        uint64 amountSd = SafeCast.toUint64(amountLd / conversionRate);
+        (message,) = OFTMsgCodec.encode(_addressToBytes32(RECIPIENT), amountSd, bytes(""));
     }
 
     function _addressToBytes32(address account) internal pure returns (bytes32) {
+        // LayerZero left-pads EVM addresses; both integer casts widen and cannot discard address bits.
         return bytes32(uint256(uint160(account)));
     }
 }
@@ -714,12 +771,13 @@ contract RecyTokenOFTTest is Test {
 // Helper contract for integration testing
 contract SimplePaymentContract {
     RecyToken public token;
+    error PaymentFailed();
 
     constructor(RecyToken _token) {
         token = _token;
     }
 
     function makePayment(uint256 amount) external {
-        token.transferFrom(msg.sender, address(this), amount);
+        if (!token.transferFrom(msg.sender, address(this), amount)) revert PaymentFailed();
     }
 }

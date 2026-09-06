@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {RecyToken} from "../../src/RecyToken.sol";
+import {RecyTokenOFTConfig} from "./RecyTokenOFTConfig.s.sol";
+import {ExecutorConfig} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/SendLibBase.sol";
+import {UlnConfig} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/uln/UlnBase.sol";
 import {ILayerZeroEndpointV2} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroEndpointV2.sol";
 import {IMessageLib, MessageLibType} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessageLib.sol";
 import {SetConfigParam} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/IMessageLibManager.sol";
-import {ExecutorConfig} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/SendLibBase.sol";
-import {UlnConfig} from "@layerzerolabs/lz-evm-messagelib-v2/contracts/uln/UlnBase.sol";
 import {EnforcedOptionParam} from "@layerzerolabs/oapp-evm/contracts/oapp/interfaces/IOAppOptionsType3.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 import {IOFT} from "@layerzerolabs/oft-evm/contracts/interfaces/IOFT.sol";
-import {RecyToken} from "../../src/RecyToken.sol";
-import {RecyTokenOFTConfig} from "./RecyTokenOFTConfig.s.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 interface ILayerZeroEndpointV2View is ILayerZeroEndpointV2 {
     function delegates(address oapp) external view returns (address);
@@ -56,6 +56,8 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         bool sendAndCallOptions;
     }
 
+    // Route scripts intentionally run these fail-fast on-chain checks for each finite configured chain.
+    // forge-lint: disable-start(calls-loop, require-revert-in-loop)
     function _validateToken(NetworkConfig memory network, OFTConfig memory oft) internal view {
         require(network.token != address(0), "token is not configured");
         require(network.token.code.length != 0, "token has no code");
@@ -80,6 +82,10 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         require(!token.approvalRequired(), "native OFT must not require approval");
     }
 
+    // forge-lint: disable-end(calls-loop, require-revert-in-loop)
+
+    // These route mutation entry points intentionally read and write each route in bounded script loops.
+    // forge-lint: disable-start(calls-loop, require-revert-in-loop)
     function _configureRoute(
         NetworkConfig memory localNetwork,
         OFTConfig memory localOft,
@@ -127,6 +133,7 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
 
         _assertConfigured(setup, true);
     }
+    // forge-lint: disable-end(calls-loop, require-revert-in-loop)
 
     function _checkRoute(
         NetworkConfig memory localNetwork,
@@ -140,6 +147,8 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         _assertConfigured(setup, requirePeer);
     }
 
+    // Bounded route setup performs every chain-specific fail-fast code and library check before any broadcast.
+    // forge-lint: disable-start(calls-loop, require-revert-in-loop)
     function _routeSetup(
         NetworkConfig memory localNetwork,
         OFTConfig memory localOft,
@@ -169,13 +178,13 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         _validateMessageLibrary(setup, localOft.sendLibrary, MessageLibType.Send);
         _validateMessageLibrary(setup, localOft.receiveLibrary, MessageLibType.Receive);
         require(localOft.executor.code.length != 0, "executor has no code");
-        for (uint256 i; i < localOft.requiredDVNs.length; ++i) {
+        for (uint256 i = 0; i < localOft.requiredDVNs.length; ++i) {
             require(localOft.requiredDVNs[i].code.length != 0, "DVN has no code");
         }
     }
 
     function _hasPeerChain(OFTConfig memory oft, uint256 chainId) private pure returns (bool) {
-        for (uint256 i; i < oft.peerChainIds.length; ++i) {
+        for (uint256 i = 0; i < oft.peerChainIds.length; ++i) {
             if (oft.peerChainIds[i] == chainId) return true;
         }
         return false;
@@ -194,6 +203,10 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         require(major == 3 && minor == 0 && endpointVersion == 2, "message library is not ULN 302");
     }
 
+    // forge-lint: disable-end(calls-loop, require-revert-in-loop)
+
+    // Each bounded route comparison must read current endpoint and token state before deciding its exact delta.
+    // forge-lint: disable-start(calls-loop)
     function _configurationChanges(RouteSetup memory setup) private view returns (RouteChanges memory changes) {
         address tokenAddress = address(setup.token);
         uint32 remoteEid = setup.remoteOft.eid;
@@ -222,6 +235,10 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         changes.sendAndCallOptions = !_sameBytes(setup.token.enforcedOptions(remoteEid, SEND_AND_CALL), desiredOptions);
     }
 
+    // forge-lint: disable-end(calls-loop)
+
+    // Deployment scripts intentionally apply route-specific endpoint and OFT writes for each finite configured route.
+    // forge-lint: disable-start(calls-loop)
     function _applyChanges(RouteSetup memory setup, RouteChanges memory changes) private {
         address tokenAddress = address(setup.token);
         uint32 remoteEid = setup.remoteOft.eid;
@@ -241,7 +258,7 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
     function _setSendConfig(RouteSetup memory setup, RouteChanges memory changes) private {
         uint256 count = (changes.executor ? 1 : 0) + (changes.sendUln ? 1 : 0);
         SetConfigParam[] memory params = new SetConfigParam[](count);
-        uint256 index;
+        uint256 index = 0;
 
         if (changes.executor) {
             params[index++] = SetConfigParam({
@@ -277,7 +294,7 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         uint256 count = (changes.sendOptions ? 1 : 0) + (changes.sendAndCallOptions ? 1 : 0);
         EnforcedOptionParam[] memory params = new EnforcedOptionParam[](count);
         bytes memory options = _receiveOptions(setup.remoteOft.lzReceiveGas);
-        uint256 index;
+        uint256 index = 0;
 
         if (changes.sendOptions) {
             params[index++] = EnforcedOptionParam({eid: setup.remoteOft.eid, msgType: SEND, options: options});
@@ -289,6 +306,10 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         setup.token.setEnforcedOptions(params);
     }
 
+    // forge-lint: disable-end(calls-loop)
+
+    // Route verification intentionally re-reads and fail-fast checks each finite route before advancing.
+    // forge-lint: disable-start(calls-loop, require-revert-in-loop)
     function _assertConfigured(RouteSetup memory setup, bool requirePeer) private view {
         address tokenAddress = address(setup.token);
         uint32 remoteEid = setup.remoteOft.eid;
@@ -359,6 +380,10 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
         require(timeoutLibrary == address(0) && expiry == 0, "receive library timeout must be empty");
     }
 
+    // forge-lint: disable-end(calls-loop, require-revert-in-loop)
+
+    // These route-local ULN builders allocate distinct empty optional-DVN arrays for each finite route.
+    // forge-lint: disable-start(calls-loop)
     function _rawUln(OFTConfig memory localConfig, uint64 confirmations) private pure returns (UlnConfig memory) {
         return UlnConfig({
             confirmations: confirmations,
@@ -380,6 +405,7 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
             optionalDVNs: new address[](0)
         });
     }
+    // forge-lint: disable-end(calls-loop)
 
     function _receiveOptions(uint128 gasLimit) private pure returns (bytes memory) {
         return OptionsBuilder.newOptions().addExecutorLzReceiveOption(gasLimit, 0);
@@ -395,7 +421,7 @@ abstract contract RecyTokenOFTWiring is RecyTokenOFTConfig {
 
     function _sameAddresses(address[] memory left, address[] memory right) private pure returns (bool) {
         if (left.length != right.length) return false;
-        for (uint256 i; i < left.length; ++i) {
+        for (uint256 i = 0; i < left.length; ++i) {
             if (left[i] != right[i]) return false;
         }
         return true;

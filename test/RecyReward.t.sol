@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Test.sol";
 import "../src/lib/RecyReward.sol";
+import "forge-std/Test.sol";
 
 contract RecyRewardTest is Test {
     uint128 private constant ONE_E18 = 10 ** 18;
@@ -76,7 +76,7 @@ contract RecyRewardTest is Test {
     function test_calculateRewardFourthEpoch() public pure {
         // Test supply in fourth epoch
         uint256 supply = RecyReward.THIRD_EPOCH + 1;
-        uint128 amount = 10000;
+        uint128 amount = 10_000;
 
         uint128 expectedReward = (amount * ONE_E18) / RecyReward.FOURTH_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
@@ -98,7 +98,7 @@ contract RecyRewardTest is Test {
     function test_calculateRewardFifthEpoch() public pure {
         // Test supply in fifth epoch
         uint256 supply = RecyReward.FOURTH_EPOCH + 1;
-        uint128 amount = 25000;
+        uint128 amount = 25_000;
 
         uint128 expectedReward = (amount * ONE_E18) / RecyReward.FIFTH_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
@@ -109,7 +109,7 @@ contract RecyRewardTest is Test {
     function test_calculateRewardFifthEpochBoundary() public pure {
         // Test supply exactly at fifth epoch boundary
         uint256 supply = RecyReward.FIFTH_EPOCH;
-        uint128 amount = 15000;
+        uint128 amount = 15_000;
 
         uint128 expectedReward = (amount * ONE_E18) / RecyReward.FIFTH_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
@@ -120,7 +120,7 @@ contract RecyRewardTest is Test {
     function test_calculateRewardLastEpoch() public pure {
         // Test supply in last epoch
         uint256 supply = RecyReward.FIFTH_EPOCH + 1;
-        uint128 amount = 50000;
+        uint128 amount = 50_000;
 
         uint128 expectedReward = (amount * ONE_E18) / RecyReward.LAST_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
@@ -131,7 +131,7 @@ contract RecyRewardTest is Test {
     function test_calculateRewardLastEpochBoundary() public pure {
         // Test supply exactly at last epoch boundary
         uint256 supply = RecyReward.LAST_EPOCH;
-        uint128 amount = 30000;
+        uint128 amount = 30_000;
 
         uint128 expectedReward = (amount * ONE_E18) / RecyReward.LAST_EPOCH_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
@@ -142,7 +142,7 @@ contract RecyRewardTest is Test {
     function test_calculateRewardFallback() public pure {
         // Test supply beyond last epoch (fallback case)
         uint256 supply = RecyReward.LAST_EPOCH + 1;
-        uint128 amount = 100000;
+        uint128 amount = 100_000;
 
         uint128 expectedReward = (amount * ONE_E18) / RecyReward.FALLBACK_REWARD;
         uint128 actualReward = RecyReward.calculateReward(amount, supply);
@@ -194,7 +194,7 @@ contract RecyRewardTest is Test {
 
         // Fallback epoch - test with a reasonable amount
         uint256 supply7 = RecyReward.LAST_EPOCH + 1;
-        uint128 reasonableAmount = 1000000; // 1M units
+        uint128 reasonableAmount = 1_000_000; // 1M units
         uint128 reward7 = RecyReward.calculateReward(reasonableAmount, supply7);
         assertGt(reward7, 0);
     }
@@ -223,7 +223,7 @@ contract RecyRewardTest is Test {
 
     function test_calculateRewardDifferentEpochs() public pure {
         // Test that different epochs produce different or equal rewards based on their divisors
-        uint128 amount = 10000;
+        uint128 amount = 10_000;
 
         uint128 firstEpochReward = RecyReward.calculateReward(amount, RecyReward.FIRST_EPOCH / 2);
         uint128 secondEpochReward = RecyReward.calculateReward(amount, RecyReward.SECOND_EPOCH / 2);
@@ -270,7 +270,7 @@ contract RecyRewardTest is Test {
 
     function test_calculateRewardLargeNumbers() public pure {
         // Test with large but realistic numbers
-        uint128 largeAmount = 1000000; // 1 million units
+        uint128 largeAmount = 1_000_000; // 1 million units
         uint256 largeSupply = RecyReward.THIRD_EPOCH;
 
         uint128 expectedReward = (largeAmount * ONE_E18) / RecyReward.THIRD_EPOCH_REWARD;
@@ -326,6 +326,8 @@ contract RecyRewardTest is Test {
         }
     }
 
+    // This fixed boundary matrix intentionally invokes the public library once per supply value.
+    // forge-lint: disable-next-item(calls-loop)
     function test_calculateRewardEdgeCaseSupplyValues() public pure {
         uint128 amount = 1000;
 

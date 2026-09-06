@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {Test, console} from "forge-std/Test.sol";
 import {RecyReportAttributes} from "../src/RecyReportAttributes.sol";
 import "./helpers/TestHelpers.sol";
+import {Test, console} from "forge-std/Test.sol";
 
 contract RecyReportAttributesTest is Test, TestHelpers {
     RecyReportAttributes public recyReportAttributes;
@@ -17,10 +17,12 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(recyReportAttributes.getMaterial(1), "Plastic");
     }
 
+    // Calls immediately following vm.expectRevert intentionally discard unreachable return data.
     /// @notice Test getMaterial reverts when index is out of bounds
     function test_getMaterial_reverts() public {
         uint256 len = recyReportAttributes.getMaterials().length;
         vm.expectRevert("RecyReportAttributes.getMaterial: Invalid index");
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getMaterial(len);
     }
 
@@ -35,6 +37,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     function test_getMaterialSvg_reverts() public {
         uint256 len = recyReportAttributes.getMaterialSvgs().length;
         vm.expectRevert("RecyReportAttributes.getMaterialSvg: Invalid index");
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getMaterialSvg(len);
     }
 
@@ -47,6 +50,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     function test_getRecycleType_reverts() public {
         uint256 len = recyReportAttributes.getRecycleTypes().length;
         vm.expectRevert("RecyReportAttributes.getRecycleType: Invalid index");
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getRecycleType(len);
     }
 
@@ -59,6 +63,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     function test_getDisposalMethod_reverts() public {
         uint256 len = recyReportAttributes.getDisposalMethods().length;
         vm.expectRevert("RecyReportAttributes.getDisposalMethod: Invalid index");
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getDisposalMethod(len);
     }
 
@@ -71,6 +76,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
     function test_getRecycleShape_reverts() public {
         uint256 len = recyReportAttributes.getRecycleShapes().length;
         vm.expectRevert("RecyReportAttributes.getRecycleShape: Invalid index");
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getRecycleShape(len);
     }
 
@@ -282,11 +288,13 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertTrue(bytes(last).length > 0);
     }
 
+    // Fuzzed invalid-index calls likewise observe the revert rather than a return value.
     function testFuzz_getMaterialWithInvalidIndex(uint256 index) public {
         uint256 materialCount = recyReportAttributes.getMaterials().length;
         vm.assume(index >= materialCount);
 
         vm.expectRevert();
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getMaterial(index);
     }
 
@@ -307,6 +315,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         vm.assume(index >= svgCount);
 
         vm.expectRevert();
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getMaterialSvg(index);
     }
 
@@ -327,6 +336,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         vm.assume(index >= typeCount);
 
         vm.expectRevert();
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getRecycleType(index);
     }
 
@@ -347,6 +357,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         vm.assume(index >= methodCount);
 
         vm.expectRevert();
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getDisposalMethod(index);
     }
 
@@ -367,6 +378,7 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         vm.assume(index >= shapeCount);
 
         vm.expectRevert();
+        // forge-lint: disable-next-line(unused-return)
         recyReportAttributes.getRecycleShape(index);
     }
 
@@ -390,6 +402,8 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         }
     }
 
+    // This bounded catalogue pass deliberately compares each external getter result.
+    // forge-lint: disable-next-item(calls-loop)
     function test_arrayOrderConsistency() public view {
         // Test that getter functions return same values as array access
         string[] memory materials = recyReportAttributes.getMaterials();
@@ -425,6 +439,8 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(newSvg, "<svg>test</svg>");
     }
 
+    // The five-item batch and verification loops are the behavior under test.
+    // forge-lint: disable-next-item(calls-loop)
     function test_addMultipleMaterials() public {
         uint256 initialCount = recyReportAttributes.getMaterials().length;
 
@@ -565,6 +581,8 @@ contract RecyReportAttributesTest is Test, TestHelpers {
 
     // ===== STRESS TESTS =====
 
+    // This bounded stress case intentionally performs the same external operation 50 times.
+    // forge-lint: disable-next-item(calls-loop)
     function test_addManyMaterials() public {
         uint256 initialCount = recyReportAttributes.getMaterials().length;
         uint256 addCount = 50; // Reduced to avoid gas limits

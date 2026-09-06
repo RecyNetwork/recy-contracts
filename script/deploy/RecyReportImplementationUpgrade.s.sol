@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Script.sol";
 import "../../src/RecyReport.sol";
 import "../../src/RecyReportFactory.sol";
 import "../config/ConfigManager.s.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "forge-std/Script.sol";
 
 /**
  * @title RecyReportImplementationUpgrade
@@ -45,8 +45,6 @@ contract RecyReportImplementationUpgrade is Script, ConfigManager {
 
     /// @dev unlockDelay the live proxy should be retuned to once the upgrade ships setUnlockDelay.
     uint64 private constant TARGET_UNLOCK_DELAY = 86_400;
-
-    function setUp() public {}
 
     function run() public {
         uint256 chainId = block.chainid;

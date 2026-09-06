@@ -24,8 +24,14 @@ remappings = [
   '@layerzerolabs/test-devtools-evm-hardhat/=lib/devtools/packages/test-devtools-evm-hardhat/',
   '@layerzerolabs/lz-evm-protocol-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/protocol',
   '@layerzerolabs/lz-evm-messagelib-v2/=lib/LayerZero-v2/packages/layerzero-v2/evm/messagelib',
+  # Interface-only test peer pinned by devtools' lockfile to npm version 3.0.148.
+  '@layerzerolabs/lz-evm-v1-0.7/=lib/lz-evm-v1-0.7/',
   'solidity-bytes-utils/=lib/solidity-bytes-utils/',
 ]
+
+[fmt]
+number_underscore = "thousands"
+sort_imports = true
 
 [rpc_endpoints]
 mainnet = "https://mainnet.infura.io/v3/3a0fa033ac184bd6bdea8aa7d910614f"

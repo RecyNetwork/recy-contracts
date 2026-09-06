@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Test.sol";
 import "../../src/RecyReport.sol";
-import "../../src/RecyReportData.sol";
 import "../../src/RecyReportAttributes.sol";
-import "../../src/RecyReportSvg.sol";
+import "../../src/RecyReportData.sol";
 import "../../src/RecyReportFactory.sol";
+import "../../src/RecyReportSvg.sol";
 import "../../src/RecyToken.sol";
 import "../../src/lib/RecyConstants.sol";
 import "../../src/lib/RecyTypes.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "forge-std/Test.sol";
 
 /**
  * @title TestHelpers
@@ -49,7 +50,7 @@ contract TestHelpers is Test {
     {
         // Deploy token
         testToken =
-            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
+            new RecyToken("Test Token", "TEST", 1_000_000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         // Deploy dependencies
         recyAttributes = new RecyReportAttributes();
@@ -82,7 +83,7 @@ contract TestHelpers is Test {
 
         // Fund the contract with tokens for rewards
         vm.prank(OWNER);
-        testToken.transfer(address(recyReport), 10000 * 10 ** 18);
+        assertTrue(testToken.transfer(address(recyReport), 10_000 * 10 ** 18));
     }
 
     /**
@@ -90,7 +91,7 @@ contract TestHelpers is Test {
      */
     function createMinimalRecyReportSetup() internal returns (RecyReport recyReport, RecyToken testToken) {
         testToken =
-            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
+            new RecyToken("Test Token", "TEST", 1_000_000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         RecyReportAttributes recyAttributes = new RecyReportAttributes();
         RecyReportSvg recySvg = new RecyReportSvg();
@@ -116,7 +117,7 @@ contract TestHelpers is Test {
         recyReport = RecyReport(address(proxy));
 
         vm.prank(OWNER);
-        testToken.transfer(address(recyReport), 10000 * 10 ** 18);
+        assertTrue(testToken.transfer(address(recyReport), 10_000 * 10 ** 18));
     }
 
     /**
@@ -177,7 +178,7 @@ contract TestHelpers is Test {
         vm.prank(RECYCLER);
         recyReport.setRecyReportResult(
             tokenId,
-            uint64(block.timestamp),
+            SafeCast.toUint64(block.timestamp),
             1500, // Total: 1000 + 500 grams
             materials,
             materialAmounts,
@@ -341,7 +342,7 @@ contract TestHelpers is Test {
         vm.prank(recycler);
         recyReport.setRecyReportResult(
             tokenId,
-            uint64(block.timestamp),
+            SafeCast.toUint64(block.timestamp),
             1000, // Total amount matches materialAmounts
             materials,
             materialAmounts,
@@ -390,7 +391,7 @@ contract TestHelpers is Test {
         returns (RecyReportFactory factory, RecyToken testToken, RecyReport implementation, RecyReportData dataContract)
     {
         testToken =
-            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
+            new RecyToken("Test Token", "TEST", 1_000_000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         RecyReportAttributes attributes = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();
@@ -407,7 +408,7 @@ contract TestHelpers is Test {
     function deployProxyWithFactory(RecyReportFactory factory, RecyToken testToken) internal returns (address proxy) {
         // Generate a unique name using block timestamp and gasleft
         string memory uniqueName =
-            string(abi.encodePacked("RecyReport-", vm.toString(block.timestamp), "-", vm.toString(gasleft())));
+            string.concat("RecyReport-", vm.toString(block.timestamp), "-", vm.toString(gasleft()));
         proxy = factory.deployProxy(
             uniqueName,
             "RECY",
@@ -475,8 +476,8 @@ contract TestHelpers is Test {
         vm.prank(recyclerRole);
         recyReport.setRecyReportResult(
             tokenId,
-            uint64(block.timestamp),
-            1000000 * 10 ** 18,
+            SafeCast.toUint64(block.timestamp),
+            1_000_000 * 10 ** 18,
             materials,
             materialAmounts,
             recycleTypes,

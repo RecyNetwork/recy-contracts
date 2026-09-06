@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
+import {RecyReport} from "./RecyReport.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {RecyReport} from "./RecyReport.sol";
 
 /**
  * @title RecyReportFactory
@@ -132,6 +132,9 @@ contract RecyReportFactory is Ownable {
         nameByProxy[proxy] = name;
         proxyNames.push(name);
 
+        // The initializer's token chain check is a view call compiled as STATICCALL, and all
+        // registry effects are complete before this success event.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit ProxyDeployed(proxy, msg.sender, name);
 
         return proxy;
@@ -233,6 +236,9 @@ contract RecyReportFactory is Ownable {
         return proxyNames.length;
     }
 
+    // Events below intentionally follow successful calls into factory-managed proxies. The
+    // supported RecyReport implementation's OpenZeppelin AccessControl paths have no callbacks.
+
     /**
      * @notice Grant AUDITOR_ROLE to an address on a specific proxy
      * @param proxy The proxy address to grant the role on
@@ -246,6 +252,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.grantRole(recyReport.AUDITOR_ROLE(), auditor);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit AuditorRoleGranted(proxy, auditor, msg.sender);
     }
 
@@ -262,6 +269,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.revokeRole(recyReport.AUDITOR_ROLE(), auditor);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit AuditorRoleRevoked(proxy, auditor, msg.sender);
     }
 
@@ -278,6 +286,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.grantRole(recyReport.RECYCLER_ROLE(), recycler);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit RecyclerRoleGranted(proxy, recycler, msg.sender);
     }
 
@@ -294,6 +303,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.revokeRole(recyReport.RECYCLER_ROLE(), recycler);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit RecyclerRoleRevoked(proxy, recycler, msg.sender);
     }
 
@@ -310,6 +320,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.grantRole(recyReport.DEFAULT_ADMIN_ROLE(), admin);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit AdminRoleGranted(proxy, admin, msg.sender);
     }
 
@@ -326,6 +337,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.revokeRole(recyReport.DEFAULT_ADMIN_ROLE(), admin);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit AdminRoleRevoked(proxy, admin, msg.sender);
     }
 
@@ -342,6 +354,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.grantRole(recyReport.EMERGENCY_ROLE(), emergency);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit EmergencyRoleGranted(proxy, emergency, msg.sender);
     }
 
@@ -358,6 +371,7 @@ contract RecyReportFactory is Ownable {
         RecyReport recyReport = RecyReport(proxy);
         recyReport.revokeRole(recyReport.EMERGENCY_ROLE(), emergency);
 
+        // forge-lint: disable-next-line(reentrancy-events)
         emit EmergencyRoleRevoked(proxy, emergency, msg.sender);
     }
 
@@ -430,6 +444,9 @@ contract RecyReportFactory is Ownable {
         // Call upgradeToAndCall on the proxy - factory has DEFAULT_ADMIN_ROLE
         RecyReport(proxy).upgradeToAndCall(newImplementation, "");
 
+        // Empty upgrade calldata performs no implementation delegatecall; ERC1967Utils also
+        // validates that the target has code before this success event is reached.
+        // forge-lint: disable-next-line(reentrancy-events)
         emit ProxyUpgraded(proxy, newImplementation, msg.sender);
     }
 

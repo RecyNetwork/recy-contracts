@@ -1,36 +1,58 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import "forge-std/Test.sol";
 import "../src/RecyDistribution.sol";
+import {RecyErrors} from "../src/lib/RecyErrors.sol";
 import "./helpers/TestHelpers.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {RecyErrors} from "../src/lib/RecyErrors.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "forge-std/Test.sol";
 
 contract MockRecyToken {
     mapping(address => uint256) public balanceOf;
     address public owner;
 
+    event Transfer(address indexed from, address indexed to, uint256 amount);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
     constructor(address _owner) {
+        if (_owner == address(0)) revert RecyErrors.AddressInvalid();
+
         owner = _owner;
+
+        emit OwnershipTransferred(address(0), _owner);
     }
 
+    // Each balance mutation emits the standard ERC20 Transfer event below.
+    // forge-lint: disable-next-item(missing-events-access-control)
     function mint(address to, uint256 amount) external {
         require(msg.sender == owner, "Only owner can mint");
         balanceOf[to] += amount;
+
+        emit Transfer(address(0), to, amount);
     }
 
+    // Each balance mutation emits the standard ERC20 Transfer event below.
+    // forge-lint: disable-next-item(missing-events-access-control)
     function transfer(address to, uint256 amount) external returns (bool) {
         require(balanceOf[msg.sender] >= amount, "Insufficient balance");
         balanceOf[msg.sender] -= amount;
         balanceOf[to] += amount;
+
+        emit Transfer(msg.sender, to, amount);
+
         return true;
     }
 
     function transferOwnership(address newOwner) external {
         require(msg.sender == owner, "Only owner");
+        if (newOwner == address(0)) revert RecyErrors.AddressInvalid();
+
+        address previousOwner = owner;
         owner = newOwner;
+
+        emit OwnershipTransferred(previousOwner, newOwner);
     }
 }
 
@@ -49,10 +71,12 @@ contract MockRecyReport {
 
 /// @dev Report contract whose `rewardTotal()` reverts - the misconfigured/bricked report case
 contract RevertingTotalReport {
-    uint256 public rewardClaimed;
-
     function rewardTotal() external pure returns (uint256) {
         revert("no accounting");
+    }
+
+    function rewardClaimed() external pure returns (uint256) {
+        return 0;
     }
 }
 
@@ -72,14 +96,32 @@ contract MalformedAccountingReport {
     fallback() external {}
 }
 
+/// @dev Report whose first getter successfully returns 192 KiB. Producing it costs less than the
+///      accounting stipend, while an unbounded caller-side copy costs roughly another stipend.
+contract OversizedAccountingReport {
+    function rewardTotal() external pure returns (uint256) {
+        assembly {
+            return(0, 0x30000)
+        }
+    }
+
+    function rewardClaimed() external pure returns (uint256) {
+        return 0;
+    }
+}
+
 /// @dev Report contract that burns far more than the accounting read's gas stipend
 contract GasBombReport {
-    uint256 public rewardClaimed;
-
     function rewardTotal() external view returns (uint256 sum) {
         for (uint256 i = 0; i < 100_000; i++) {
-            sum += uint256(keccak256(abi.encode(i, address(this))));
+            // XOR makes every hash observable without arithmetic overflow; the loop itself,
+            // rather than a panic on its first addition, must exhaust the read stipend.
+            sum ^= uint256(keccak256(abi.encode(i, address(this))));
         }
+    }
+
+    function rewardClaimed() external pure returns (uint256) {
+        return 0;
     }
 }
 
@@ -91,6 +133,9 @@ contract FalseReturnRescueToken {
     }
 }
 
+// Every event emitted by the test contract is a vm.expectEmit template, not a production state
+// transition. External setup calls cannot make these template logs reentrant.
+// forge-lint: disable-start(reentrancy-events)
 contract RecyDistributionTest is Test, TestHelpers {
     RecyDistribution public distribution;
     MockRecyToken public token;
@@ -103,7 +148,7 @@ contract RecyDistributionTest is Test, TestHelpers {
     address public nonOwner = address(0x3);
 
     // Test amounts in wei (18 decimals)
-    uint256 constant TOTAL_SUPPLY = 1000000 * 10 ** 18; // 1M tokens
+    uint256 constant TOTAL_SUPPLY = 1_000_000 * 10 ** 18; // 1M tokens
     uint256 constant REWARD_AMOUNT = 1000 * 10 ** 18; // 1K tokens
     uint256 constant CLAIMED_AMOUNT = 500 * 10 ** 18; // 500 tokens
 
@@ -111,6 +156,8 @@ contract RecyDistributionTest is Test, TestHelpers {
     // the containment tests tighten these explicitly.
     uint256 constant MAX_MINT_PER_CALL = 100_000 * 10 ** 18;
     uint256 constant MAX_CUMULATIVE_MINT = 1_000_000 * 10 ** 18;
+    uint256 constant ACCOUNTING_READ_STIPEND = 100_000;
+    uint256 constant ADVERSARIAL_BATCH_GAS = 230_000;
 
     event TokensMinted(address indexed reportContract, uint256 amount);
     event ReportContractAdded(address indexed reportContract);
@@ -122,6 +169,8 @@ contract RecyDistributionTest is Test, TestHelpers {
     event MaxMintPerCallUpdated(uint256 previousValue, uint256 newValue);
     event MaxCumulativeMintPerReportUpdated(uint256 previousValue, uint256 newValue);
     event TokensRescued(address indexed rescuedToken, address indexed to, uint256 amount);
+
+    error GasBombUnexpectedlyCompleted(uint256 sum);
 
     function setUp() public {
         // Deploy mock token with owner
@@ -142,7 +191,7 @@ contract RecyDistributionTest is Test, TestHelpers {
 
         // Give owner some initial tokens for transfer tests
         vm.prank(address(distribution));
-        token.mint(owner, 10000 * 10 ** 18);
+        token.mint(owner, 10_000 * 10 ** 18);
     }
 
     // ========== HELPERS ==========
@@ -444,7 +493,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         // Give some tokens to the report contract
         uint256 existingBalance = 200 * 10 ** 18;
         vm.prank(owner);
-        token.transfer(address(mockReport1), existingBalance);
+        assertTrue(token.transfer(address(mockReport1), existingBalance));
 
         uint256 shouldHave = REWARD_AMOUNT - CLAIMED_AMOUNT; // 500 tokens
         uint256 expected = shouldHave - existingBalance; // 500 - 200 = 300 tokens
@@ -462,7 +511,7 @@ contract RecyDistributionTest is Test, TestHelpers {
         // Give more tokens than needed
         uint256 excessBalance = 600 * 10 ** 18;
         vm.prank(owner);
-        token.transfer(address(mockReport1), excessBalance);
+        assertTrue(token.transfer(address(mockReport1), excessBalance));
 
         uint256 actual = distribution.calculateTokensToMint(address(mockReport1));
         assertEq(actual, 0);
@@ -470,6 +519,8 @@ contract RecyDistributionTest is Test, TestHelpers {
 
     function test_calculateTokensToMintNotFound() public {
         vm.expectRevert(_mintBlocked(address(mockReport1), RecyDistribution.MintBlocker.NotRegistered));
+        // This call is expected to revert, so it has no return value to bind.
+        // forge-lint: disable-next-line(unused-return)
         distribution.calculateTokensToMint(address(mockReport1));
     }
 
@@ -480,6 +531,8 @@ contract RecyDistributionTest is Test, TestHelpers {
         vm.stopPrank();
 
         vm.expectRevert(_mintBlocked(address(mockReport1), RecyDistribution.MintBlocker.Blacklisted));
+        // This call is expected to revert, so it has no return value to bind.
+        // forge-lint: disable-next-line(unused-return)
         distribution.calculateTokensToMint(address(mockReport1));
     }
 
@@ -605,6 +658,8 @@ contract RecyDistributionTest is Test, TestHelpers {
         assertEq(uint8(reason), uint8(RecyDistribution.MintBlocker.AccountingInverted));
 
         vm.expectRevert(_mintBlocked(address(mockReport1), RecyDistribution.MintBlocker.AccountingInverted));
+        // This call is expected to revert, so it has no return value to bind.
+        // forge-lint: disable-next-line(unused-return)
         distribution.calculateTokensToMint(address(mockReport1));
 
         vm.prank(owner);
@@ -643,6 +698,8 @@ contract RecyDistributionTest is Test, TestHelpers {
     /// @dev The core containment property: a report contract reporting an absurd `rewardTotal`
     ///      (the §3.1 self-dealing drain poisons exactly this value) mints *nothing*, however
     ///      many times the owner runs the top-up.
+    // The bounded repetition is the tested contract: every poisoned attempt must remain blocked.
+    // forge-lint: disable-next-item(calls-loop)
     function test_poisonedRewardTotalCannotMintPastPerCallCap() public {
         vm.startPrank(owner);
         distribution.setMaxMintPerCall(REWARD_AMOUNT);
@@ -662,6 +719,8 @@ contract RecyDistributionTest is Test, TestHelpers {
     }
 
     /// @dev And a poison drip-fed one cap-sized step at a time is stopped by the cumulative cap
+    // The bounded sequence proves cumulative accounting across successive external top-ups.
+    // forge-lint: disable-next-item(calls-loop)
     function test_poisonedRewardTotalCannotMintPastCumulativeCap() public {
         vm.startPrank(owner);
         distribution.setMaxMintPerCall(REWARD_AMOUNT);
@@ -955,9 +1014,52 @@ contract RecyDistributionTest is Test, TestHelpers {
         assertEq(token.balanceOf(address(mockReport2)), REWARD_AMOUNT);
     }
 
-    /// @dev A report contract that burns unbounded gas in its getter cannot drag the sweep down
+    /// @dev The hostile getter demonstrably completes with 192 KiB of return data under the
+    ///      production stipend. The batch gets only enough gas for bounded copying plus the
+    ///      healthy leg, so restoring an unbounded returndata copy makes this test run out of gas.
+    function test_batchBoundsOversizedAccountingReturnData() public {
+        OversizedAccountingReport oversized = new OversizedAccountingReport();
+        assertEq(
+            oversized.rewardTotal{gas: ACCOUNTING_READ_STIPEND}(),
+            0,
+            "oversized getter must complete within the accounting stipend"
+        );
+        (bool generated, bytes memory returnData) =
+            address(oversized).staticcall(abi.encodeWithSelector(IRecyReportAccounting.rewardTotal.selector));
+        assertTrue(generated, "oversized getter must return successfully");
+        assertEq(returnData.length, 0x30000, "fixture must return 192 KiB");
+
+        mockReport2.setRewardTotal(REWARD_AMOUNT);
+
+        vm.startPrank(owner);
+        distribution.whitelistReportContract(address(oversized));
+        distribution.whitelistReportContract(address(mockReport2));
+
+        vm.expectEmit(true, false, false, true);
+        emit ReportMintSkipped(address(oversized), RecyDistribution.MintBlocker.AccountingUnreadable);
+        vm.expectEmit(true, false, false, true);
+        emit TokensMinted(address(mockReport2), REWARD_AMOUNT);
+        vm.expectEmit(false, false, false, true);
+        emit BatchMintCompleted(REWARD_AMOUNT, 1, 1);
+        distribution.mintTokensToAllReports{gas: ADVERSARIAL_BATCH_GAS}();
+        vm.stopPrank();
+
+        assertEq(token.balanceOf(address(oversized)), 0);
+        assertEq(token.balanceOf(address(mockReport2)), REWARD_AMOUNT);
+    }
+
+    /// @dev The getter first proves that 100k gas ends in empty-data OOG, not a checked-arithmetic
+    ///      panic. The batch call has enough gas for that stipend plus a healthy mint, but not
+    ///      enough to recover from EIP-150 after an uncapped getter consumes all forwarded gas.
     function test_batchSkipsGasBombReport() public {
         GasBombReport bomb = new GasBombReport();
+
+        try bomb.rewardTotal{gas: ACCOUNTING_READ_STIPEND}() returns (uint256 sum) {
+            revert GasBombUnexpectedlyCompleted(sum);
+        } catch (bytes memory reason) {
+            assertEq(reason.length, 0, "gas bomb must exhaust its stipend without panicking");
+        }
+
         mockReport2.setRewardTotal(REWARD_AMOUNT);
 
         vm.startPrank(owner);
@@ -966,7 +1068,11 @@ contract RecyDistributionTest is Test, TestHelpers {
 
         vm.expectEmit(true, false, false, true);
         emit ReportMintSkipped(address(bomb), RecyDistribution.MintBlocker.AccountingUnreadable);
-        distribution.mintTokensToAllReports();
+        vm.expectEmit(true, false, false, true);
+        emit TokensMinted(address(mockReport2), REWARD_AMOUNT);
+        vm.expectEmit(false, false, false, true);
+        emit BatchMintCompleted(REWARD_AMOUNT, 1, 1);
+        distribution.mintTokensToAllReports{gas: ADVERSARIAL_BATCH_GAS}();
         vm.stopPrank();
 
         assertEq(token.balanceOf(address(bomb)), 0);
@@ -998,7 +1104,7 @@ contract RecyDistributionTest is Test, TestHelpers {
 
         // Simulate tokens accidentally sent to the distribution contract
         vm.prank(owner);
-        token.transfer(address(distribution), stray);
+        assertTrue(token.transfer(address(distribution), stray));
         assertEq(token.balanceOf(address(distribution)), stray);
 
         vm.prank(owner);
@@ -1437,7 +1543,7 @@ contract RecyDistributionTest is Test, TestHelpers {
     {
         // createMinimalRecyReportSetup pre-funds the pool; the whole point here is starting empty.
         realToken =
-            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
+            new RecyToken("Test Token", "TEST", 1_000_000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         RecyReportAttributes attrs = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();
@@ -1525,8 +1631,9 @@ contract RecyDistributionTest is Test, TestHelpers {
         vm.prank(USER);
         realReport.mintRecyReport();
         (uint32[] memory m, uint128[] memory a, uint32[] memory t, uint32[] memory s) = createTestMaterials();
+        uint64 recycleDate = SafeCast.toUint64(vm.getBlockTimestamp());
         vm.prank(RECYCLER);
-        realReport.setRecyReportResult(tokenB, uint64(block.timestamp), 1500, m, a, t, s, 1);
+        realReport.setRecyReportResult(tokenB, recycleDate, 1500, m, a, t, s, 1);
         vm.prank(VALIDATOR);
         realReport.validateRecyReport(tokenB);
         _assertNoShortfall(realDist, address(realReport), "second validation from surplus");
@@ -1554,13 +1661,13 @@ contract RecyDistributionTest is Test, TestHelpers {
         // Build a real validated obligation, then drain the pool - the state an unguarded
         // pre-upgrade validate used to leave behind (obligation with no backing balance).
         vm.prank(OWNER);
-        realToken.transfer(address(realReport), REAL_REWARD_1500MG);
+        assertTrue(realToken.transfer(address(realReport), REAL_REWARD_1500MG));
         uint256 tokenId = mintAndCompleteReport(realReport);
         vm.prank(VALIDATOR);
         realReport.validateRecyReport(tokenId);
 
         vm.prank(address(realReport));
-        realToken.transfer(address(0xD00D), REAL_REWARD_1500MG);
+        assertTrue(realToken.transfer(address(0xD00D), REAL_REWARD_1500MG));
         assertEq(realToken.balanceOf(address(realReport)), 0);
 
         // A genuine shortfall, read through the real proxy within the gas stipend.
@@ -1589,12 +1696,12 @@ contract RecyDistributionTest is Test, TestHelpers {
 
         // Same legacy-gap construction, but the distribution never received token ownership.
         vm.prank(OWNER);
-        realToken.transfer(address(realReport), REAL_REWARD_1500MG);
+        assertTrue(realToken.transfer(address(realReport), REAL_REWARD_1500MG));
         uint256 tokenId = mintAndCompleteReport(realReport);
         vm.prank(VALIDATOR);
         realReport.validateRecyReport(tokenId);
         vm.prank(address(realReport));
-        realToken.transfer(address(0xD00D), REAL_REWARD_1500MG);
+        assertTrue(realToken.transfer(address(0xD00D), REAL_REWARD_1500MG));
 
         bytes memory notOwner = abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(realDist));
 
@@ -1612,3 +1719,4 @@ contract RecyDistributionTest is Test, TestHelpers {
         realDist.fundReport(address(realReport), 1);
     }
 }
+// forge-lint: disable-end(reentrancy-events)
