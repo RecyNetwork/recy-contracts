@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.34;
 
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
@@ -14,6 +13,7 @@ import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Pau
 import {ERC2771ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/metatx/ERC2771ContextUpgradeable.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {RecyReportData} from "./RecyReportData.sol";
+import {RecyToken} from "./RecyToken.sol";
 import {RecyConstants} from "./lib/RecyConstants.sol";
 import {RecyTypes} from "./lib/RecyTypes.sol";
 import {RecyErrors} from "./lib/RecyErrors.sol";
@@ -29,7 +29,7 @@ contract RecyReport is
     ERC2771ContextUpgradeable
 {
     RecyReportData private data;
-    ERC20 public token;
+    RecyToken public token;
 
     bytes32 public constant AUDITOR_ROLE = RecyConstants.AUDITOR_ROLE;
     bytes32 public constant RECYCLER_ROLE = RecyConstants.RECYCLER_ROLE;
@@ -103,10 +103,11 @@ contract RecyReport is
 
     /**
      * @notice Initializes the upgradeable contract
-     * @dev Replaces the constructor for upgradeable contracts
+     * @dev Replaces the constructor for upgradeable contracts. Rewards exist only on the token's
+     *      issuance chain, so initialization rejects every other chain without changing this ABI.
      * @param _name The name of the nft
      * @param _symbol The symbol of the nft
-     * @param _tokenAddress The address of the token contract (ERC20).
+     * @param _tokenAddress The address of the RECY OFT token.
      * @param _dataAddress The address of the data contract.
      * @param _protocolAddress The address of the protocol
      * @param _unlockDelay The delay in seconds before the reward can be claimed
@@ -131,6 +132,9 @@ contract RecyReport is
         if (_tokenAddress == address(0) || _dataAddress == address(0)) {
             revert RecyErrors.AddressInvalid();
         }
+        if (RecyToken(_tokenAddress).issuanceChainId() != block.chainid) {
+            revert RecyErrors.RewardsUnavailableOnThisChain();
+        }
         // A proxy must not be BORN outside the unlock-delay bounds either: the delay is the
         // EMERGENCY_ROLE reaction window (zero deletes it silently) and near-uint64.max values
         // wrap the unlock-date sum at validation into the past. Same bounds as setUnlockDelay.
@@ -143,7 +147,7 @@ contract RecyReport is
         __Pausable_init();
         __UUPSUpgradeable_init();
 
-        token = ERC20(_tokenAddress);
+        token = RecyToken(_tokenAddress);
         data = RecyReportData(_dataAddress);
 
         protocolAddress = _protocolAddress;
@@ -422,7 +426,9 @@ contract RecyReport is
 
         RecyTypes.RecyReward storage _reward = reward[_tokenId];
 
-        _reward.rewardAmount = RecyReward.calculateReward(_info.wasteAmount, token.totalSupply());
+        // Bridging and burning change circulating supply but never the cumulative issuance that
+        // selects a reward epoch.
+        _reward.rewardAmount = RecyReward.calculateReward(_info.wasteAmount, token.totalIssued());
         _reward.rewardUnlockDate = uint64(block.timestamp + unlockDelay);
 
         rewardTotal += _reward.rewardAmount;

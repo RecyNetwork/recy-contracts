@@ -14,11 +14,10 @@ contract RecyTokenDeploy is Script, ConfigManager {
         console.log("=== RecyToken (OFT) Deployment ===");
         console.log("Chain ID:", chainId);
 
-        // Load network config for lzEndpoint
         NetworkConfig memory networkConfig = getNetworkConfig(chainId);
         require(networkConfig.lzEndpoint != address(0), "lzEndpoint not configured for this chain");
-
-        address delegate = address(0x3402ce3b5f88c852c0d6992C69A03095d1345BBd);
+        require(networkConfig.issuanceChainId != 0, "issuanceChainId not configured for this chain");
+        address tokenOwner = address(0x3402ce3b5f88c852c0d6992C69A03095d1345BBd);
 
         vm.startBroadcast();
 
@@ -26,10 +25,12 @@ contract RecyTokenDeploy is Script, ConfigManager {
         string memory name = "RecyToken";
         string memory symbol = "cRECY";
 
-        // Deploy RecyToken (OFT)
+        // Deploy the standard OFT instance for this chain.
         console.log("Deploying RecyToken...");
-        console.log("LZ Endpoint:", networkConfig.lzEndpoint);
-        RecyToken token = new RecyToken(name, symbol, 0, networkConfig.lzEndpoint, delegate);
+        console.log("LayerZero endpoint:", networkConfig.lzEndpoint);
+        console.log("Issuance chain ID:", networkConfig.issuanceChainId);
+        RecyToken token =
+            new RecyToken(name, symbol, 0, networkConfig.lzEndpoint, tokenOwner, networkConfig.issuanceChainId);
 
         vm.stopBroadcast();
 
@@ -42,6 +43,8 @@ contract RecyTokenDeploy is Script, ConfigManager {
         console.log("Token decimals:", token.decimals());
         console.log("Token owner:", token.owner());
         console.log("Initial supply:", token.totalSupply());
+        console.log("Total issued:", token.totalIssued());
+        console.log("Issuance chain ID:", token.issuanceChainId());
 
         console.log("=== Deployment Complete ===");
     }

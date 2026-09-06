@@ -1,9 +1,10 @@
 {
   "31337": {
     "name": "Localhost",
+    "issuanceChainId": 31337,
     "addresses": {
       "protocol": "0x1234567890123456789012345678901234567890",
-      "lzEndpoint": null
+      "lzEndpoint": "0x0000000000000000000000000000000000000000"
     },
     "contracts": {
       "token": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
@@ -39,6 +40,7 @@
   },
   "11155111": {
     "name": "Sepolia Testnet",
+    "issuanceChainId": 11155111,
     "addresses": {
       "protocol": "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
       "lzEndpoint": "0x6EDCE65403992e310A62460808c4b910D972f10f"

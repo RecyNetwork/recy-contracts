@@ -19,6 +19,7 @@ contract ConfigManager is Script {
         address reportData;
         address factory;
         address lzEndpoint;
+        uint256 issuanceChainId;
     }
 
     struct ProxyConfig {
@@ -42,6 +43,7 @@ contract ConfigManager is Script {
 
         NetworkConfig memory config;
         config.name = json.readString(string.concat(".", chainIdStr, ".name"));
+        config.issuanceChainId = json.readUint(string.concat(".", chainIdStr, ".issuanceChainId"));
 
         // Read contract addresses using helper function
         _readContractAddresses(json, chainIdStr, config);
@@ -114,7 +116,7 @@ contract ConfigManager is Script {
             config.factory = vm.parseAddress(factoryStr);
         }
 
-        // Read lzEndpoint address
+        // Read LayerZero endpoint address
         string memory lzEndpointStr = json.readString(string.concat(".", chainIdStr, ".addresses.lzEndpoint"));
         if (_isValidAddress(lzEndpointStr)) {
             config.lzEndpoint = vm.parseAddress(lzEndpointStr);

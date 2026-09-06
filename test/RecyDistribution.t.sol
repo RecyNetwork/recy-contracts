@@ -1419,7 +1419,7 @@ contract RecyDistributionTest is Test, TestHelpers {
     // ========== INTEGRATION WITH THE REAL PROTOCOL ==========
     //
     // Everything above drives mocks whose accounting is settable - states the FIXED protocol can
-    // never enter. These tests wire the real RecyToken (OFT, onlyOwner mint) and a real RecyReport
+    // never enter. These tests wire the real RecyToken (onlyOwner mint) and a real RecyReport
     // behind a real ERC1967 proxy, proving: the reactive shortfall path is dead against a fixed
     // report at every lifecycle stage; fundReport is the production funding path; the 100k
     // accounting-read stipend suffices for genuine proxied reads; and the real token's ownership
@@ -1436,7 +1436,8 @@ contract RecyDistributionTest is Test, TestHelpers {
         returns (RecyReport realReport, RecyToken realToken, RecyDistribution realDist)
     {
         // createMinimalRecyReportSetup pre-funds the pool; the whole point here is starting empty.
-        realToken = new RecyToken("Test Token", "TEST", 1000000, _deployMockEndpoint(), OWNER);
+        realToken =
+            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         RecyReportAttributes attrs = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();

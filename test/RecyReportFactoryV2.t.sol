@@ -41,8 +41,8 @@ contract RecyReportFactoryV2Test is Test, TestHelpers {
         attributes = new RecyReportAttributes();
         svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
-        MockLZEndpointForHelpers mockEndpoint = new MockLZEndpointForHelpers();
-        token = new RecyToken("Test Token", "TEST", 1000000, address(mockEndpoint), owner);
+        token =
+            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
 
         implementation = new RecyReport();
 

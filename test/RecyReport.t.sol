@@ -23,15 +23,19 @@ contract MockReceiver is IERC721Receiver {
     }
 }
 
-contract MockLZEndpointReport {
-    function setDelegate(address) external {}
-}
-
 /// @dev ERC20 whose transfer returns false instead of reverting — the non-reverting failure mode
 /// SafeERC20 exists to catch. Balances are seeded directly because transfer is deliberately inert.
+/// It mirrors RecyToken's issuance getters because report initialization and reward calculation
+/// require them; transfer remains the only deliberately non-standard behavior under test.
 contract FalseReturnToken {
     uint256 public totalSupply = 1_000_000 * 10 ** 18;
+    uint256 public totalIssued = 1_000_000 * 10 ** 18;
+    uint256 public immutable issuanceChainId;
     mapping(address => uint256) public balanceOf;
+
+    constructor() {
+        issuanceChainId = block.chainid;
+    }
 
     function seed(address account, uint256 amount) external {
         balanceOf[account] = amount;
@@ -50,6 +54,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
     RecyToken public testToken;
     MockReceiver public mockReceiver;
     ERC1967Proxy public proxy;
+    address public tokenEndpoint;
 
     address public owner;
     address public user;
@@ -59,7 +64,7 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     // Independently derived expectations, computed by hand rather than mirrored from the contract's
     // own formulas, so that a change to the reward math or the share split is caught rather than
-    // reproduced. testToken's supply is 1_000_000e18, at or below RecyReward.FIRST_EPOCH
+    // reproduced. testToken's cumulative issuance is 1_000_000e18, at or below RecyReward.FIRST_EPOCH
     // (2_138_428e18), so the divisor is FIRST_EPOCH_REWARD = 1e6 and the reward for a report is
     // wasteAmount_mg * 1e18 / 1e6 = wasteAmount_mg * 1e12. The shared helpers record 1500 mg.
     uint128 internal constant EXPECTED_REWARD_1500MG = 1_500_000_000_000_000;
@@ -73,8 +78,8 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         protocol = address(0xABC);
 
         // Deploy test token
-        MockLZEndpointReport mockEndpoint = new MockLZEndpointReport();
-        testToken = new RecyToken("Test Recy Token", "TRECY", 1000000, address(mockEndpoint), address(this));
+        tokenEndpoint = address(deployTestEndpoint(TEST_EID));
+        testToken = new RecyToken("Test Recy Token", "TRECY", 1000000, tokenEndpoint, address(this), block.chainid);
         mockReceiver = new MockReceiver();
 
         // Deploy dependencies
@@ -1310,13 +1315,13 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
     function test_validateRevertsWhenRewardCannotBeFunded() public {
         // Deploy a separate token contract with no initial balance for the test
-        MockLZEndpointReport emptyEndpoint = new MockLZEndpointReport();
         RecyToken emptyToken = new RecyToken(
             "Empty Test Token",
             "EMPTY",
             0, // No initial supply
-            address(emptyEndpoint),
-            address(this)
+            tokenEndpoint,
+            address(this),
+            block.chainid
         );
 
         // Deploy a new RecyReport with the empty token

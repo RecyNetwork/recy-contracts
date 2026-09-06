@@ -11,6 +11,7 @@ import "../../src/RecyToken.sol";
 import "../../src/lib/RecyConstants.sol";
 import "../../src/lib/RecyTypes.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {EndpointV2Mock} from "@layerzerolabs/test-devtools-evm-foundry/contracts/mocks/EndpointV2Mock.sol";
 
 /**
  * @title TestHelpers
@@ -25,9 +26,11 @@ contract TestHelpers is Test {
     address constant PROTOCOL = address(0x1005);
     address constant MALICIOUS_USER = address(0x1006);
 
-    function _deployMockEndpoint() internal returns (address) {
-        MockLZEndpointForHelpers mock = new MockLZEndpointForHelpers();
-        return address(mock);
+    // LayerZero endpoint IDs are protocol-specific and intentionally differ from EVM chain IDs.
+    uint32 internal constant TEST_EID = 30_101;
+
+    function deployTestEndpoint(uint32 eid) internal returns (EndpointV2Mock endpoint) {
+        endpoint = new EndpointV2Mock(eid, address(this));
     }
 
     /**
@@ -44,8 +47,9 @@ contract TestHelpers is Test {
             RecyReportFactory factory
         )
     {
-        // Deploy mock token
-        testToken = new RecyToken("Test Token", "TEST", 1000000, _deployMockEndpoint(), OWNER);
+        // Deploy token
+        testToken =
+            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         // Deploy dependencies
         recyAttributes = new RecyReportAttributes();
@@ -85,7 +89,8 @@ contract TestHelpers is Test {
      * @notice Create a minimal RecyReport setup for basic testing
      */
     function createMinimalRecyReportSetup() internal returns (RecyReport recyReport, RecyToken testToken) {
-        testToken = new RecyToken("Test Token", "TEST", 1000000, _deployMockEndpoint(), OWNER);
+        testToken =
+            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         RecyReportAttributes recyAttributes = new RecyReportAttributes();
         RecyReportSvg recySvg = new RecyReportSvg();
@@ -384,7 +389,8 @@ contract TestHelpers is Test {
         internal
         returns (RecyReportFactory factory, RecyToken testToken, RecyReport implementation, RecyReportData dataContract)
     {
-        testToken = new RecyToken("Test Token", "TEST", 1000000, _deployMockEndpoint(), OWNER);
+        testToken =
+            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), OWNER, block.chainid);
 
         RecyReportAttributes attributes = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();
@@ -664,8 +670,4 @@ contract TestHelpers is Test {
         assertEq(recyReport.shareGenerator(), expectedGenerator);
         assertEq(recyReport.shareProtocol(), expectedProtocol);
     }
-}
-
-contract MockLZEndpointForHelpers {
-    function setDelegate(address) external {}
 }

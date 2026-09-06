@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 
 library RecyErrors {
     error AddressInvalid();
+    error RewardsUnavailableOnThisChain();
     error ArrayLengthMismatch();
     error NotReportOwner();
     error RewardAlreadyClaimed();

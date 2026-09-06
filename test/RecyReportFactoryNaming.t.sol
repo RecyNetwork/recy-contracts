@@ -10,15 +10,11 @@ import {RecyReportAttributes} from "../src/RecyReportAttributes.sol";
 import {RecyReportSvg} from "../src/RecyReportSvg.sol";
 import {TestHelpers} from "./helpers/TestHelpers.sol";
 
-contract MockLZEndpointNaming {
-    function setDelegate(address) external {}
-}
-
 /**
  * @title RecyReportFactoryNamingTest
  * @notice Tests for the proxy naming functionality in RecyReportFactory
  */
-contract RecyReportFactoryNamingTest is Test {
+contract RecyReportFactoryNamingTest is Test, TestHelpers {
     RecyReportFactory factory;
     RecyToken token;
     RecyReportData dataContract;
@@ -32,8 +28,8 @@ contract RecyReportFactoryNamingTest is Test {
         RecyReportAttributes attributes = new RecyReportAttributes();
         RecyReportSvg svg = new RecyReportSvg();
         dataContract = new RecyReportData(address(attributes), address(svg));
-        MockLZEndpointNaming mockEndpoint = new MockLZEndpointNaming();
-        token = new RecyToken("Test Token", "TEST", 1000000, address(mockEndpoint), owner);
+        token =
+            new RecyToken("Test Token", "TEST", 1000000, address(deployTestEndpoint(TEST_EID)), owner, block.chainid);
 
         // Deploy implementation
         implementation = new RecyReport();
