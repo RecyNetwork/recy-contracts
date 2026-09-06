@@ -31,17 +31,18 @@ jobs:
         run: |
           forge --version
 
-      - name: Run Forge fmt
-        run: |
-          forge fmt --check
+      - name: Check Forge formatting
+        run: make format-check
         id: fmt
 
-      - name: Run Forge build
-        run: |
-          forge build --sizes
+      - name: Lint with warnings denied
+        run: make lint
+        id: lint
+
+      - name: Build with warnings denied
+        run: make build-check
         id: build
 
-      - name: Run Forge tests
-        run: |
-          forge test -vvv
+      - name: Run full Forge test suite
+        run: make test
         id: test

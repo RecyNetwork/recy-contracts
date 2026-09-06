@@ -4,6 +4,7 @@ out = "out"
 test = "test"
 auto_detect_solc = false
 solc = "0.8.36"
+deny = "warnings"
 ffi = true
 ast = true
 viaIR = true
@@ -32,6 +33,11 @@ remappings = [
 [fmt]
 number_underscore = "thousands"
 sort_imports = true
+
+[lint]
+# Enforce warning-level correctness checks in contracts, scripts, and tests.
+# Informational, gas, and code-size suggestions remain available via `make lint-all`.
+severity = ["high", "med", "low"]
 
 [rpc_endpoints]
 mainnet = "https://mainnet.infura.io/v3/3a0fa033ac184bd6bdea8aa7d910614f"

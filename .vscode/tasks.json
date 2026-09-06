@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Foundry: Lint",
+      "type": "process",
+      "command": "make",
+      "args": ["lint"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Foundry: Check",
+      "type": "process",
+      "command": "make",
+      "args": ["check"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
