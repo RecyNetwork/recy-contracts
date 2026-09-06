@@ -39,11 +39,13 @@ existing `pos` API and rename a mock signature-recovery error local; they do not
 
 ### Fresh deployment required
 
-Historical testnet deployments are obsolete. Fresh OFTs are already recorded for Sepolia and Base
-Sepolia; the token rollout reuses those addresses. Deploy the report implementation, factory, and
-proxies on Sepolia only; do not upgrade or reuse historical proxies. Base Sepolia is an OFT satellite
-and needs no report or proxy deployment. The token script records its addresses automatically;
-other deployment scripts still require manually recording addresses before dependent deployments.
+Historical testnet report deployments are obsolete. The recorded Sepolia and Base Sepolia OFTs are
+reused unchanged; Base Sepolia remains an OFT satellite and gets no report stack. On Sepolia,
+`RecyReportDeploy` is the fresh-only, one-command report-stack orchestrator: it deploys and wires the
+complete stack, applies configured roles, removes the factory's operational roles, and records all
+six planned addresses. Those addresses are not live deployments until every broadcast receipt
+succeeds. Standalone component deployment scripts still require their addresses to be recorded
+manually before dependent scripts run.
 
 The recorded OFT token contracts are immutable deployments and are reused by the rollout.
 Updating the compiler, Foundry, or vendored dependencies changes only bytecode newly compiled
@@ -213,133 +215,222 @@ strict format, lint, warning-free build, and full-test gates.
 
 ### Deploy locally with Anvil
 
-#### Anvil
-
-- make sure you have run `anvil` in a separate terminal window to start a local EVM node.
-- deploy a local Endpoint V2 first and set `LOCAL_LZ_ENDPOINT` to its address. The standalone
-  local token below has issuance chain ID `31337`; record its address under `.31337.contracts.token`.
-  The multichain rollout uses `oft.rpcAlias` and is **not** redirected to Anvil by `--rpc-url`.
+Start `anvil` in a separate terminal, deploy a local LayerZero Endpoint V2, and export the endpoint,
+RPC URL, and one Anvil account whose public test key may sign the local deployment:
 
 ```sh
-# Deploy a standalone local RecyToken for report testing (public Anvil test key only)
+export ANVIL_RPC_URL=http://127.0.0.1:8545
+export ANVIL_DEPLOYER=<ANVIL_ACCOUNT_ADDRESS>
+export ANVIL_PRIVATE_KEY=<CORRESPONDING_PUBLIC_ANVIL_PRIVATE_KEY>
+export LOCAL_LZ_ENDPOINT=<DEPLOYED_LOCAL_ENDPOINT_ADDRESS>
+
+# Deploy the standalone local token used by the report stack.
 forge create src/RecyToken.sol:RecyToken \
-  --rpc-url http://127.0.0.1:8545 \
-  --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+  --rpc-url "$ANVIL_RPC_URL" \
+  --private-key "$ANVIL_PRIVATE_KEY" \
   --broadcast \
-  --constructor-args RecyToken cRECY 0 "$LOCAL_LZ_ENDPOINT" 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 31337
+  --constructor-args RecyToken cRECY 0 "$LOCAL_LZ_ENDPOINT" "$ANVIL_DEPLOYER" 31337
+```
 
-# Deploy RecyReportAttributesDeploy
-forge script script/deploy/RecyReportAttributesDeploy.s.sol:RecyReportAttributesDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+Before deploying the report stack, update the `31337` entry in `config/contracts.json` so
+`addresses.tokenOwner` is `$ANVIL_DEPLOYER`, `addresses.lzEndpoint` is `$LOCAL_LZ_ENDPOINT`, and
+`contracts.token` is the newly deployed token. Leave `issuanceChainId` as `31337`. For a fresh run,
+all six report-stack fields must be zero: `contracts.reportAttributes`, `contracts.reportSvg`,
+`contracts.reportData`, `contracts.reportImplementation`, `contracts.factory`, and
+`proxies.default.address`.
 
-# Deploy RecyReportSvgDeploy
-forge script script/deploy/RecyReportSvgDeploy.s.sol:RecyReportSvgDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+Dry-run the same orchestrator first. It checks the local token, endpoint, owner, proxy settings, and
+role separation, exercises the complete deployment, and leaves `config/contracts.json` unchanged:
 
-# Deploy RecyReportDataDeploy (depends on above contracts)
-forge script script/deploy/RecyReportDataDeploy.s.sol:RecyReportDataDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+```sh
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
+  --rpc-url "$ANVIL_RPC_URL" \
+  --sender "$ANVIL_DEPLOYER"
+```
 
-# Deploy complete upgradeable system
-forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+Then broadcast the local deployment:
 
-# Deploy RecyReportFactoryDeploy
-forge script script/deploy/RecyReportFactoryDeploy.s.sol:RecyReportFactoryDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+```sh
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
+  --rpc-url "$ANVIL_RPC_URL" \
+  --private-key "$ANVIL_PRIVATE_KEY" \
+  --broadcast --slow
+```
 
-# Deploy RecyReportProxyDeploy
-forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportProxyDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+The fresh proxy deliberately has no trusted forwarder. A standalone forwarder can be deployed
+separately for development, but this is outside the fresh flow and does not wire it into the proxy:
 
-# Deploy ERC2771 Trusted Forwarder (for gasless meta-transactions)
-forge script script/deploy/RecyReportTrustedForwarderDeploy.s.sol:RecyReportTrustedForwarderDeploy --rpc-url 127.0.0.1:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+```sh
+forge script script/deploy/RecyReportTrustedForwarderDeploy.s.sol:RecyReportTrustedForwarderDeploy \
+  --rpc-url "$ANVIL_RPC_URL" \
+  --private-key "$ANVIL_PRIVATE_KEY" \
+  --broadcast
 ```
 
 #### Sepolia report-stack deployment
 
-Complete the two-chain OFT rollout above separately. The commands below deploy only the fresh
-Sepolia report stack; there is no corresponding Base Sepolia report stack.
+The recorded OFTs must already be deployed and configured by the separate two-chain rollout. These
+instructions deploy only a fresh Sepolia report stack; they do not deploy on Base Sepolia and do not
+claim that a public-chain report stack already exists.
 
-##### Deploy report contracts on Sepolia
+The `proxy` environment selector defaults to the config key `default`. That key remains `default`;
+the factory registry identity comes from the separate configured `name` (`RecyReport`), while the
+proxy's token identity uses the configured `name` and `symbol` (`RecyReport`/`cRECYr`).
+
+##### Preflight and dry run
+
+Before signing:
+
+1. Keep the six Sepolia report-stack fields listed above at zero. A fresh run rejects any nonzero
+   field; this protects a partial deployment from being overwritten.
+2. Confirm that the configured Sepolia token and LayerZero endpoint contain code, and that the token
+   is `RecyToken`/`cRECY` with issuance chain `11155111` and owner
+   `0x3402ce3b5f88c852c0d6992C69A03095d1345BBd`.
+3. Review the `default` proxy's `name`, `symbol`, reward shares, unlock delay, protocol recipient,
+   and role arrays. Role entries must be nonzero and unique, and no recycler or auditor may also be
+   an admin, emergency account, or member of the opposite operational role.
+4. Ensure the encrypted Foundry account named `deployer` resolves to
+   `0x3402ce3b5f88c852c0d6992C69A03095d1345BBd` and has enough Sepolia ETH for deployment gas.
+
+The unsigned simulation uses the configured token owner as `--sender` and does not modify the
+registry:
 
 ```sh
-
-forge script script/deploy/RecyReportAttributesDeploy.s.sol:RecyReportAttributesDeploy --account deployer --verify --broadcast --rpc-url sepolia
-
-forge script script/deploy/RecyReportSvgDeploy.s.sol:RecyReportSvgDeploy --account deployer --verify --broadcast --rpc-url sepolia
-
-forge script script/deploy/RecyReportDataDeploy.s.sol:RecyReportDataDeploy --account deployer --verify --broadcast --rpc-url sepolia
-
-forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy --account deployer --verify --broadcast --rpc-url sepolia
-
-forge script script/deploy/RecyReportFactoryDeploy.s.sol:RecyReportFactoryDeploy --account deployer --verify --broadcast --rpc-url sepolia
-
-proxy=default forge script script/deploy/RecyReportProxyDeploy.s.sol:RecyReportProxyDeploy --account deployer --verify --broadcast --rpc-url sepolia
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
+  --sender 0x3402ce3b5f88c852c0d6992C69A03095d1345BBd \
+  --rpc-url sepolia
 ```
+
+##### Sign and broadcast
+
+Live signing starts only with the following command. Foundry opens the encrypted `deployer`
+keystore in this terminal:
+
+```sh
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
+  --rpc-url sepolia \
+  --account deployer \
+  --broadcast --slow
+```
+
+To request explorer verification in the same invocation, set the explorer credential and override
+the repository's legacy Sepolia verifier URL with Etherscan V2:
+
+```sh
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
+  --rpc-url sepolia \
+  --account deployer \
+  --broadcast --slow \
+  --verify \
+  --etherscan-api-key "$ETHERSCAN_API_KEY" \
+  --verifier-url 'https://api.etherscan.io/v2/api?chainid=11155111'
+```
+
+The invocation deploys `RecyReportAttributes`, `RecyReportSvg`, `RecyReportData`, the `RecyReport`
+implementation, `RecyReportFactoryV2`, and the `default` `RecyReport` proxy. Foundry may also deploy
+the linked `RecyReward` library and records it in its broadcast artifacts; it is not a seventh
+report-stack registry field. Do not rely on an exact transaction count.
+
+During broadcast preparation, the script executes locally and records all six planned addresses in
+`config/contracts.json` before Foundry sends the transactions. Planned addresses are not evidence
+of live contracts. They become the deployment record only after every receipt succeeds and the
+signerless readback passes:
+
+```sh
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
+  --rpc-url sepolia \
+  --sig 'check()'
+```
+
+If sending is interrupted, keep both `config/contracts.json` and Foundry's broadcast artifacts.
+Resume the saved broadcast with the same target, RPC, account, and pacing options:
+
+```sh
+forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
+  --rpc-url sepolia \
+  --account deployer \
+  --resume --broadcast --slow
+```
+
+Keep any verification options used by the original invocation, wait for every receipt, and run
+`check()` afterward. `--resume` reuses the saved transactions without rerunning the Solidity
+deployment code; after the broadcast is complete, another resume has nothing to send. Never zero
+the registry and blindly start a new deployment after a partial send.
+
+The configured token owner is the broadcaster and becomes the owner of the attributes, SVG
+metadata, and factory contracts. The orchestrator grants the configured admin, emergency,
+recycler, and auditor roles, then revokes the factory's `RECYCLER_ROLE` and `AUDITOR_ROLE`; the
+factory retains its required admin and emergency authority. The initial
+`applyAllRolesFromConfig()` call is therefore unnecessary.
+
+The fresh flow does not mint reports or tokens, move or fund cRECY, deploy a Distribution contract,
+change OFT ownership or peers, or configure a trusted forwarder. It also does not register fund
+wallets on behalf of role holders.
+An unfunded report proxy cannot validate reports with a nonzero payout. Report submission,
+principal self-registration, and separately authorized funding must be performed later by their
+proper recycler, role-holder, and funding signers; possession of the deployment key alone does not
+authorize report submission.
 
 ##### Role management
 
-###### Apply all roles from config to the default proxy
-
-```sh
-forge script script/ManageRoles.s.sol:ManageRoles --sig "applyAllRolesFromConfig()" --rpc-url sepolia --account deployer --broadcast
-```
+`ManageRoles` selects `proxies.default.address` and the factory from the current chain's config, so
+these methods take only the principal address. Mutating calls must be signed by the configured
+factory owner.
 
 ###### Grant auditor role
 
 ```sh
- forge script script/ManageRoles.s.sol:ManageRoles \
-   --sig "grantAuditor(address,address)" <PROXY_ADDRESS> <AUDITOR_ADDRESS> \
-   --rpc-url sepolia --account deployer --broadcast
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig "grantAuditor(address)" <AUDITOR_ADDRESS> \
+  --rpc-url sepolia --account deployer --broadcast
 ```
 
 ###### Revoke auditor role
 
 ```sh
- forge script script/ManageRoles.s.sol:ManageRoles \
-   --sig "revokeAuditor(address,address)" <PROXY_ADDRESS> <AUDITOR_ADDRESS> \
-   --rpc-url sepolia --account deployer --broadcast
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig "revokeAuditor(address)" <AUDITOR_ADDRESS> \
+  --rpc-url sepolia --account deployer --broadcast
 ```
 
 ###### Check if address has auditor role
 
 ```sh
- forge script script/ManageRoles.s.sol:ManageRoles \
-   --sig "checkAuditor(address,address)" <PROXY_ADDRESS> <AUDITOR_ADDRESS> \
-   --rpc-url sepolia
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig "checkAuditor(address)" <AUDITOR_ADDRESS> \
+  --rpc-url sepolia
 ```
 
 ###### Grant recycler role
 
 ```sh
 forge script script/ManageRoles.s.sol:ManageRoles \
-  --sig "grantRecycler(address,address)" <PROXY_ADDRESS> <RECYCLER_ADDRESS> \
+  --sig "grantRecycler(address)" <RECYCLER_ADDRESS> \
   --rpc-url sepolia --account deployer --broadcast
 ```
 
 ###### Revoke recycler role
 
 ```sh
- forge script script/ManageRoles.s.sol:ManageRoles \
-   --sig "revokeRecycler(address,address)" <PROXY_ADDRESS> <RECYCLER_ADDRESS> \
-   --rpc-url sepolia --account deployer --broadcast
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig "revokeRecycler(address)" <RECYCLER_ADDRESS> \
+  --rpc-url sepolia --account deployer --broadcast
 ```
 
 ###### Check if address has recycler role
 
 ```sh
- forge script script/ManageRoles.s.sol:ManageRoles \
-   --sig "checkRecycler(address,address)" <PROXY_ADDRESS> <RECYCLER_ADDRESS> \
-   --rpc-url sepolia
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig "checkRecycler(address)" <RECYCLER_ADDRESS> \
+  --rpc-url sepolia
 ```
 
 ##### List all deployed proxies
 
 ```sh
- forge script script/ManageRoles.s.sol:ManageRoles \
-   --sig "listProxies()" \
-   --rpc-url sepolia
-```
-
-##### Populate
-
-```sh
-forge script script/PopulateRecyReport.s.sol:PopulateRecyReportScript --account deployer --broadcast --rpc-url sepolia
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig "listProxies()" \
+  --rpc-url sepolia
 ```
 
 #### Mainnet
@@ -368,9 +459,12 @@ cast --help
 ## Configuration
 
 The project uses `config/contracts.json` as the source of truth for per-network settings and contract
-addresses. `RecyTokenDeploy` discovers networks through their `oft` objects and automatically records
-planned token addresses during broadcast preparation, as described above. Other deployment scripts
-log the address to record; update their matching JSON fields manually.
+addresses. `RecyTokenDeploy` automatically records planned token addresses during broadcast
+preparation. `RecyReportDeploy` likewise records all six planned report-stack addresses for its
+selected proxy (`proxy=default` unless overridden); its dry run preserves the file, and an
+interrupted broadcast must retain those values for `--resume`. Addresses written during preparation
+are not live until their receipts succeed. Standalone component deployment scripts only log their
+addresses, which must be copied into the matching JSON fields manually.
 
 ### Environment Variables
 
