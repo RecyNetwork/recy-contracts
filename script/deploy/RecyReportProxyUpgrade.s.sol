@@ -9,6 +9,8 @@ import "../config/ConfigManager.s.sol";
 /**
  * @title UpgradeProxy
  * @notice Script to upgrade a deployed proxy to a new implementation
+ * @dev WARNING: Historical testnet proxies use incompatible storage layouts. Do not upgrade them
+ *      to the current implementation; deploy a fresh contract stack instead.
  *
  * Usage Examples:
  *

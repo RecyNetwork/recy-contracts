@@ -14,6 +14,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  * @dev This script deploys an implementation. It never upgrades anything: the upgrade is a
  *      separate, deliberate transaction so the OZ upgrade-safety validator and a human can sit
  *      between the two steps.
+ *      WARNING: Historical testnet proxies use an incompatible storage layout. Do not run this
+ *      upgrade flow for them; deploy a fresh stack instead.
  *
  *      HARD ORDERING CONSTRAINT. The Phase 1 RecyReportData must already be live on the proxy
  *      before this implementation is activated. The new implementation validates material ids at

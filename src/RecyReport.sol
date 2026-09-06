@@ -35,8 +35,15 @@ contract RecyReport is
     bytes32 public constant RECYCLER_ROLE = RecyConstants.RECYCLER_ROLE;
     bytes32 public constant EMERGENCY_ROLE = RecyConstants.EMERGENCY_ROLE;
 
-    /// @notice The trusted forwarder address for ERC-2771 meta-transactions (storage-based for flexibility)
-    address private _storedTrustedForwarder;
+    /// @custom:storage-location erc7201:recy.storage.RecyReport.Forwarder
+    struct ForwarderStorage {
+        address trustedForwarder;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("recy.storage.RecyReport.Forwarder")) - 1))
+    // & ~bytes32(uint256(0xff))
+    bytes32 private constant FORWARDER_STORAGE_LOCATION =
+        0x30bcef56db6f42da6964a7ba83863f99a06e22258c7b092a9ffe992173aa0200;
 
     event TrustedForwarderChanged(address indexed oldForwarder, address indexed newForwarder);
     event ReportResult(uint256 indexed tokenId, address indexed recycler, uint64 recycleDate, uint128 wasteAmount);
@@ -46,6 +53,8 @@ contract RecyReport is
     event UnlockDelayChanged(uint64 oldUnlockDelay, uint64 newUnlockDelay);
     event ProtocolAddressChanged(address indexed oldProtocolAddress, address indexed newProtocolAddress);
 
+    // Forwarder configuration lives in an ERC-7201 namespace so adding it cannot shift protocol
+    // state, counters, or mapping roots in any future upgrade.
     address public protocolAddress;
 
     uint128 public nftNextId;
@@ -65,9 +74,9 @@ contract RecyReport is
     ///      RecyDistribution mints real cRECY against this difference, so it is a supply invariant.
     uint256 public rewardTotal;
 
-    /// @custom:deprecated Never read or written. Retained solely to preserve the UUPS storage layout
-    /// of the live proxy; removing it would shift `rewardClaimed` and every mapping below it.
-    /// Do not delete, do not repurpose without an explicit storage-layout review.
+    /// @custom:deprecated Never read or written. Retained solely to preserve the original UUPS
+    /// storage layout; removing it would shift `rewardClaimed` and every mapping below it.
+    /// Do not delete or repurpose without an explicit storage-layout review.
     uint256 public rewardMinted;
 
     /// @notice Cumulative reward actually paid out, in token wei
@@ -611,7 +620,7 @@ contract RecyReport is
      * @return The address of the currently configured trusted forwarder
      */
     function trustedForwarder() public view override returns (address) {
-        return _storedTrustedForwarder;
+        return _getForwarderStorage().trustedForwarder;
     }
 
     /**
@@ -621,9 +630,16 @@ contract RecyReport is
      * @custom:emits TrustedForwarderChanged Event with the old and new forwarder addresses
      */
     function setTrustedForwarder(address _forwarder) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        address oldForwarder = _storedTrustedForwarder;
-        _storedTrustedForwarder = _forwarder;
+        ForwarderStorage storage $ = _getForwarderStorage();
+        address oldForwarder = $.trustedForwarder;
+        $.trustedForwarder = _forwarder;
         emit TrustedForwarderChanged(oldForwarder, _forwarder);
+    }
+
+    function _getForwarderStorage() private pure returns (ForwarderStorage storage $) {
+        assembly {
+            $.slot := FORWARDER_STORAGE_LOCATION
+        }
     }
 
     /**

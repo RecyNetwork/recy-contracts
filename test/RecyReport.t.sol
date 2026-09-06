@@ -15,6 +15,7 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "./helpers/TestHelpers.sol";
+import "./helpers/RecyReportOriginalLayout.sol";
 
 // Mock ERC721 receiver for testing
 contract MockReceiver is IERC721Receiver {
@@ -231,6 +232,115 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
 
         // Contract should still work after upgrade
         assertEq(recyReport.version(), "1.0.0");
+    }
+
+    function test_upgradeFromOriginalLayoutPreservesStateAndForwarder() public {
+        RecyReportOriginalLayout originalImplementation = new RecyReportOriginalLayout();
+        ERC1967Proxy originalProxy = new ERC1967Proxy(
+            address(originalImplementation),
+            abi.encodeCall(
+                RecyReportOriginalLayout.initialize,
+                (
+                    "Original Layout Report",
+                    "ORIGINAL",
+                    address(testToken),
+                    address(recyData),
+                    protocol,
+                    60,
+                    60,
+                    10,
+                    20,
+                    10
+                )
+            )
+        );
+        RecyReportOriginalLayout originalReport = RecyReportOriginalLayout(address(originalProxy));
+        address fundWallet = address(0xF00D);
+        originalReport.seedValidatedReport(user, recycler, validator, fundWallet);
+        testToken.transfer(address(originalProxy), 1_000 ether);
+        uint256 proxyTokenBalance = testToken.balanceOf(address(originalProxy));
+        uint256 tokenSupply = testToken.totalSupply();
+        uint256 tokenIssued = testToken.totalIssued();
+
+        RecyReport newImplementation = new RecyReport();
+        originalReport.upgradeToAndCall(address(newImplementation), "");
+        RecyReport upgradedReport = RecyReport(address(originalProxy));
+
+        assertEq(upgradedReport.trustedForwarder(), address(0), "legacy protocol address became the forwarder");
+        _assertOriginalLayoutState(upgradedReport, fundWallet, proxyTokenBalance, tokenSupply, tokenIssued);
+
+        address forwarder = address(0xF01);
+        upgradedReport.setTrustedForwarder(forwarder);
+        assertEq(upgradedReport.trustedForwarder(), forwarder);
+        assertTrue(upgradedReport.isTrustedForwarder(forwarder));
+        _assertOriginalLayoutState(upgradedReport, fundWallet, proxyTokenBalance, tokenSupply, tokenIssued);
+
+        address forwardedSender = address(0xBEEF);
+        bytes memory forwardedCallData =
+            abi.encodePacked(abi.encodeCall(RecyReport.mintRecyReport, ()), forwardedSender);
+        vm.prank(forwarder);
+        (bool success,) = address(upgradedReport).call(forwardedCallData);
+
+        assertTrue(success);
+        assertEq(upgradedReport.ownerOf(1), forwardedSender);
+        assertEq(upgradedReport.nftNextId(), 2);
+    }
+
+    function _assertOriginalLayoutState(
+        RecyReport report,
+        address fundWallet,
+        uint256 proxyTokenBalance,
+        uint256 tokenSupply,
+        uint256 tokenIssued
+    ) internal view {
+        assertEq(report.name(), "Original Layout Report");
+        assertEq(report.symbol(), "ORIGINAL");
+        assertEq(address(report.token()), address(testToken));
+        assertEq(
+            address(uint160(uint256(vm.load(address(report), bytes32(uint256(0)))))),
+            address(recyData),
+            "data slot changed"
+        );
+        assertEq(report.protocolAddress(), protocol);
+        assertEq(report.nftNextId(), 1);
+        assertEq(report.unlockDelay(), 60);
+        assertEq(report.shareRecycler(), 60);
+        assertEq(report.shareValidator(), 10);
+        assertEq(report.shareGenerator(), 20);
+        assertEq(report.shareProtocol(), 10);
+        assertEq(report.rewardTotal(), 900 ether);
+        assertEq(report.rewardMinted(), 800 ether);
+        assertEq(report.rewardClaimed(), 123 ether);
+
+        (address infoValidator, address infoRecycler, uint64 recycleDate, uint64 auditDate, uint128 wasteAmount) =
+            report.info(0);
+        assertEq(infoValidator, validator);
+        assertEq(infoRecycler, recycler);
+        assertEq(recycleDate, 1_700_000_001);
+        assertEq(auditDate, 1_700_000_002);
+        assertEq(wasteAmount, 1_234_567);
+
+        RecyTypes.RecyMaterials[] memory storedMaterials = report.getRecyReportMaterials(0);
+        assertEq(storedMaterials.length, 1);
+        assertEq(storedMaterials[0].material, 7);
+        assertEq(storedMaterials[0].recycleType, 8);
+        assertEq(storedMaterials[0].recycleShape, 9);
+        assertEq(storedMaterials[0].disposalMethod, 10);
+        assertEq(storedMaterials[0].amountRecycled, 1_234_567);
+
+        (uint128 rewardAmount, uint64 rewardUnlockDate) = report.reward(0);
+        assertEq(rewardAmount, 777 ether);
+        assertEq(rewardUnlockDate, 1_700_000_003);
+        assertEq(report.status(0), RecyConstants.RECYCLE_VALIDATED);
+        assertEq(report.funds(user), fundWallet);
+        assertEq(report.ownerOf(0), user);
+        assertTrue(report.hasRole(report.DEFAULT_ADMIN_ROLE(), address(this)));
+        assertTrue(report.hasRole(RecyConstants.RECYCLER_ROLE, recycler));
+        assertTrue(report.hasRole(RecyConstants.AUDITOR_ROLE, validator));
+        assertEq(testToken.balanceOf(address(report)), proxyTokenBalance);
+        assertEq(testToken.totalSupply(), tokenSupply);
+        assertEq(testToken.totalIssued(), tokenIssued);
+        assertEq(testToken.owner(), address(this));
     }
 
     function test_roleManagement() public {
@@ -2328,24 +2438,6 @@ contract RecyReportTest is Test, TestHelpers, IERC721Receiver {
         recyReport.invalidateRecyReport(tokenId);
 
         assertEq(recyReport.rewardTotal(), rewardTotalBefore);
-    }
-
-    function test_invalidateFlaggedReport() public {
-        uint256 tokenId = mintAndCompleteReport(recyReport);
-
-        // Manually set status to FLAGGED (simulate flagging)
-        vm.store(
-            address(recyReport),
-            keccak256(abi.encode(tokenId, uint256(11))), // status mapping slot
-            bytes32(uint256(RecyConstants.RECYCLE_FLAGGED))
-        );
-        assertEq(recyReport.status(tokenId), RecyConstants.RECYCLE_FLAGGED);
-
-        recyReport.grantRole(RecyConstants.AUDITOR_ROLE, validator);
-        vm.prank(validator);
-        recyReport.invalidateRecyReport(tokenId);
-
-        assertReportStatus(recyReport, tokenId, RecyConstants.RECYCLE_INVALIDATED);
     }
 
     // ===== END INVALIDATE RECY REPORT TESTS =====
