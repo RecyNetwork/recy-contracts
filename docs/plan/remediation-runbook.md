@@ -2,6 +2,28 @@
 
 **Operator-facing companion to** [`security-audit-remediation.md`](./security-audit-remediation.md). That document says *what* is wrong and *why*; this one says *what to type, in what order*. Section references below (§3.1, §5a, …) point back to it.
 
+## Current policy: fresh testnet deployment
+
+**The historical in-place upgrade procedure below is superseded. Do not execute its commands
+against the old testnet deployments.** Existing state does not need preservation.
+Deploy a new token, attributes, SVG, data contract, report implementation, factory, and proxies,
+using the deployment scripts listed in the README. Record each new address in
+`config/contracts.json` before deploying its dependants; old contract/proxy entries are reset
+to zero. Keep recycler and auditor keys separate when provisioning the new proxies.
+
+The token is a standard LayerZero V2 OFT. New issuance and recycling rewards live on one EVM
+chain; satellite OFTs start at zero supply and cannot owner-mint. Every peer must use the same
+`issuanceChainId`. Reward epochs read cumulative `totalIssued`, which neither bridging nor burning
+can decrease. Configure endpoints and standard peer/DVN/executor settings per the README.
+
+The forwarder remains isolated in ERC-7201 storage rather than inserted between existing report
+fields. Fresh reports use application slots 0–11, with `protocolAddress`
+at 2 and `funds` at 11. Historical inserted-field proxies use different mapping roots and
+**must not be upgraded to this implementation**. No migration or deployment has been performed.
+Future upgrades require layout validation against the exact newly deployed build.
+
+The remaining sections retain historical investigation context, not current deployment instructions.
+
 **Target deployment:** Sepolia, chain `11155111`.
 **Live state verified:** 2026-08-11, read-only `eth_call` / `eth_getStorageAt` against `https://ethereum-sepolia.publicnode.com`.
 
@@ -293,11 +315,11 @@ npx @openzeppelin/upgrades-core validate out/build-info \
 
 Storage-layout facts the validator is checking, restated so a human can sanity-check the diff:
 
-- **`RecyReport` reserves no `__gap`.** New state variables may only be **appended** after
-  `mapping(address => address) public funds;` (`src/RecyReport.sol:63`).
-- **`uint256 public rewardMinted` (`:55`) must keep its slot.** Deleting it shifts `rewardClaimed`
-  and every mapping below it and corrupts the live proxy. It is retained and documented as reserved.
-- `_storedTrustedForwarder` sits mid-layout; do not disturb it.
+- **`RecyReport` reserves no `__gap`.** Future state must be appended after `funds` or use an
+  independently derived ERC-7201 namespace; never insert a field into the application layout.
+- `rewardMinted` remains reserved at slot 5 in the corrected layout, with `funds` at slot 11.
+- The configurable forwarder uses `recy.storage.RecyReport.Forwarder`, outside application slots.
+  This is not storage-compatible with the historical Sepolia proxy's inserted-field layout.
 - **`initialize` must keep its 10 parameters and its selector.** The factory is immutable and
   hardcodes `RecyReport.initialize.selector` (`src/RecyReportFactory.sol:107`); changing it
   permanently breaks `deployProxy` for all future proxies.
@@ -378,47 +400,15 @@ already cover** (`InsufficientRewardBalance`), and a refused validation adds not
 
 ## Rollback
 
-Both phases are individually reversible, but **only in the reverse of the deploy order**:
-implementation first, data second. The ordering constraint at the top of this document has a
-mirror-image trap here.
+There is no supported rollback from the fresh deployment to historical testnet implementations.
+In particular, the old `0xc2b9a91fD9789ebe93C22b5a4981c2d643C9e6B1` implementation has a
+different application layout and must never be installed on a newly deployed proxy.
 
-### Rolling back Phase 2 (implementation) — safe, one call
-
-```bash
-cast send $F "upgradeProxy(address,address)" $P 0xc2b9a91fD9789ebe93C22b5a4981c2d643C9e6B1
-```
-
-This is layout-safe by construction: the new implementation **appends no storage variables** — the
-layout is the same 13 slots in the same order (`forge inspect RecyReport storage-layout`, recorded
-in §8.1 of the plan). Every slot the old implementation reads means exactly what it meant before
-the upgrade, so downgrading cannot corrupt state. The old implementation never calls
-`data.materialsCount()`, and the new `RecyReportData` still serves every function the old
-implementation uses — so old implementation + new data is a working pair (it is exactly the state
-between Phase 1 and Phase 2).
-
-What you give back up: every Phase 2 guard (dual control, solvency, waste cap, status guard,
-self-service `setFundsWallet`, `setUnlockDelay`). If the rollback is more than momentary, treat the
-Phase 0 role separation as the only remaining defence against §3.1 and do not re-grant any
-overlapping roles while downgraded.
-
-### Rolling back Phase 1 (data contract) — ⚠ ONLY after Phase 2 is rolled back
-
-```bash
-cast send $P "setDataContract(address)" 0x7CF63765aaFA47BadA0374c23b10EB91F00d46f4   # old RecyReportData
-```
-
-**Never do this while the Phase 2 implementation is live.** The upgraded implementation calls
-`data.materialsCount()` on every write path (the §3.3 material-bounds check); the old
-`RecyReportData` does not have that function, so pointing a Phase-2 proxy back at the old data
-contract **bricks `mintRecyReportResult` and `setRecyReportResult` entirely** until the data
-contract is set forward again. An operator troubleshooting bad metadata after both phases are live
-must roll back the implementation first — or better, deploy a corrected `RecyReportData` and move
-forward, since `setDataContract` is repeatable and cheap.
-
-Rolling back Phase 1 also restores the malformed-JSON `tokenURI` (§3.4) and the metadata brick on
-out-of-range material ids (§3.3): it is a last resort, not a clean state.
+For any future rollback, validate the exact storage layouts and data-contract interfaces first.
+Retain deployment build artifacts. A previous address alone is not evidence of compatibility.
 
 ---
+
 
 ## Fund wallets — the self-service migration
 

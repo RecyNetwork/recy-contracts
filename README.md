@@ -12,6 +12,41 @@ The RecyReport protocol allows recyclers to report recycling data, which can be 
 - The OpenZeppelin contracts library to deploy battletested contracts, ensuring that the protocol meets the highest security standards.
 - The OpenZeppelin upgradable contracts library to deploy upgradeable contracts, ensuring that the protocol can evolve without losing existing data or functionality.
 
+### Fresh deployment required
+
+Existing testnet deployments are obsolete. Deploy a new token, attributes, SVG, data contract,
+report implementation, factory, and proxies; do not upgrade or reuse the historical proxies.
+Contract and proxy addresses in `config/contracts.json` are reset to zero. Record each new address
+before running dependent deployment scripts; keep protocol-wallet and role configuration separate.
+
+`RecyToken` is a standard LayerZero V2 OFT (ERC-20 with multichain transfers), with constructor:
+`(string name, string symbol, uint256 initialSupply, address lzEndpoint, address tokenOwner, uint256 issuanceChainId)`.
+Initial supply is in whole tokens; `mint`, `burn`, `burnFrom`, and `totalIssued` use token wei.
+
+Use one shared **EVM `issuanceChainId`** for every token in the OFT network. Only that chain
+permits initial issuance, owner minting, and report initialization. Satellite deployments must
+start with zero supply; they support ordinary transfers, burns, and OFT bridging, not new issuance.
+`totalIssued` increases only for initial issuance and owner minting. Report reward epochs use
+that counter, never chain-local `totalSupply()`: bridging or burning cannot roll an epoch backward.
+No custom cross-chain reward messages or global-supply synchronization are used.
+
+Each network configuration needs its local `addresses.lzEndpoint` and the shared `issuanceChainId`.
+Sepolia is the configured testnet issuance chain (`11155111`); the local development network is
+independent (`31337`). A satellite testnet must also use `11155111`, not its own EVM chain ID.
+For local deployment, deploy a test Endpoint V2 and configure its address before running the token script.
+Record newly deployed token addresses manually in `config/contracts.json`.
+
+Deployment alone does not enable cross-chain transfers. Configure standard LayerZero send/receive
+libraries, DVNs, confirmations, and executor options, then set the intended OFT peers in both
+directions. `setPeer` takes a **LayerZero endpoint ID**, not an EVM chain ID. All peers must use
+the same issuance chain configuration; review ownership/delegate permissions before opening routes.
+Follow the [official OFT deployment and wiring guide](https://docs.layerzero.network/v2/developers/evm/oft/quickstart).
+
+The report's configurable ERC-2771 forwarder uses the ERC-7201 namespace
+`recy.storage.RecyReport.Forwarder` and starts disabled. Only an admin can enable it.
+Before any future upgrade, validate storage compatibility against that deployment's build artifacts.
+Passing tests is not a security audit or a guarantee of security.
+
 ### Build
 
 ```sh

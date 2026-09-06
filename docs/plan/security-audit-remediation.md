@@ -4,6 +4,16 @@
 **This document:** independent verification of that report against `HEAD` of this repo + live Sepolia state, and a prioritised remediation plan.
 **Status:** **IMPLEMENTED IN CODE** (see §8). Contract code, tests, scripts, and config have been changed. **Nothing has been deployed and no transaction has been broadcast** — every on-chain step remains for an operator, per `docs/plan/remediation-runbook.md`. Code blocks in §3 are the original specifications; where implementation diverged from them, §8.2 records why.
 
+**Current deployment policy:** abandon existing testnet deployments and deploy the complete
+system fresh. Historical live-state observations and phased upgrade instructions below are
+retained as investigation context, not instructions for the current build. `RecyToken` is a
+standard LayerZero V2 OFT with one designated issuance/rewards chain. Reward epochs now read
+`totalIssued`, incremented only by initial issuance and owner minting, never by bridge credits.
+Satellite tokens cannot create new issuance and satellite reports cannot initialize. Bridging
+and burning therefore cannot roll reward epochs backward. The report forwarder uses the ERC-7201 namespace
+`recy.storage.RecyReport.Forwarder`; it no longer occupies an inserted application slot.
+The corrected implementation must not be installed on the historical inserted-field proxies.
+
 ---
 
 ## 0. How to read this document
@@ -43,7 +53,7 @@ Severity here is **reachability-adjusted for the actual live deployment** (one p
 | 1 | State machine bypass & unlimited reward re-validation (`setRecyReportResult`) | Critical | **CONFIRMED (mechanism)** — no status guard, no existence check at `src/RecyReport.sol:305-344`. But the report's *own patch* contains the missing guard, and its `require(ownerOf(x) != address(0))` is dead code under OZ v5 | **High** — see §3.2. Not the primary drain vector (§3.1 is worse and needs no such bug) |
 | 2 | Metadata generation DoS (`getStatus` reverts on 5 **and** 6) | High | **PARTIALLY-CONFIRMED / mostly wrong** — status **5 is handled** (`src/RecyReportData.sol:205-206`) and tested (`test/RecyReportData.t.sol:138`). Only status **6 (`FLAGGED`)** reverts, and **nothing in `src/` can ever write 6** | **Informational** (latent) |
 | 3 | O(N) gas DoS on factory admin functions | High | **CONFIRMED (shape) / REFUTED (impact)** — loop exists at `src/RecyReportFactory.sol:436-442`, but it `return`s on first match and the live proxy is index 0, so its cost is ~2 SLOADs *forever*. Break-even ≈13,100 proxies ≈6.5B attacker gas | **Low** |
-| 4 | Unsafe ERC20 transfers (missing SafeERC20) | Medium | **CONFIRMED (code fact)** — raw `token.transfer` ×4 at `src/RecyReport.sol:424,430,436,441`, returns unchecked | **Low** — cRECY is OZ ERC20 via OFT (reverts on failure). Real only for future non-standard tokens |
+| 4 | Unsafe ERC20 transfers (missing SafeERC20) | Medium | **CONFIRMED (code fact)** — raw `token.transfer` ×4 at `src/RecyReport.sol:424,430,436,441`, returns unchecked | **Low** — cRECY uses OZ ERC20 semantics (reverts on failure). Real only for future non-standard tokens |
 | 5 | Arbitrary payout diversion via admin `funds` override | Medium | **CONFIRMED** — `setFundsWallet(address _signatory, address)` is `onlyRole(DEFAULT_ADMIN_ROLE)` at `src/RecyReport.sol:473`, and its own docstring (`:468-472`) claims the opposite ("Accounts can only set their own fund address") | **Medium** |
 | 6 | ERC-2771 forwarder forgery | Medium | **REFUTED as an independent vulnerability** — `setTrustedForwarder` (`:501`) and `_authorizeUpgrade` (`:148`) are gated on the *same* role. An admin who could install a malicious forwarder can already replace the entire implementation. Overrides verified correct; feature is not even armed (no forwarder in live config) | **Informational** |
 | 7 | Unrestricted public minting of blank NFTs | Low | **CONFIRMED** — `mintRecyReport()` (`:224`) is unguarded | **Low** |
@@ -59,7 +69,7 @@ Context: this scan was produced *after* the model refused and was pushed to "loo
 |---|---|---|---|
 | 11 | Metadata lockout via out-of-bounds material index | **CONFIRMED — and materially understated.** See §3.3 | **High** |
 | 12 | Unbounded material-array iteration (gas DoS) | **CONFIRMED but self-limiting** — a recycler can only exhaust their own tx gas | **Low** |
-| 13 | Economic volatility via `totalSupply` dependence | **PARTIALLY-CONFIRMED** — cRECY *is* burnable and OFT-bridgeable, so supply is **not** monotonic. But the remediation is wrong: it proposes reusing `rewardMinted`, which does not track what it implies | **Medium** |
+| 13 | Economic volatility via `totalSupply` dependence | **FIXED IN CURRENT CODE** — reward epochs use `RecyToken.totalIssued` on the sole issuance/rewards chain. Bridge transfers and burns do not change this counter; `rewardMinted` is not repurposed | **Resolved for fresh deployments** |
 | 14 | Empty material array minting | **CONFIRMED** — length checks pass at 0 (`:315-320`); `test_setRecyReportResultWithEmptyArrays` asserts this as *intended* | **Low** |
 
 ---
@@ -209,12 +219,12 @@ Two related footguns:
 |---|---|---|
 | Raw `token.transfer` ×4, unchecked | `src/RecyReport.sol:424-441` | Adopt `SafeERC20`. Note `token` is declared concrete `ERC20` (`:121`) — use `SafeERC20.safeTransfer(IERC20(address(token)), …)` or change the declaration to `IERC20` (same slot, ABI stays `address`). Breaks no existing test |
 | `getStatus` reverts for status 6 / status 0 | `src/RecyReportData.sol:198-212` | Add a default `return "Unknown"` branch. **Not** try/catch (internal pure). Do this when touching §3.4 |
-| `RECYCLE_FLAGGED` unreachable; `FLAGGED` branches in validate/invalidate are dead | `src/lib/RecyConstants.sol:45`; `src/RecyReport.sol:355,384` | Either implement `flagReport()` or delete the dead branches. Note the repo's own test reaches 6 only via `vm.store` (`test/RecyReport.t.sol:2062-2068`) |
+| `RECYCLE_FLAGGED` unreachable; `FLAGGED` branches in validate/invalidate are dead | `src/lib/RecyConstants.sol:45`; `src/RecyReport.sol:355,384` | Either implement `flagReport()` or delete the dead branches. The old test fabricated this state by writing a hard-coded storage slot; that implementation-dependent test was removed |
 | Permissionless `deployProxy` → permanent name squatting; deploy script silently "reuses" a squatted proxy | `src/RecyReportFactory.sol:96`; `script/deploy/RecyReportProxyDeploy.s.sol:47-53` | Gate `deployProxy` in v2; make the script fail loudly on an unexpected pre-existing proxy |
 | `_isDeployedProxy` O(N) | `src/RecyReportFactory.sol:436-442` | `mapping(address => bool)` in v2. **Low priority** — not reachable against the live proxy |
 | `protocolAddress` unvalidated, no setter → a zero value bricks every claim | `src/RecyReportFactory.sol:90`; `src/RecyReport.sol:441` | Zero-check in v2; add `setProtocolAddress` (append-only, layout-safe). Live value is non-zero |
 | Degenerate epoch: `FOURTH`/`FIFTH` are **1 token** apart with a 100× reward cliff | `src/lib/RecyReward.sol:11-12,18-19` | Product decision. Likely a typo; confirm intent before changing (changes payout rates) |
-| Reward rate depends on burnable/bridgeable `totalSupply` | `src/lib/RecyReward.sol:23` | Track emissions in a monotonic counter instead. Not `rewardMinted` as-is (§3.5) |
+| Reward rate depended on burnable/bridgeable `totalSupply` | `src/RecyReport.sol`; `src/RecyToken.sol` | **Implemented:** cumulative `totalIssued` records initial supply and owner minting only. Source-chain issuance and report-initialization checks avoid unsynchronized reward accounting on satellite chains |
 | `uint128` overflow in `calculateReward` above ~3.4e20 mg bricks validate **and** invalidate for that report | `src/lib/RecyReward.sol:25` | Subsumed by the §3.1 `_wasteAmount` cap |
 | Duplicate "Glass" (idx 2 and 5); `materialSvg` has 11 entries vs 13 materials | `src/RecyReportAttributes.sol:13,16` | **DO NOT RENUMBER** — 64 live reports store raw indices; removing idx 5 silently relabels every stored index ≥6. Rename in place via a new attributes+data deployment, or stop emitting idx 5 client-side. Also: live idx 12 reads "Solid Inert Industrial Waste" vs HEAD's "Inert Industrial Waste" — **deployed bytecode ≠ HEAD**, verify on-chain before any migration |
 | Empty-material reports allowed | `src/RecyReport.sol:315-320` | `require(length > 0)`. Breaks `test_setRecyReportResultWithEmptyArrays` (`test/RecyReport.t.sol:459-478`) — product decision |
@@ -265,7 +275,7 @@ Bundle, because each upgrade carries risk:
 **Hard constraints for the implementer:**
 
 - **Do not change the `initialize` signature.** The immutable factory hardcodes its selector; changing it breaks all future `deployProxy` calls.
-- **`RecyReport` reserves no `__gap`.** New state variables **must** be appended after `mapping(address => address) public funds;` (`src/RecyReport.sol:63`). Nothing may be inserted above it. `_storedTrustedForwarder` sits mid-layout — do not disturb it.
+- **`RecyReport` reserves no `__gap`.** Future state must be appended after `funds` or isolated in an ERC-7201 namespace. The corrected layout has `protocolAddress` at slot 2 and `funds` at slot 11; the forwarder is namespaced. Do not upgrade historical inserted-field proxies to this build.
 - Adding functions, modifiers, events, and errors is layout-safe.
 - Run the OZ upgrade-safety validator against the deployed implementation before upgrading.
 
@@ -283,7 +293,7 @@ Not deployed; fix before it ships. Its mint path trusts `rewardTotal` (§3.1, §
 
 ### Phase 5 — Product decisions (not security fixes)
 
-Epoch cliff (§3.8), emissions basis vs `totalSupply` (§3.8), duplicate-material migration (§3.8), whether report amendment is a required workflow (§3.2), whether empty reports are legal (§3.8).
+Epoch cliff (§3.8), duplicate-material migration (§3.8), whether report amendment is a required workflow (§3.2), whether empty reports are legal (§3.8). The emissions-basis decision is now resolved: cumulative issuance on one chain, with standard OFT bridging to satellites.
 
 ---
 
@@ -427,7 +437,7 @@ Pleasing side effect: `NftNotExists()` is currently **unraisable dead code** (OZ
 
 **Suite: 455 passed / 0 failed** (baseline at HEAD was 336 passed / **11 failed**). Full `forge build` clean.
 
-`initialize` selector unchanged: `0x54de02e5`, 10 params. Storage layout unchanged — verified via `forge inspect RecyReport storage-layout`: 13 slots, same order, `rewardMinted` still at slot 6, `funds` still last at slot 12.
+`initialize` retains its 10-parameter selector, `0x54de02e5`. The subsequent forwarder repair restores 12 application slots, with `protocolAddress` at 2, `rewardMinted` at 5 and `funds` at 11, plus ERC-7201 forwarder storage. The former 13-slot implementation is incompatible; use fresh deployments, not an in-place upgrade of the historical testnet proxies.
 
 ### 8.2 Where the plan was wrong, and what was done instead
 
@@ -453,7 +463,7 @@ Unchanged from §4 Phase 5 — these need an owner, not an implementer:
 
 - `flagReport()` / making `RECYCLE_FLAGGED` writable. The FLAGGED branches remain dead but harmless; metadata now renders status 6 as `"Flagged"` if it ever becomes reachable.
 - ~~An `AUDITOR`-gated amend path for a mistyped completed report (§3.2).~~ **RESOLVED — no action needed, and §5b.2 item 1 is now closed.** Audited the actual clients: the only caller is the "Set Result" action in `recy-web`, and it is already gated on `report.status === "minted" || report.status === "created"` (`apps/recy-web/app/routes/report-detail.tsx:340`) — i.e. status **1 (`CREATED`) only**. No client ever offered amending a `COMPLETED`/`REWARDED` report, so the new `CREATED`-only guard exactly matches the UI's pre-existing contract and breaks no workflow. No amend endpoint is required.
-- `RecyReward` epoch cliff and the `totalSupply` emissions basis (§3.8) — changing either moves live payout rates.
+- `RecyReward` epoch thresholds and payout rates (§3.8) remain unchanged. The former `totalSupply` basis is now replaced by cumulative `totalIssued`, so bridging and burns cannot select an earlier epoch.
 - Duplicate "Glass" at indices 2 and 5 — left in place deliberately; renumbering would relabel 64 live reports.
 - The §4 Phase 3 **timelock** half of "`Ownable2Step` + timelock" is **deferred to operations by design** — V2 ships no in-contract delay. The compensating control is procedural and now explicit: V2's header migration sequence begins with a step 0 that transfers V2 ownership to the governance multisig / `TimelockController` (with `acceptOwnership`) **before** the live proxy is adopted. An in-contract two-phase upgrade would duplicate what a timelock owner already provides; the decision stands or falls with that ownership precondition.
 - `MAX_WASTE_AMOUNT = 1e15` (1,000 t in mg) is a **placeholder pending sign-off**; it is a named constant in `RecyConstants` for exactly that reason.
