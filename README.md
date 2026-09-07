@@ -382,11 +382,63 @@ principal self-registration, and separately authorized funding must be performed
 proper recycler, role-holder, and funding signers; possession of the deployment key alone does not
 authorize report submission.
 
+##### Restore legacy roles
+
+`RecyReport` uses plain `AccessControlUpgradeable`, so roles granted on the retired Sepolia proxy
+`0x91e3E6F9672E985100b8F0798d2cB55fa53c66Da` do not carry over to the new one. `RestoreLegacyRoles`
+discovers the legacy holders and grants the missing `RECYCLER_ROLE`/`AUDITOR_ROLE` through the new
+factory. It reads the optional `legacy` object under the chain's `proxies.default` entry:
+
+| Key | Meaning |
+| --- | --- |
+| `proxy` | Legacy proxy address; the script reverts when it is missing. |
+| `fromBlock` | Block where the legacy proxy was created; the log scan starts here and the script reverts when it is missing. |
+| `keepRecycler` | Legacy dual-role wallets that keep only `RECYCLER_ROLE`. |
+| `keepAuditor` | Legacy dual-role wallets that keep only `AUDITOR_ROLE`. |
+| `exclude` | Legacy holders that receive nothing. |
+
+Discovery scans `RoleGranted` logs from `fromBlock` to the head in 10,000-block chunks (the Infura
+`eth_getLogs` limit) and keeps only accounts for which `hasRole` is still true on the legacy proxy.
+Legacy `DEFAULT_ADMIN_ROLE` and `EMERGENCY_ROLE` holders, the configured admin and emergency keys,
+the new and legacy factories, and `exclude` entries never receive an operational role. For each
+remaining candidate, `config/contracts.json` decides: an address listed in `recyclers` gets only
+`RECYCLER_ROLE`, one listed in `auditors` gets only `AUDITOR_ROLE`. A single legacy role is copied
+as is. A wallet holding both legacy roles follows `keepRecycler` or `keepAuditor`; otherwise it is
+left unresolved and reported with the config keys to edit. Eight legacy wallets hold both roles,
+and five of them need explicit decisions. Admin and emergency holders missing from the config lists
+are only reported for a manual decision.
+
+Every grant re-checks on chain that the target does not hold the opposite operational role, and
+already-held roles are skipped, so the script can be rerun safely. Preview the plan without a
+signer, then dry-run and broadcast as the factory owner:
+
+```sh
+forge script script/RestoreLegacyRoles.s.sol:RestoreLegacyRoles \
+  --rpc-url sepolia \
+  --sig 'check()'
+forge script script/RestoreLegacyRoles.s.sol:RestoreLegacyRoles \
+  --rpc-url sepolia \
+  --account deployer \
+  --sender 0x3402ce3b5f88c852c0d6992C69A03095d1345BBd
+forge script script/RestoreLegacyRoles.s.sol:RestoreLegacyRoles \
+  --rpc-url sepolia \
+  --account deployer \
+  --sender 0x3402ce3b5f88c852c0d6992C69A03095d1345BBd \
+  --broadcast --slow
+```
+
+Only the broadcast merges the restored wallets into the `recyclers` and `auditors` arrays of
+`config/contracts.json`, which stays the source of truth. `check()` reverts until every planned
+holder has its role on the new proxy and no dual-role wallet remains unresolved.
+
 ##### Role management
 
 `ManageRoles` selects `proxies.default.address` and the factory from the current chain's config, so
 these methods take only the principal address. Mutating calls must be signed by the configured
 factory owner.
+
+To carry over recyclers and auditors from the retired proxy, see
+[Restore legacy roles](#restore-legacy-roles) before granting them by hand.
 
 ###### Grant auditor role
 

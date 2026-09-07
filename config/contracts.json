@@ -121,7 +121,18 @@
         "emergency": [
           "0x3402ce3b5f88c852c0d6992C69A03095d1345BBd",
           "0xF62DaAe4c3f9Fadf689F767716a82dFEe5026C89"
-        ]
+        ],
+        "legacy": {
+          "_notes": {
+            "purpose": "Retired Sepolia proxy whose RECYCLER_ROLE/AUDITOR_ROLE holders script/RestoreLegacyRoles.s.sol carries over to `address`. Roles do not follow a proxy change, so the script scans the legacy proxy's RoleGranted logs from `fromBlock` (its creation block) in 10,000-block chunks, keeps the accounts whose role is still held, grants what is missing through `contracts.factory`, and on broadcast appends the restored wallets to `recyclers`/`auditors`, which remain the source of truth. Legacy DEFAULT_ADMIN_ROLE/EMERGENCY_ROLE holders, the `admins`/`emergency` keys, both factories and `exclude` entries never receive an operational role; legacy admin/emergency holders missing from those lists are only reported.",
+            "conflicts": "A legacy wallet holding BOTH operational roles gets at most one, never both (roleSeparation above). `recyclers`/`auditors` decide first: 0x5f3CD352...0b64 keeps RECYCLER_ROLE because it is listed under `recyclers`, and 0x3402ce3b...5BBd / 0xF62DaAe4...6C89 get nothing because they are admin/emergency keys. Any other dual-role wallet needs exactly one decision here: `keepRecycler` grants RECYCLER_ROLE only, `keepAuditor` grants AUDITOR_ROLE only, `exclude` grants nothing; a wallet in both keep lists aborts the script. Five legacy dual-role wallets are still undecided and receive nothing until one of those lists names them (check() fails until then): 0x4050bf78c4804acd739b6a4AdD5AF5A6ba7E9037, 0x2fEc62311d70BEBA41191A100e4cd9d233108dE0, 0x1DBA7F0E9eC079357FE8cca44B4F2f0A5CeDe00B, 0xf60DD75B6A9F547944f36371E9D5BBe8e50A5380, 0xB8e17eE14A0836Cde5f91975818D6B2dF03FA342."
+          },
+          "proxy": "0x91e3E6F9672E985100b8F0798d2cB55fa53c66Da",
+          "fromBlock": 10486981,
+          "keepRecycler": [],
+          "keepAuditor": [],
+          "exclude": []
+        }
       }
     }
   },

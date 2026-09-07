@@ -42,6 +42,16 @@ contract ConfigManager is Script {
         uint8 shareProtocol;
     }
 
+    /// @dev Optional `legacy` object of a proxy entry: the retired proxy whose operational role
+    ///      holders script/RestoreLegacyRoles.s.sol carries over. `proxy == address(0)` means unset.
+    struct LegacyProxyConfig {
+        address proxy;
+        uint256 fromBlock;
+        address[] keepRecycler;
+        address[] keepAuditor;
+        address[] exclude;
+    }
+
     // Multichain scripts deliberately read and select one network config per bounded chain iteration.
     // forge-lint: disable-next-item(calls-loop)
     function getNetworkConfig(uint256 chainId) public view returns (NetworkConfig memory) {
@@ -77,6 +87,47 @@ contract ConfigManager is Script {
         _readRoleArrays(json, chainIdStr, proxyName, config);
 
         return config;
+    }
+
+    function getLegacyProxyConfig(uint256 chainId, string memory proxyName)
+        public
+        view
+        returns (LegacyProxyConfig memory config)
+    {
+        string memory json = vm.readFile(CONFIG_PATH);
+        string memory basePath = string.concat(".", vm.toString(chainId), ".proxies.", proxyName, ".legacy");
+
+        try vm.parseJsonString(json, string.concat(basePath, ".proxy")) returns (string memory proxyStr) {
+            if (_isValidAddress(proxyStr)) {
+                config.proxy = vm.parseAddress(proxyStr);
+            }
+        } catch {
+            config.proxy = address(0);
+        }
+        try vm.parseJsonUint(json, string.concat(basePath, ".fromBlock")) returns (uint256 fromBlock) {
+            config.fromBlock = fromBlock;
+        } catch {
+            config.fromBlock = 0;
+        }
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".keepRecycler")) returns (
+            address[] memory keepRecycler
+        ) {
+            config.keepRecycler = keepRecycler;
+        } catch {
+            config.keepRecycler = new address[](0);
+        }
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".keepAuditor")) returns (
+            address[] memory keepAuditor
+        ) {
+            config.keepAuditor = keepAuditor;
+        } catch {
+            config.keepAuditor = new address[](0);
+        }
+        try vm.parseJsonAddressArray(json, string.concat(basePath, ".exclude")) returns (address[] memory exclude) {
+            config.exclude = exclude;
+        } catch {
+            config.exclude = new address[](0);
+        }
     }
 
     // Each iterated network must parse its own configured addresses; these are read-only cheatcode calls.

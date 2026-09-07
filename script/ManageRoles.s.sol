@@ -615,7 +615,7 @@ contract ManageRoles is Script, ConfigManager {
 
     /// @dev Append every address of `extra` to `buffer[0:count]`, skipping duplicates and zeros.
     function _appendUnique(address[] memory buffer, uint256 count, address[] memory extra)
-        private
+        internal
         pure
         returns (uint256)
     {
@@ -627,7 +627,7 @@ contract ManageRoles is Script, ConfigManager {
 
     /// @dev Append `candidate` to `buffer[0:count]` unless it is zero or already present.
     function _appendUniqueOne(address[] memory buffer, uint256 count, address candidate)
-        private
+        internal
         pure
         returns (uint256)
     {
@@ -640,7 +640,7 @@ contract ManageRoles is Script, ConfigManager {
     }
 
     /// @dev Linear membership test; ops-scale arrays only.
-    function _contains(address[] memory haystack, address needle) private pure returns (bool) {
+    function _contains(address[] memory haystack, address needle) internal pure returns (bool) {
         for (uint256 i = 0; i < haystack.length; i++) {
             if (haystack[i] == needle) return true;
         }
