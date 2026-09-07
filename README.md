@@ -37,15 +37,19 @@ The Forge suite uses LayerZero's full Foundry OFT harness in place of the former
 The only vendored compatibility patches replace deprecated `DoubleEndedQueue.at` calls with the
 existing `pos` API and rename a mock signature-recovery error local; they do not change behavior.
 
-### Fresh deployment required
+### Deployment status
 
 Historical testnet report deployments are obsolete. The recorded Sepolia and Base Sepolia OFTs are
-reused unchanged; Base Sepolia remains an OFT satellite and gets no report stack. On Sepolia,
-`RecyReportDeploy` is the fresh-only, one-command report-stack orchestrator: it deploys and wires the
-complete stack, applies configured roles, removes the factory's operational roles, and records all
-six planned addresses. Those addresses are not live deployments until every broadcast receipt
-succeeds. Standalone component deployment scripts still require their addresses to be recorded
-manually before dependent scripts run.
+reused unchanged; Base Sepolia remains an OFT satellite and gets no report stack. The Sepolia
+report stack recorded in `config/contracts.json` (attributes, SVG, data, `RecyReport`
+implementation, `RecyReportFactoryV2`, and the `default` proxy `0x93a9cabB365d6231A26ab0Fe519001bF082e776a`)
+was deployed on 2026-09-07 in Sepolia blocks 11653735-11653755 by `RecyReportDeploy`, with the
+linked `RecyReward` library at `0x3390fEf79d1368dD24dF3de1aF6D75B1EbE20633`; the signerless
+`check()` readback passes against it. `RecyReportDeploy` is the fresh-only, one-command report-stack
+orchestrator: it deploys and wires the complete stack, applies configured roles, removes the
+factory's operational roles, and records all six planned addresses. Those addresses are not live
+deployments until every broadcast receipt succeeds. Standalone component deployment scripts still
+require their addresses to be recorded manually before dependent scripts run.
 
 The recorded OFT token contracts are immutable deployments and are reused by the rollout.
 Updating the compiler, Foundry, or vendored dependencies changes only bytecode newly compiled

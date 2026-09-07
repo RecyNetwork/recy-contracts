@@ -69,11 +69,11 @@
     },
     "contracts": {
       "token": "0x573BA952da488624f3281168FCb310B633A928D9",
-      "reportAttributes": "0x0000000000000000000000000000000000000000",
-      "reportSvg": "0x0000000000000000000000000000000000000000",
-      "reportData": "0x0000000000000000000000000000000000000000",
-      "reportImplementation": "0x0000000000000000000000000000000000000000",
-      "factory": "0x0000000000000000000000000000000000000000"
+      "reportAttributes": "0xE117972832D38B700B98a717dA6e187Da17699E4",
+      "reportSvg": "0xCafD04fEde8A025813519fb7AACAF7edDee58f5f",
+      "reportData": "0x333100B481ED7A65E59f47D768E6078D0D9ba8d4",
+      "reportImplementation": "0x0d398210341a2152B4fdd533D9f8106edA9e9c2A",
+      "factory": "0xAed8d4708Ed8fd3305adD1b06e25eb8858b1Cc0c"
     },
     "proxies": {
       "default": {
@@ -86,7 +86,7 @@
         },
         "name": "RecyReport",
         "symbol": "cRECYr",
-        "address": "0x0000000000000000000000000000000000000000",
+        "address": "0x93a9cabB365d6231A26ab0Fe519001bF082e776a",
         "settings": {
           "unlockDelay": 86400,
           "shareRecycler": 60,
