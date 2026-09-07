@@ -304,12 +304,14 @@ forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
 ##### Sign and broadcast
 
 Live signing starts only with the following command. Foundry opens the encrypted `deployer`
-keystore in this terminal:
+keystore in this terminal. Pass the token owner as `--sender` so Foundry knows the deployer before
+it predeploys the linked `RecyReward` library:
 
 ```sh
 forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
   --rpc-url sepolia \
   --account deployer \
+  --sender 0x3402ce3b5f88c852c0d6992C69A03095d1345BBd \
   --broadcast --slow
 ```
 
@@ -320,6 +322,7 @@ the repository's legacy Sepolia verifier URL with Etherscan V2:
 forge script script/deploy/RecyReportDeploy.s.sol:RecyReportDeploy \
   --rpc-url sepolia \
   --account deployer \
+  --sender 0x3402ce3b5f88c852c0d6992C69A03095d1345BBd \
   --broadcast --slow \
   --verify \
   --etherscan-api-key "$ETHERSCAN_API_KEY" \
@@ -332,8 +335,12 @@ the linked `RecyReward` library and records it in its broadcast artifacts; it is
 report-stack registry field. Do not rely on an exact transaction count.
 
 During broadcast preparation, the script executes locally and records all six planned addresses in
-`config/contracts.json` before Foundry sends the transactions. Planned addresses are not evidence
-of live contracts. They become the deployment record only after every receipt succeeds and the
+`config/contracts.json` before Foundry sends the transactions. Without `--sender`, Foundry unlocks
+the keystore only when the script first broadcasts and then executes the script a second time with
+the deployer as sender; the first pass predeploys `RecyReward` from Foundry's default sender, so
+its simulated addresses sit one nonce early. The script records the registry only in the pass whose
+script sender is the broadcaster, so either form is safe. Planned addresses are not evidence of
+live contracts. They become the deployment record only after every receipt succeeds and the
 signerless readback passes:
 
 ```sh

@@ -18,6 +18,8 @@ contract RecyReportDeploy is ManageRoles {
     bytes32 private constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 private constant DATA_SLOT = bytes32(uint256(0));
     uint256 private constant MAX_PROXY_NAME_LENGTH = 64;
+    /// @dev Foundry's script sender when neither `--sender` nor an eagerly unlocked signer supplies one.
+    address private constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 
     struct Stack {
         address attributes;
@@ -42,6 +44,11 @@ contract RecyReportDeploy is ManageRoles {
     function setUp() public override {}
 
     /// @notice Simulates, broadcasts and records a complete fresh stack through one Foundry invocation.
+    /// @dev Foundry predeploys the linked `RecyReward` library from the script sender (`msg.sender` here).
+    /// When a signer is unlocked only during execution (interactive `--account`, hardware wallets), the
+    /// first pass runs with Foundry's default sender: the library does not consume the broadcaster's
+    /// nonce, so every simulated CREATE lands one nonce early. Foundry discards that pass and re-executes
+    /// with the broadcaster as sender, so only the pass whose script sender is the broadcaster may record.
     function run() public {
         string memory proxyKey = _selectedProxyKey();
         NetworkConfig memory network = getNetworkConfig(block.chainid);
@@ -50,6 +57,11 @@ contract RecyReportDeploy is ManageRoles {
 
         address broadcaster = _broadcastSender();
         require(broadcaster == network.tokenOwner, "broadcaster is not the configured token owner");
+        bool senderInferencePass = msg.sender != broadcaster;
+        require(
+            !senderInferencePass || msg.sender == FOUNDRY_DEFAULT_SENDER,
+            "script sender differs from the broadcaster; pass --sender <token owner>"
+        );
         TokenSnapshot memory tokenBefore = _snapshotToken(token, broadcaster);
 
         console2.log("=== Fresh RecyReport stack ===");
@@ -65,6 +77,12 @@ contract RecyReportDeploy is ManageRoles {
         require(roleRevocations == 2, "fresh proxy must revoke both factory operational roles");
         _assertStack(network, config, stack);
         _assertTokenUnchanged(token, broadcaster, tokenBefore);
+        if (senderInferencePass) {
+            console2.log(
+                "Sender-inference pass: Foundry re-runs with the broadcaster as sender; registry left unchanged."
+            );
+            return;
+        }
         _recordPlannedAddresses(stack, proxyKey);
         _logDeployment(stack, roleRevocations);
     }
@@ -384,6 +402,8 @@ contract RecyReportDeploy is ManageRoles {
             CONFIG_PATH,
             string.concat(chainPath, ".proxies.", proxyKey, ".address")
         );
+        // vm.writeJson drops the file's final newline; restore it so real deployments diff cleanly.
+        vm.writeLine(CONFIG_PATH, "");
 
         console2.log("Recorded all six planned report-stack addresses.");
         console2.log("Recorded addresses are planned until every broadcast receipt succeeds.");
