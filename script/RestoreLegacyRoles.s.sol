@@ -58,7 +58,7 @@ contract RestoreLegacyRoles is ManageRoles {
         (uint256 missing, uint256 conflicts) = _report(legacy, plan, config, settings);
         require(
             conflicts == 0,
-            "ROLE SEPARATION VIOLATION: a planned wallet holds the opposite operational role on the new proxy; run revokeUnauthorizedOperationalRoles() first."
+            "ROLE SEPARATION VIOLATION: revoke each reported wallet's opposite role with its ManageRoles --sig command, then rerun."
         );
 
         vm.startBroadcast();
@@ -351,7 +351,7 @@ contract RestoreLegacyRoles is ManageRoles {
         console2.log("Summary: missing", missing, "conflicts", conflicts);
     }
 
-    /// @dev Prints one line per planned wallet with its state on the new proxy.
+    /// @dev Prints one line per planned wallet with its state on the new proxy and a per-wallet recovery command.
     function _reportPlannedRole(string memory role, address[] memory wallets, bool recyclerRole)
         internal
         view
@@ -369,7 +369,23 @@ contract RestoreLegacyRoles is ManageRoles {
                 console2.log("  MISSING  ", wallets[i]);
             } else {
                 conflicts++;
-                console2.log("  CONFLICT (holds the opposite operational role on the new proxy):", wallets[i]);
+                string memory oppositeRole = recyclerRole ? "AUDITOR_ROLE" : "RECYCLER_ROLE";
+                string memory revokeSig = recyclerRole ? "revokeAuditor(address)" : "revokeRecycler(address)";
+                console2.log(
+                    string.concat("  CONFLICT (planned ", role, "; holds ", oppositeRole, " on the new proxy):"),
+                    wallets[i]
+                );
+                console2.log(
+                    string.concat(
+                        "    Recovery: forge script script/ManageRoles.s.sol:ManageRoles --sig '",
+                        revokeSig,
+                        "' ",
+                        vm.toString(wallets[i]),
+                        " --rpc-url <RPC_URL> --account <FACTORY_OWNER_ACCOUNT> --sender ",
+                        vm.toString(factory.owner()),
+                        " --broadcast"
+                    )
+                );
             }
         }
         // forge-lint: disable-end(calls-loop)

@@ -109,23 +109,31 @@ contract ConfigManager is Script {
         } catch {
             config.fromBlock = 0;
         }
-        try vm.parseJsonAddressArray(json, string.concat(basePath, ".keepRecycler")) returns (
-            address[] memory keepRecycler
-        ) {
-            config.keepRecycler = keepRecycler;
-        } catch {
+        _readLegacyDecisionLists(json, basePath, config);
+    }
+
+    function _readLegacyDecisionLists(string memory json, string memory basePath, LegacyProxyConfig memory config)
+        internal
+        view
+    {
+        string memory path = string.concat(basePath, ".keepRecycler");
+        if (json.keyExists(path)) {
+            config.keepRecycler = json.readAddressArray(path);
+        } else {
             config.keepRecycler = new address[](0);
         }
-        try vm.parseJsonAddressArray(json, string.concat(basePath, ".keepAuditor")) returns (
-            address[] memory keepAuditor
-        ) {
-            config.keepAuditor = keepAuditor;
-        } catch {
+
+        path = string.concat(basePath, ".keepAuditor");
+        if (json.keyExists(path)) {
+            config.keepAuditor = json.readAddressArray(path);
+        } else {
             config.keepAuditor = new address[](0);
         }
-        try vm.parseJsonAddressArray(json, string.concat(basePath, ".exclude")) returns (address[] memory exclude) {
-            config.exclude = exclude;
-        } catch {
+
+        path = string.concat(basePath, ".exclude");
+        if (json.keyExists(path)) {
+            config.exclude = json.readAddressArray(path);
+        } else {
             config.exclude = new address[](0);
         }
     }

@@ -409,8 +409,9 @@ and five of them need explicit decisions. Admin and emergency holders missing fr
 are only reported for a manual decision.
 
 Every grant re-checks on chain that the target does not hold the opposite operational role, and
-already-held roles are skipped, so the script can be rerun safely. Preview the plan without a
-signer, then dry-run and broadcast as the factory owner:
+already-held planned roles are skipped. If a planned wallet already has the opposite role, the
+script stops without revoking it and reports the matching per-wallet `ManageRoles` command. Preview
+the plan without a signer, then dry-run and broadcast as the factory owner:
 
 ```sh
 forge script script/RestoreLegacyRoles.s.sol:RestoreLegacyRoles \
@@ -427,9 +428,38 @@ forge script script/RestoreLegacyRoles.s.sol:RestoreLegacyRoles \
   --broadcast --slow
 ```
 
-Only the broadcast merges the restored wallets into the `recyclers` and `auditors` arrays of
-`config/contracts.json`, which stays the source of truth. `check()` reverts until every planned
+During broadcast preparation, the script executes locally and merges the planned wallets into the
+`recyclers` and `auditors` arrays of `config/contracts.json` before Foundry sends transactions.
+That config merge is not evidence that the grants are live. If sending is interrupted, wait for
+submitted transactions to settle, keep the config and broadcast artifacts, rerun the same broadcast
+command, wait for every receipt, and run `check()` afterward. `check()` reverts until every planned
 holder has its role on the new proxy and no dual-role wallet remains unresolved.
+
+Resolve each reported conflict explicitly before rerunning restoration. For a wallet planned as a
+recycler, revoke its existing auditor role:
+
+```sh
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig 'revokeAuditor(address)' <CONFLICT_WALLET> \
+  --rpc-url sepolia \
+  --account deployer \
+  --sender 0x3402ce3b5f88c852c0d6992C69A03095d1345BBd \
+  --broadcast
+```
+
+For a wallet planned as an auditor, revoke its existing recycler role:
+
+```sh
+forge script script/ManageRoles.s.sol:ManageRoles \
+  --sig 'revokeRecycler(address)' <CONFLICT_WALLET> \
+  --rpc-url sepolia \
+  --account deployer \
+  --sender 0x3402ce3b5f88c852c0d6992C69A03095d1345BBd \
+  --broadcast
+```
+
+These commands revoke only the reported wallet's opposite role; they do not change the restoration
+grant policy. The signer must be the configured factory owner.
 
 ##### Role management
 
