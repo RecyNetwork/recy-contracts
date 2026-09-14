@@ -47,9 +47,11 @@ was deployed on 2026-09-07 in Sepolia blocks 11653735-11653755 by `RecyReportDep
 linked `RecyReward` library at `0x3390fEf79d1368dD24dF3de1aF6D75B1EbE20633`; the signerless
 `check()` readback passes against it. `RecyReportDeploy` is the fresh-only, one-command report-stack
 orchestrator: it deploys and wires the complete stack, applies configured roles, removes the
-factory's operational roles, and records all six planned addresses. Those addresses are not live
-deployments until every broadcast receipt succeeds. Standalone component deployment scripts still
-require their addresses to be recorded manually before dependent scripts run.
+factory's operational roles, mints `1,000,000` cRECY (`1e24` token wei) from new issuance on the
+issuance chain directly to the fresh proxy through the existing token-owner signer, and records all
+six planned addresses. Those addresses are not live deployments until every broadcast receipt
+succeeds. Standalone component deployment scripts still require their addresses to be recorded
+manually before dependent scripts run.
 
 The recorded OFT token contracts are immutable deployments and are reused by the rollout.
 Updating the compiler, Foundry, or vendored dependencies changes only bytecode newly compiled
@@ -66,8 +68,10 @@ instead of silently wrapping.
 
 Use one shared **EVM `issuanceChainId`** for every token in the OFT network. Sepolia is the issuance
 chain (`11155111`), so both public-testnet deployments use `issuanceChainId = 11155111`. Both fresh
-deployments start with zero supply. Only Sepolia permits later owner minting and report initialization;
-the Base Sepolia satellite supports ordinary transfers, burns, and OFT bridging, not new issuance.
+deployments create zero-supply tokens; the fresh Sepolia report flow then issues `1,000,000` cRECY
+(`1e24` token wei) directly to its proxy. Only Sepolia permits later owner minting and report
+initialization; the Base Sepolia satellite supports ordinary transfers, burns, and OFT bridging,
+not new issuance.
 `totalIssued` increases only for initial issuance and owner minting. Report reward epochs use that
 counter, never chain-local `totalSupply()`: bridging or burning cannot roll an epoch backward.
 No custom cross-chain reward messages or global-supply synchronization are used.
@@ -374,13 +378,14 @@ recycler, and auditor roles, then revokes the factory's `RECYCLER_ROLE` and `AUD
 factory retains its required admin and emergency authority. The initial
 `applyAllRolesFromConfig()` call is therefore unnecessary.
 
-The fresh flow does not mint reports or tokens, move or fund cRECY, deploy a Distribution contract,
-change OFT ownership or peers, or configure a trusted forwarder. It also does not register fund
-wallets on behalf of role holders.
-An unfunded report proxy cannot validate reports with a nonzero payout. Report submission,
-principal self-registration, and separately authorized funding must be performed later by their
-proper recycler, role-holder, and funding signers; possession of the deployment key alone does not
-authorize report submission.
+The fresh flow does not mint reports, deploy a Distribution contract, change
+OFT ownership or peers, configure a trusted forwarder, or register fund wallets on behalf of role
+holders. After wiring, it does issue `1,000,000` cRECY (`1e24` token wei) from new issuance on the
+issuance chain directly to the fresh proxy through the existing token-owner signer; this does not
+spend or move the owner's existing token balance. An unfunded report proxy cannot validate reports
+with a nonzero payout. Report submission, principal self-registration, and any additional funding
+must be performed later by their proper recycler, role-holder, and funding signers; possession of the
+deployment key alone does not authorize report submission.
 
 ##### Restore legacy roles
 

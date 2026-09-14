@@ -18,6 +18,7 @@ contract RecyReportDeploy is ManageRoles {
     bytes32 private constant IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     bytes32 private constant DATA_SLOT = bytes32(uint256(0));
     uint256 private constant MAX_PROXY_NAME_LENGTH = 64;
+    uint256 private constant INITIAL_REWARD_FUNDING = 1_000_000 * 10 ** 18;
     /// @dev Foundry's script sender when neither `--sender` nor an eagerly unlocked signer supplies one.
     address private constant FOUNDRY_DEFAULT_SENDER = 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38;
 
@@ -72,11 +73,13 @@ contract RecyReportDeploy is ManageRoles {
 
         vm.startBroadcast();
         (Stack memory stack, uint256 roleRevocations) = _deployAndConfigure(network, config);
+        uint256 proxyBalanceBefore = token.balanceOf(stack.proxyAddress);
+        token.mint(stack.proxyAddress, INITIAL_REWARD_FUNDING);
         vm.stopBroadcast();
 
         require(roleRevocations == 2, "fresh proxy must revoke both factory operational roles");
         _assertStack(network, config, stack);
-        _assertTokenUnchanged(token, broadcaster, tokenBefore);
+        _assertTokenFunded(token, broadcaster, tokenBefore, stack.proxyAddress, proxyBalanceBefore);
         if (senderInferencePass) {
             console2.log(
                 "Sender-inference pass: Foundry re-runs with the broadcaster as sender; registry left unchanged."
@@ -345,10 +348,27 @@ contract RecyReportDeploy is ManageRoles {
         return address(uint160(uint256(vm.load(target, slot))));
     }
 
-    function _assertTokenUnchanged(RecyToken token, address tokenOwner, TokenSnapshot memory before_) private view {
-        require(token.totalIssued() == before_.totalIssued, "deployment changed token totalIssued");
-        require(token.totalSupply() == before_.totalSupply, "deployment changed token totalSupply");
-        // Exact equality proves non-interference within this single simulated execution, not a funding condition.
+    function _assertTokenFunded(
+        RecyToken token,
+        address tokenOwner,
+        TokenSnapshot memory before_,
+        address fundedProxy,
+        uint256 proxyBalanceBefore
+    ) private view {
+        require(
+            token.totalIssued() == before_.totalIssued + INITIAL_REWARD_FUNDING,
+            "deployment token totalIssued funding mismatch"
+        );
+        require(
+            token.totalSupply() == before_.totalSupply + INITIAL_REWARD_FUNDING,
+            "deployment token totalSupply funding mismatch"
+        );
+        // Exact balance deltas apply only to this deployment, not later checks after reward payouts.
+        require(
+            // forge-lint: disable-next-line(incorrect-strict-equality)
+            token.balanceOf(fundedProxy) == proxyBalanceBefore + INITIAL_REWARD_FUNDING,
+            "deployment proxy reward funding mismatch"
+        );
         // forge-lint: disable-next-line(incorrect-strict-equality)
         require(token.balanceOf(tokenOwner) == before_.ownerBalance, "deployment changed token owner balance");
         require(token.issuanceChainId() == before_.issuanceChainId, "deployment changed token issuance chain");
@@ -417,7 +437,8 @@ contract RecyReportDeploy is ManageRoles {
         console2.log("Direct stack CREATE calls: 5");
         console2.log("Factory deployProxy calls (proxy CREATE is internal): 1");
         console2.log("Factory operational-role revocation calls:", roleRevocations);
-        console2.log("Token mint/transfer/ownership calls: 0");
+        console2.log("Token mint/transfer/ownership calls: 1");
+        console2.log("Initial proxy reward funding (cRECY base units):", INITIAL_REWARD_FUNDING);
         console2.log("Foundry's broadcast artifact is the transaction authority; linked libraries add deployments.");
     }
 
