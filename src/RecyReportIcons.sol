@@ -29,11 +29,11 @@ contract RecyReportIcons {
     /// @notice Material glyph; zero and unknown IDs (including 13) fall back to the package.
     function material(uint32 id) external pure returns (Glyph memory) {
         if (id == 1) {
-            // Plastic: PET bottle with three fine ribs and cap/neck join.
+            // Plastic: PET bottle with three fine ribs and cap/neck join, with tinted interior.
             return Glyph(
-                "",
-                "",
                 "M10.5 4.3V7c0 1.2-3 1.6-3 3.8v9.7c3 .8 6 .8 9 0V10.8c0-2.2-3-2.6-3-3.8V4.3Z",
+                "",
+                "",
                 "M10.7 2.8h2.7a.4.4 0 0 1 .4.4v.7a.4.4 0 0 1-.4.4H10.7a.4.4 0 0 1-.4-.4V3.2a.4.4 0 0 1 .4-.4Z",
                 "M7.5 12.75c3 .8 6 .8 9 0m-9 2.5c3 .8 6 .8 9 0m-9 2.5c3 .8 6 .8 9 0",
                 false
@@ -51,9 +51,14 @@ contract RecyReportIcons {
             );
         }
         if (id == 3) {
-            // Metal: a crisp filled hex nut with a generous open circular center.
+            // Metal: a crisp filled hex nut with a tinted circular center.
             return Glyph(
-                "", "", "", "M12 3 19.8 7.5v9L12 21l-7.8-4.5v-9ZM8.5 12a3.5 3.5 0 1 0 7 0 3.5 3.5 0 1 0-7 0Z", "", true
+                "",
+                "M8.5 12a3.5 3.5 0 1 0 7 0 3.5 3.5 0 1 0-7 0Z",
+                "",
+                "M12 3 19.8 7.5v9L12 21l-7.8-4.5v-9ZM8.5 12a3.5 3.5 0 1 0 7 0 3.5 3.5 0 1 0-7 0Z",
+                "",
+                true
             );
         }
         if (id == 4) {
@@ -153,10 +158,10 @@ contract RecyReportIcons {
         if (id == 1) return _compost();
         if (id == 2) return _flame();
         if (id == 3) {
-            // Mechanical recycling: circular arrows around a gear with a tinted hub band.
+            // Mechanical recycling: circular arrows around a gear with a tinted center.
             return Glyph(
                 "",
-                "M10.75 12a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 1 0-2.5 0ZM11.05 12a.95.95 0 1 0 1.9 0 .95.95 0 1 0-1.9 0Z",
+                "M10.75 12a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 1 0-2.5 0Z",
                 CYCLE,
                 string.concat(
                     CYCLE_HEADS,

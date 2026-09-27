@@ -257,13 +257,13 @@ deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x
 > on filled details such as the Organic taper, Metal nut, Glass stem, Compost sprout and
 > Digestion pipe/bubbles. Compost stems and leaves form one continuous filled silhouette;
 > Glass uses a flat-ended filled stem joint. The plastic bottle neck closes beneath its cap,
-> and three fine ribs have no interior tint. Its base follows the same curve as the ribs,
+> and its interior is tinted behind three fine white ribs. Its base follows the same curve as the ribs,
 > with equal visible gaps allowing for the base's thicker outline.
 > Anaerobic digestion uses fine flame and liquid contours with separated, unstroked bubbles;
 > its filled pipe ends within the flame border, preserving the inner curve and lower join.
-> Metal (material 3) is a crisp, filled hex nut with a circular hole; E-Waste (material 5)
+> Metal (material 3) is a crisp white hex nut with a tinted circular center; E-Waste (material 5)
 > uses a mobile phone with an inset screen. Mechanical recycling (recycle type 3) uses
-> a thin tinted hub band, preserving the dark opening. Recycling (disposal method 3)
+> a tinted disk filling the gear's central opening. Recycling (disposal method 3)
 > uses tinted arrowhead fills with white outlines and white curved shafts.
 > All body and tone fills share the slot accent at .35 opacity, including these recycling details.
 > Both Incineration entries (recycle type 2 and disposal method 2) use only the outer flame,
