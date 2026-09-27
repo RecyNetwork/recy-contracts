@@ -29,11 +29,11 @@ contract RecyReportIcons {
     /// @notice Material glyph; zero and unknown IDs (including 13) fall back to the package.
     function material(uint32 id) external pure returns (Glyph memory) {
         if (id == 1) {
-            // Plastic: PET bottle with solid cap and a tinted label band.
+            // Plastic: PET bottle with solid cap; neck joins beneath cap and label band is tinted.
             return Glyph(
                 "",
                 "M7.5 12.3c3 .8 6 .8 9 0v4c-3 .8-6 .8-9 0Z",
-                "M10.5 5.5V7c0 1.2-3 1.6-3 3.8v8.5c0 1 .8 1.8 1.8 1.8h5.5c1 0 1.8-.8 1.8-1.7V10.8c0-2.2-3-2.6-3-3.8V5.5M7.5 12.3c3 .8 6 .8 9 0m-9 4c3 .8 6 .8 9 0",
+                "M10.5 4.3V7c0 1.2-3 1.6-3 3.8v8.5c0 1 .8 1.8 1.8 1.8h5.5c1 0 1.8-.8 1.8-1.7V10.8c0-2.2-3-2.6-3-3.8V4.3ZM7.5 12.3c3 .8 6 .8 9 0m-9 4c3 .8 6 .8 9 0",
                 "M10.7 2.8h2.7a.4.4 0 0 1 .4.4v.7a.4.4 0 0 1-.4.4H10.7a.4.4 0 0 1-.4-.4V3.2a.4.4 0 0 1 .4-.4Z",
                 "",
                 false
@@ -51,13 +51,13 @@ contract RecyReportIcons {
             );
         }
         if (id == 3) {
-            // Metal: drink can with a tinted wrap and pull tab.
+            // Metal: rolled sheet with a spiral cut end and a short unfurled lip.
             return Glyph(
+                "M8.2 6.5c2.8 0 4.9 2.8 4.9 6.5s-2.1 6.5-4.9 6.5-4.9-2.8-4.9-6.5 2.1-6.5 4.9-6.5Z",
+                "M8.2 6.5 16.7 4c2.7-.8 4.6 2.2 4.6 6v3.9c0 1.8-.9 3.1-2.4 3.6L8.2 19.5ZM12.5 18.7l6.4-1.2 1.7 1.6-4 1.9Z",
+                "M8.2 6.5 16.7 4c2.7-.8 4.6 2.2 4.6 6v3.9c0 1.8-.9 3.1-2.4 3.6L8.2 19.5m10.7-2 1.7 1.6-4 1.9-4.1-2.3",
                 "",
-                "M5.5 9.5a6.5 2.3 0 0 0 13 0v5a6.5 2.3 0 0 1-13 0Z",
-                "M5.5 5a6.5 2.3 0 1 0 13 0 6.5 2.3 0 1 0-13 0Zm0 0V18.8a6.5 2.3 0 0 0 13 0V5M5.5 9.5a6.5 2.3 0 0 0 13 0m-13 5a6.5 2.3 0 0 0 13 0M11.3 5.4h1.5",
-                "",
-                "",
+                "M7.8 9.3c2.3-.4 3.5 1.3 3.5 3.8 0 2.7-1.5 4.3-3.5 3.9-2-.4-2.7-2.3-2.6-4.4.2-1.8 1.4-2.7 2.9-2.5 1.7.1 2.3 1.5 2.2 2.9-.1 1.6-1 2.4-2.1 2.4-1.2 0-1.7-.9-1.5-2.1.1-1 .7-1.3 1.5-1.2",
                 false
             );
         }
@@ -295,14 +295,19 @@ contract RecyReportIcons {
         }
         if (id == 4) return _compost();
         if (id == 5) {
-            // Anaerobic digestion: bubbling fixed-dome digester piping biogas to a flame.
+            // Anaerobic digestion: fine flame and liquid contours keep the bubbles distinct.
+            string memory flame =
+                "M17.9 8.6A2 2 0 0 1 16 6.7c0-1 .6-1.6 1-2.3.1.5.4.8.8 1-.2-1 .2-1.7.8-2.2 0 .9.3 1.5.7 2 .3.5.6.9.6 1.5a2 2 0 0 1-2 1.9Z";
             return Glyph(
-                "M17.9 8.6A2 2 0 0 1 16 6.7c0-1 .6-1.6 1-2.3.1.5.4.8.8 1-.2-1 .2-1.7.8-2.2 0 .9.3 1.5.7 2 .3.5.6.9.6 1.5a2 2 0 0 1-2 1.9Z",
-                "M4.6 16.3c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0a8.5 8.5 0 0 1 1.1 4.2H3.5a8.5 8.5 0 0 1 1.1-4.2Z",
-                "M3.5 20.5a8.5 8.5 0 0 1 17 0Zm1.1-4.2c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0M12 12V7.8h4.3M14.5 18.6v.1m-3.7-4.3v.1m2.5-.9v.1",
-                "M8.7 18.4a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z",
                 "",
-                false
+                string.concat(
+                    flame,
+                    " M4.6 16.3c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0a8.5 8.5 0 0 1 1.1 4.2H3.5a8.5 8.5 0 0 1 1.1-4.2Z"
+                ),
+                "M3.5 20.5a8.5 8.5 0 0 1 17 0ZM12 12V7.8h4.3",
+                "M8.85 18.4a.65.65 0 1 0 1.3 0 .65.65 0 1 0-1.3 0ZM14 18.5a.5.5 0 1 0 1 0 .5.5 0 1 0-1 0ZM10.1 14.3a.5.5 0 1 0 1 0 .5.5 0 1 0-1 0ZM12.95 14.1a.45.45 0 1 0 .9 0 .45.45 0 1 0-.9 0Z",
+                string.concat(flame, " M4.6 16.3c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0"),
+                true
             );
         }
         if (id == 6) {
@@ -331,15 +336,15 @@ contract RecyReportIcons {
         );
     }
 
-    /// @dev Composting (recycle type 1, disposal method 4): soil heap sprouting a seedling.
+    /// @dev Composting (recycle type 1, disposal method 4): soil heap sprouting a seedling with unstroked leaves.
     function _compost() private pure returns (Glyph memory) {
         return Glyph(
             "M4.5 20.5c1-3.7 4-6 7.5-6s6.5 2.3 7.5 6Z",
             "",
-            "M12 14.5v-6",
+            "M12 14.5V10",
             "M12 11.3c-2.4.1-4.4-1.1-4.7-3.8 2.6-.2 4.5 1.1 4.8 3.8Zm0-2c.1-2.7 1.9-4.2 4.8-4.2-.1 2.9-1.9 4.5-4.7 4.3Z",
             "",
-            false
+            true
         );
     }
 
