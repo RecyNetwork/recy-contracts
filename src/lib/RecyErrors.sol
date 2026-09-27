@@ -37,7 +37,4 @@ library RecyErrors {
 
     /// @notice Thrown when a new unlock delay is outside [MIN_UNLOCK_DELAY, MAX_UNLOCK_DELAY]
     error UnlockDelayOutOfBounds();
-
-    /// @notice Thrown when more than three material badges are requested.
-    error TooManyMaterialIcons();
 }

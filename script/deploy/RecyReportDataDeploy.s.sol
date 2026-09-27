@@ -18,18 +18,9 @@ contract RecyReportDataDeploy is Script, ConfigManager {
         console.log("Chain ID:", chainId);
         console.log("Network:", config.name);
 
-        // A configured SVG may predate material badges. Reject it before broadcasting any deployment.
+        // Reject configured renderers with the old dynamic-array ABI before broadcasting.
         if (config.reportSvg != address(0)) {
-            bool supportsMaterialBadges = false;
-            try RecyReportSvg(config.reportSvg).getRecycle(new uint32[](0)) returns (
-                string memory /* rendered */
-            ) {
-                supportsMaterialBadges = true;
-            } catch {}
-            require(
-                supportsMaterialBadges,
-                "Legacy reportSvg: deploy a fresh RecyReportSvg via RecyReportSvgDeploy and update config first"
-            );
+            _requireClassificationRenderer(config.reportSvg);
         }
 
         vm.startBroadcast();
@@ -95,5 +86,21 @@ contract RecyReportDataDeploy is Script, ConfigManager {
         console.log("RecyReportAttributes:", address(recyAttributes));
         console.log("RecyReportSvg:", address(recySvg));
         console.log("RecyReportData:", address(recyData));
+    }
+
+    function _requireClassificationRenderer(address renderer) internal pure {
+        uint32[4] memory classifications = [uint32(1), 3, 4, 5];
+        bool supportsRecycle = false;
+        bool supportsCoins = false;
+        try RecyReportSvg(renderer).getRecycle(classifications) returns (string memory rendered) {
+            supportsRecycle = bytes(rendered).length != 0;
+        } catch {}
+        try RecyReportSvg(renderer).getCoins(3, classifications) returns (string memory rendered) {
+            supportsCoins = bytes(rendered).length != 0;
+        } catch {}
+        require(
+            supportsRecycle && supportsCoins,
+            "reportSvg needs four-classification getRecycle/getCoins: deploy a fresh RecyReportSvg via RecyReportSvgDeploy and update config first"
+        );
     }
 }

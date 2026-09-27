@@ -231,11 +231,22 @@ role on chain. The dangerous pairing cannot be re-applied silently by a future o
 **A single deployment.** The new `RecyReportData` is constructed against the **existing, already
 deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x5529c9CD…1227`).
 
-> **Material-badge renderer update:** The historical SVG address above cannot serve the newer
-> `getRecycle(uint32[])` ABI. Deploy a fresh stateless `RecyReportSvg` via
-> `RecyReportSvgDeploy`, update `reportSvg` in config, then redeploy `RecyReportData`.
-> Unlike attributes, the SVG contract is safe to replace; the data deployment scripts
-> now reject legacy SVGs before broadcasting.
+> **Four-classification renderer requirement:** The historical SVG address above cannot serve
+> `getRecycle(uint32[4])` and `getCoins(uint8,uint32[4])`. Deploy a fresh stateless
+> `RecyReportSvg` via `RecyReportSvgDeploy`, update `reportSvg` in config, then deploy
+> `RecyReportData`. The data deployment scripts probe **both** image calls before broadcasting
+> and reject legacy renderers. Unlike attributes, the SVG contract is safe to replace.
+> The four equal-width bottom slots on completed and coin images are, in order, Material,
+> Recycle Type, Recycle Shape, and Disposal Method. Their icons use proportional stroked paths;
+> CREATED remains a plain trashcan. The material is chosen by total positive recycled weight
+> across its rows (uint256 sum), with first positive appearance winning total ties. The other
+> three IDs come together from that material's heaviest positive row (first on row ties), not
+> independent top processes. Empty or all-zero rows yield four zero IDs; unknown catalogue
+> IDs remain raw and render as neutral category icons instead of reverting. Metadata material
+> traits and stored IDs are unchanged.
+> Material 13, like other unknown material IDs, uses a plain package glyph rather than a
+> question mark. Shape icons include Final Product (3) and Fertilizer (4); the renderer does
+> not alter the attributes catalogue.
 
 > **Do not redeploy `RecyReportAttributes`.** An earlier draft of this work required it, because the
 > material-bounds check was going to depend on a `getMaterialsCount()` function that does not exist

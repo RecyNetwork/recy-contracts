@@ -68,8 +68,12 @@ contract RecyReportDataHarness is RecyReportData {
         return generateSvg(_status, _materials);
     }
 
-    function exposed_topMaterials(RecyTypes.RecyMaterials[] memory _materials) external pure returns (uint32[] memory) {
-        return _topMaterials(_materials);
+    function exposed_topClassification(RecyTypes.RecyMaterials[] memory _materials)
+        external
+        pure
+        returns (uint32[4] memory)
+    {
+        return _topClassification(_materials);
     }
 
     function exposed_generateMaterialsText(RecyTypes.RecyMaterials[] memory _materials)
@@ -168,113 +172,79 @@ contract RecyReportDataTest is Test, TestHelpers {
         assertEq(recyReportData.exposed_getStatus(255), "Unknown", "Max status should render Unknown");
     }
 
-    function test_generateSvg() public view {
-        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](0);
-        assertTrue(
-            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_CREATED, materials)).length > 0,
-            "Created SVG should not be empty"
-        );
-        assertTrue(
-            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_COMPLETED, materials)).length > 0,
-            "Completed SVG should not be empty"
-        );
-        assertTrue(
-            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_VALIDATED, materials)).length > 0,
-            "Validated SVG should not be empty"
-        );
-        assertTrue(
-            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_REWARDED, materials)).length > 0,
-            "Rewarded SVG should not be empty"
+    function test_generateSvgCreatedRemainsPlain() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](1);
+        materials[0] = createRecyMaterials(3, 4, 2, 3, 100);
+        assertEq(
+            recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_CREATED, materials), recyReportSvg.getTrashcan()
         );
     }
 
-    function test_topMaterialsAggregatesDuplicatesAndOrdersByTotalWeight() public view {
-        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](5);
-        materials[0] = createRecyMaterials(1, 0, 0, 0, 12);
-        materials[1] = createRecyMaterials(2, 0, 0, 0, 20);
-        materials[2] = createRecyMaterials(3, 0, 0, 0, 15);
-        materials[3] = createRecyMaterials(1, 0, 0, 0, 13);
-        materials[4] = createRecyMaterials(4, 0, 0, 0, 2);
-
-        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
-        assertEq(top.length, 3);
-        assertEq(top[0], 1, "aggregate of two smaller entries wins");
-        assertEq(top[1], 2, "second heaviest");
-        assertEq(top[2], 3, "third heaviest");
-    }
-
-    function test_topMaterialsTiesUseFirstPositiveAppearance() public view {
+    function test_topClassificationAggregatesAndKeepsHeaviestRowProcess() public view {
         RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](4);
-        materials[0] = createRecyMaterials(9, 0, 0, 0, 0);
-        materials[1] = createRecyMaterials(2, 0, 0, 0, 10);
-        materials[2] = createRecyMaterials(9, 0, 0, 0, 10);
-        materials[3] = createRecyMaterials(3, 0, 0, 0, 10);
+        materials[0] = createRecyMaterials(1, 1, 1, 1, 12);
+        materials[1] = createRecyMaterials(2, 3, 2, 2, 20);
+        materials[2] = createRecyMaterials(1, 4, 3, 5, 13);
+        materials[3] = createRecyMaterials(1, 2, 4, 7, 0);
 
-        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
-        assertEq(top.length, 3);
-        assertEq(top[0], 2, "earliest positive entry wins tie");
-        assertEq(top[1], 9, "zero entry does not establish order");
-        assertEq(top[2], 3);
+        // Two individually smaller rows beat the single heavier row. Only the 13mg
+        // row supplies the winning material's process; zero-weight rows cannot.
+        _assertClassification(recyReportData.exposed_topClassification(materials), [uint32(1), 4, 3, 5]);
     }
 
-    function test_topMaterialsZeroAndEmptyArrays() public view {
-        assertEq(recyReportData.exposed_topMaterials(new RecyTypes.RecyMaterials[](0)).length, 0);
-
-        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
-        materials[0] = createRecyMaterials(1, 0, 0, 0, 0);
-        materials[1] = createRecyMaterials(2, 0, 0, 0, 0);
-        assertEq(recyReportData.exposed_topMaterials(materials).length, 0);
-
-        materials[1] = createRecyMaterials(2, 0, 0, 0, 1);
-        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
-        assertEq(top.length, 1);
-        assertEq(top[0], 2, "zero-only material excluded");
-    }
-
-    function test_topMaterialsTruncatesAfterThreeDistinct() public view {
+    function test_topClassificationStableMaterialAndRepresentativeTies() public view {
         RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](5);
-        materials[0] = createRecyMaterials(1, 0, 0, 0, 3);
-        materials[1] = createRecyMaterials(2, 0, 0, 0, 2);
-        materials[2] = createRecyMaterials(3, 0, 0, 0, 1);
-        materials[3] = createRecyMaterials(4, 0, 0, 0, 5);
-        materials[4] = createRecyMaterials(5, 0, 0, 0, 4);
+        materials[0] = createRecyMaterials(9, 6, 4, 7, 0);
+        materials[1] = createRecyMaterials(2, 1, 1, 1, 10);
+        materials[2] = createRecyMaterials(9, 2, 2, 2, 10);
+        materials[3] = createRecyMaterials(2, 3, 3, 3, 10);
+        materials[4] = createRecyMaterials(9, 4, 4, 4, 10);
 
-        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
-        assertEq(top.length, 3);
-        assertEq(top[0], 4);
-        assertEq(top[1], 5);
-        assertEq(top[2], 1);
+        // Material totals tie at 20: material 2 appeared positively first, and
+        // its equal-weight rows tie, so the first row's process remains intact.
+        _assertClassification(recyReportData.exposed_topClassification(materials), [uint32(2), 1, 1, 1]);
     }
 
-    function test_topMaterialsUsesUint256Aggregate() public view {
-        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](3);
-        materials[0] = createRecyMaterials(1, 0, 0, 0, type(uint128).max);
-        materials[1] = createRecyMaterials(2, 0, 0, 0, type(uint128).max);
-        materials[2] = createRecyMaterials(1, 0, 0, 0, 1);
-
-        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
-        assertEq(top.length, 2);
-        assertEq(top[0], 1);
-        assertEq(top[1], 2);
-    }
-
-    function test_materialBadgesInCompletedUriAndCoinImage() public view {
-        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
-        materials[0] = createRecyMaterials(1, 0, 0, 0, 10);
-        materials[1] = createRecyMaterials(3, 0, 0, 0, 20);
-        string memory topIcon = recyReportSvg.getMaterialIcon(3);
-
-        string memory completedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_COMPLETED, materials);
-        string memory validatedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_VALIDATED, materials);
-        assertTrue(contains(completedSvg, topIcon), "completed icon contains heaviest material");
-        assertTrue(contains(validatedSvg, topIcon), "coin icon contains heaviest material");
-
-        string memory uri = recyReportData.tokenUriAttributes(
-            1, RecyConstants.RECYCLE_COMPLETED, mockToken, _sampleReward(), _sampleInfo(), materials
+    function test_topClassificationEmptyAndZeroReturnFourZeros() public view {
+        _assertClassification(
+            recyReportData.exposed_topClassification(new RecyTypes.RecyMaterials[](0)), [uint32(0), 0, 0, 0]
         );
-        string memory json = decodeJsonDataUri(uri);
-        string memory encodedImage = vm.parseJsonString(json, ".image");
-        assertTrue(contains(encodedImage, "data:image/svg+xml;base64,"), "completed image has SVG data-URI");
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
+        materials[0] = createRecyMaterials(1, 1, 1, 1, 0);
+        materials[1] = createRecyMaterials(2, 3, 2, 3, 0);
+        _assertClassification(recyReportData.exposed_topClassification(materials), [uint32(0), 0, 0, 0]);
+
+        materials[1] = createRecyMaterials(2, 3, 2, 3, 1);
+        _assertClassification(recyReportData.exposed_topClassification(materials), [uint32(2), 3, 2, 3]);
+    }
+
+    function test_topClassificationUsesUint256Totals() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](3);
+        materials[0] = createRecyMaterials(1, 1, 1, 1, type(uint128).max);
+        materials[1] = createRecyMaterials(2, 2, 2, 2, type(uint128).max);
+        materials[2] = createRecyMaterials(1, 3, 3, 3, 1);
+        _assertClassification(recyReportData.exposed_topClassification(materials), [uint32(1), 1, 1, 1]);
+    }
+
+    function test_topClassificationPreservesUnknownIds() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](1);
+        materials[0] = RecyTypes.RecyMaterials({
+            material: type(uint32).max,
+            recycleType: type(uint32).max,
+            recycleShape: type(uint32).max,
+            disposalMethod: type(uint32).max,
+            amountRecycled: 1
+        });
+        _assertClassification(
+            recyReportData.exposed_topClassification(materials),
+            [type(uint32).max, type(uint32).max, type(uint32).max, type(uint32).max]
+        );
+    }
+
+    function _assertClassification(uint32[4] memory actual, uint32[4] memory expected) internal pure {
+        for (uint256 i = 0; i < 4; i++) {
+            assertEq(uint256(actual[i]), uint256(expected[i]));
+        }
     }
 
     function test_generateMaterialsText() public view {

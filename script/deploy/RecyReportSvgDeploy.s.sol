@@ -21,27 +21,24 @@ contract RecyReportSvgDeploy is Script {
         // Test some functionality
         console.log("Recycle SVG constant defined:", bytes(recySvg.recycle()).length > 0);
 
-        uint32[] memory sampleMaterials = new uint32[](3);
-        sampleMaterials[0] = 1;
-        sampleMaterials[1] = 4;
-        sampleMaterials[2] = 3;
-        // Test SVG generation for different statuses
-        console.log("Testing SVG generation:");
-        try recySvg.getCoins(0, sampleMaterials) returns (
-            string memory /* coinsCreated */
+        uint32[4] memory classifications = [uint32(1), 3, 4, 3]; // Plastic / mechanical / fertilizer / recycling
+        // Exercise the four-slot category strip on both non-created image surfaces.
+        console.log("Testing SVG generation with material/type/shape/disposal slots:");
+        try recySvg.getCoins(3, classifications) returns (
+            string memory /* coinsValidated */
         ) {
-            console.log("Coins SVG for CREATED status generated successfully");
+            console.log("Coins SVG for VALIDATED status generated successfully");
         } catch {
-            console.log("Error generating coins SVG for CREATED status");
+            console.log("Error generating coins SVG for VALIDATED status");
         }
-        try recySvg.getCoins(4, sampleMaterials) returns (
+        try recySvg.getCoins(4, classifications) returns (
             string memory /* coinsRewarded */
         ) {
             console.log("Coins SVG for REWARDED status generated successfully");
         } catch {
             console.log("Error generating coins SVG for REWARDED status");
         }
-        try recySvg.getRecycle(sampleMaterials) returns (
+        try recySvg.getRecycle(classifications) returns (
             string memory /* recycleSvg */
         ) {
             console.log("Recycle SVG generated successfully");

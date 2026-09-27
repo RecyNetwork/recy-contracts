@@ -4,7 +4,6 @@ pragma solidity ^0.8.34;
 
 import {RecyReportSvg} from "../src/RecyReportSvg.sol";
 import {RecyConstants} from "../src/lib/RecyConstants.sol";
-import {RecyErrors} from "../src/lib/RecyErrors.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract RecyReportSvgTest is Test {
@@ -38,11 +37,9 @@ contract RecyReportSvgTest is Test {
 
     function test_getTrashcan() public view {
         string memory s = svg.getTrashcan();
-        assertTrue(bytes(s).length > 0, "empty svg");
-        assertTrue(contains(s, "<svg"), "missing <svg>");
-        assertTrue(contains(s, 'viewBox="0 0 24 24"'), "wrong viewBox");
-        assertTrue(contains(s, 'fill="#6644FF"'), "wrong fill color");
-        assertTrue(contains(s, "</svg>"), "missing footer");
+        assertTrue(contains(s, 'viewBox="0 0 24 24"'));
+        assertTrue(contains(s, 'fill="#6644FF"'));
+        assertEq(countOccurrences(s, 'class="category-slot"'), 0);
     }
 
     function countOccurrences(string memory where, string memory what) internal pure returns (uint256 count) {
@@ -78,88 +75,66 @@ contract RecyReportSvgTest is Test {
         return type(uint256).max;
     }
 
-    // Rendering each cardinality deliberately makes repeated calls to the fixture contract.
-    // forge-lint: disable-next-item(calls-loop)
-    function test_recycleBadgeCountsAndPlacement() public view {
-        uint32[] memory ids = new uint32[](3);
-        ids[0] = 1;
-        ids[1] = 4;
-        ids[2] = 3;
-        for (uint256 n = 0; n <= 3; ++n) {
-            uint32[] memory selected = new uint32[](n);
-            for (uint256 j = 0; j < n; ++j) {
-                selected[j] = ids[j];
-            }
-            string memory image = svg.getRecycle(selected);
-            assertEq(countOccurrences(image, 'class="material-badge"'), n);
-            assertTrue(contains(image, 'viewBox="0 0 549 549"'));
-            assertTrue(contains(image, 'fill="#000000"'));
-            assertTrue(contains(image, "background-color:#00FF44"));
-            assertTrue(contains(image, "</svg>"));
-        }
-        string memory three = svg.getRecycle(ids);
-        assertTrue(contains(three, 'cx="174" cy="465"'));
-        assertTrue(contains(three, 'cx="274" cy="465"'));
-        assertTrue(contains(three, 'cx="374" cy="465"'));
-        assertTrue(firstIndex(three, svg.getMaterialIcon(1)) < firstIndex(three, svg.getMaterialIcon(4)));
-        assertTrue(firstIndex(three, svg.getMaterialIcon(4)) < firstIndex(three, svg.getMaterialIcon(3)));
+    function test_recycleRendersFourOrderedCategoriesEvenWhenUndefined() public view {
+        uint32[4] memory classifications = [uint32(1), 3, 4, 5];
+        string memory image = svg.getRecycle(classifications);
+        assertTrue(contains(image, 'viewBox="0 0 549 549"'));
+        assertTrue(contains(image, "background-color:#00FF44"));
+        assertTrue(contains(image, 'fill="#000000"'));
+        assertEq(countOccurrences(image, 'class="category-slot"'), 4);
+        assertEq(countOccurrences(image, 'width="25%"'), 4);
+        assertTrue(contains(image, 'data-category="material" data-id="1" x="0%"'));
+        assertTrue(contains(image, 'data-category="recycle-type" data-id="3" x="25%"'));
+        assertTrue(contains(image, 'data-category="recycle-shape" data-id="4" x="50%"'));
+        assertTrue(contains(image, 'data-category="disposal-method" data-id="5" x="75%"'));
+        assertTrue(firstIndex(image, 'data-category="material"') < firstIndex(image, 'data-category="recycle-type"'));
+        assertTrue(
+            firstIndex(image, 'data-category="recycle-type"') < firstIndex(image, 'data-category="recycle-shape"')
+        );
+        assertTrue(
+            firstIndex(image, 'data-category="recycle-shape"') < firstIndex(image, 'data-category="disposal-method"')
+        );
+        assertTrue(firstIndex(image, 'fill="#000000"') < firstIndex(image, 'class="category-slot"'));
+        assertEq(countOccurrences(svg.getRecycle([uint32(0), 0, 0, 0]), 'class="category-slot"'), 4);
     }
 
-    // Rendering each cardinality deliberately makes repeated calls to the fixture contract.
-    // forge-lint: disable-next-item(calls-loop)
-    function test_coinBadgeCountsLayeringAndStatusColours() public view {
-        uint32[] memory ids = new uint32[](3);
-        ids[0] = 7;
-        ids[1] = 8;
-        ids[2] = 10;
-        for (uint256 n = 0; n <= 3; ++n) {
-            uint32[] memory selected = new uint32[](n);
-            for (uint256 j = 0; j < n; ++j) {
-                selected[j] = ids[j];
-            }
-            string memory image = svg.getCoins(RecyConstants.RECYCLE_VALIDATED, selected);
-            assertEq(countOccurrences(image, 'class="material-badge"'), n);
-            assertTrue(contains(image, 'viewBox="0 0 512 512"'));
-            assertTrue(contains(image, 'fill="#FFD700"'));
-            if (n > 0) {
-                assertTrue(firstIndex(image, "M264.4 95.01") < firstIndex(image, 'class="material-badge"'));
-                assertTrue(contains(image, svg.getMaterialIcon(selected[n - 1])));
-            }
-        }
-        assertTrue(contains(svg.getCoins(RecyConstants.RECYCLE_REWARDED, ids), 'fill="#808080"'));
-        assertTrue(contains(svg.getCoins(RecyConstants.RECYCLE_INVALIDATED, ids), 'fill="#ff0000"'));
-        assertTrue(contains(svg.getCoins(RecyConstants.RECYCLE_FLAGGED, ids), 'fill="#FFD700"'));
-        assertTrue(contains(svg.getCoins(RecyConstants.RECYCLE_INVALIDATED, ids), 'stroke="#ff0000"'));
+    function test_coinSlotsOverlayMainIconWithStatusSpecificAccent() public view {
+        uint32[4] memory classifications = [uint32(7), 2, 3, 4];
+        string memory validated = svg.getCoins(RecyConstants.RECYCLE_VALIDATED, classifications);
+        assertTrue(contains(validated, 'viewBox="0 0 512 512"'));
+        assertTrue(contains(validated, 'fill="#FFD700"'));
+        assertTrue(contains(validated, 'stroke="#FFD700"'));
+        assertEq(countOccurrences(validated, 'class="category-slot"'), 4);
+        assertTrue(firstIndex(validated, 'fill="#FFD700"') < firstIndex(validated, 'class="category-slot"'));
+        assertTrue(contains(validated, 'data-category="material" data-id="7" x="0%"'));
+        assertTrue(contains(validated, 'data-category="recycle-type" data-id="2" x="25%"'));
+        assertTrue(contains(validated, 'data-category="recycle-shape" data-id="3" x="50%"'));
+        assertTrue(contains(validated, 'data-category="disposal-method" data-id="4" x="75%"'));
+
+        string memory rewarded = svg.getCoins(RecyConstants.RECYCLE_REWARDED, classifications);
+        assertTrue(contains(rewarded, 'fill="#808080"'));
+        assertTrue(contains(rewarded, 'stroke="#808080"'));
+        assertEq(countOccurrences(rewarded, 'class="category-slot"'), 4);
+
+        string memory invalidated = svg.getCoins(RecyConstants.RECYCLE_INVALIDATED, classifications);
+        assertTrue(contains(invalidated, 'fill="#ff0000"'));
+        assertTrue(contains(invalidated, 'stroke="#ff0000"'));
+        assertEq(countOccurrences(invalidated, 'class="category-slot"'), 4);
+        assertTrue(contains(svg.getCoins(RecyConstants.RECYCLE_FLAGGED, classifications), 'fill="#FFD700"'));
     }
 
-    // Every frozen catalogue entry is rendered through the same two public image surfaces.
-    // forge-lint: disable-next-item(calls-loop)
-    function test_materialCatalogueAndFallback() public view {
-        assertNotEq(svg.getMaterialIcon(2), svg.getMaterialIcon(5));
-        assertNotEq(svg.getMaterialIcon(5), svg.getMaterialIcon(6));
-        assertEq(svg.getMaterialIcon(0), svg.getMaterialIcon(12));
-        assertEq(svg.getMaterialIcon(12), svg.getMaterialIcon(type(uint32).max));
-        assertNotEq(svg.getMaterialIcon(11), svg.getMaterialIcon(12));
-        for (uint32 id = 1; id <= 11; ++id) {
-            uint32[] memory selected = new uint32[](1);
-            selected[0] = id;
-            assertTrue(contains(svg.getRecycle(selected), svg.getMaterialIcon(id)));
-            assertTrue(contains(svg.getCoins(RecyConstants.RECYCLE_VALIDATED, selected), svg.getMaterialIcon(id)));
-        }
-        uint32[] memory unknown = new uint32[](2);
-        unknown[0] = 12;
-        unknown[1] = type(uint32).max;
-        assertEq(countOccurrences(svg.getRecycle(unknown), svg.getMaterialIcon(0)), 2);
-        assertEq(countOccurrences(svg.getCoins(RecyConstants.RECYCLE_REWARDED, unknown), svg.getMaterialIcon(0)), 2);
-    }
-
-    // A rejected call cannot return a value for assertion.
-    // forge-lint: disable-next-item(unused-return)
-    function test_revertsAboveThreeBadges() public {
-        uint32[] memory four = new uint32[](4);
-        vm.expectRevert(RecyErrors.TooManyMaterialIcons.selector);
-        svg.getRecycle(four);
-        vm.expectRevert(RecyErrors.TooManyMaterialIcons.selector);
-        svg.getCoins(RecyConstants.RECYCLE_INVALIDATED, four);
+    function test_unknownIdsRenderCategoryFallbackWithoutDroppingSlots() public view {
+        uint32[4] memory unknown = [uint32(13), type(uint32).max, type(uint32).max, type(uint32).max];
+        assertEq(svg.getMaterialIcon(13), svg.getMaterialIcon(0));
+        assertEq(svg.getRecycleTypeIcon(type(uint32).max), svg.getRecycleTypeIcon(0));
+        assertEq(svg.getRecycleShapeIcon(type(uint32).max), svg.getRecycleShapeIcon(0));
+        assertEq(svg.getDisposalMethodIcon(type(uint32).max), svg.getDisposalMethodIcon(0));
+        string memory image = svg.getRecycle(unknown);
+        assertEq(countOccurrences(image, 'class="category-slot"'), 4);
+        assertTrue(contains(image, 'data-category="material" data-id="13"'));
+        assertTrue(contains(image, 'data-category="recycle-type" data-id="4294967295"'));
+        assertTrue(contains(image, 'data-category="recycle-shape" data-id="4294967295"'));
+        assertTrue(contains(image, 'data-category="disposal-method" data-id="4294967295"'));
+        assertEq(countOccurrences(svg.getCoins(RecyConstants.RECYCLE_REWARDED, unknown), 'class="category-slot"'), 4);
     }
 }

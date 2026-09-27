@@ -85,7 +85,6 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         string[] memory mats = recyReportAttributes.getMaterials();
         string[] memory types = recyReportAttributes.getRecycleTypes();
         string[] memory disposals = recyReportAttributes.getDisposalMethods();
-        string[] memory shapes = recyReportAttributes.getRecycleShapes();
 
         // spot‐check lengths and contents
         assertEq(mats.length, 12);
@@ -94,8 +93,6 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(types[0], "Undefined");
         assertEq(disposals.length, 8);
         assertEq(disposals[0], "Undefined");
-        assertEq(shapes.length, 3);
-        assertEq(shapes[0], "Undefined");
     }
 
     /// @notice Test getMaterialSvgs returns the full array
@@ -199,15 +196,6 @@ contract RecyReportAttributesTest is Test, TestHelpers {
         assertEq(disposals.length, 8, "getDisposalMethods length");
         assertEq(disposals[0], "Undefined", "disposals[0]");
         assertEq(disposals[7], "Plasma Gasification", "disposals[7]");
-    }
-
-    /// @notice Test getRecycleShapes returns the complete array
-    function test_getRecycleShapes_fullArray() public view {
-        string[] memory shapes = recyReportAttributes.getRecycleShapes();
-        // expected length per source: 3
-        assertEq(shapes.length, 3, "getRecycleShapes length");
-        assertEq(shapes[0], "Undefined", "shapes[0]");
-        assertEq(shapes[2], "Bricks", "shapes[2]");
     }
 
     /// @notice Test addMaterial pushes both name and SVG

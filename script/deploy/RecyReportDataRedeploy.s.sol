@@ -15,7 +15,7 @@ import "forge-std/Script.sol";
  *      they are missing from config. That behaviour is unsafe for a live proxy: a fresh attributes
  *      contract would renumber the material catalogue, and 64 live reports store raw material
  *      indices (security-audit-remediation.md 3.8). This script REQUIRES both addresses in config;
- *      attributes are reused verbatim, and the SVG contract must support material badges.
+ *      attributes are reused verbatim, and the SVG contract must support four classification icons.
  *
  *      Phase 1 needs no proxy upgrade — `setDataContract` (src/RecyReport.sol:477) is a plain
  *      DEFAULT_ADMIN_ROLE call on the existing proxy.
@@ -85,7 +85,7 @@ contract RecyReportDataRedeploy is Script, ConfigManager {
         console.log("[ ] 2. RecyReportAttributes is REUSED, never redeployed:");
         console.log("       attributes:", networkConfig.reportAttributes);
         console.log("       svg:       ", networkConfig.reportSvg);
-        console.log("       The SVG must expose the material-badge renderer. If it is legacy, deploy");
+        console.log("       The SVG must expose both four-classification renderers. If legacy, deploy");
         console.log("       a fresh stateless RecyReportSvg and update config before this script.");
         console.log("       Deploying fresh attributes would renumber material ids that 64 live");
         console.log("       reports already store. If the catalogue must change, that is a");
@@ -107,17 +107,24 @@ contract RecyReportDataRedeploy is Script, ConfigManager {
         );
         require(networkConfig.reportAttributes.code.length > 0, "reportAttributes in config has no code on this chain");
         require(networkConfig.reportSvg.code.length > 0, "reportSvg in config has no code on this chain");
-        bool supportsMaterialBadges = false;
-        try RecyReportSvg(networkConfig.reportSvg).getRecycle(new uint32[](0)) returns (
-            string memory /* rendered */
-        ) {
-            supportsMaterialBadges = true;
+        _requireClassificationRenderer(networkConfig.reportSvg);
+        require(proxyConfig.proxy != address(0), "Proxy address not found in config for the requested proxy name");
+    }
+
+    function _requireClassificationRenderer(address renderer) internal pure {
+        uint32[4] memory classifications = [uint32(1), 3, 4, 5];
+        bool supportsRecycle = false;
+        bool supportsCoins = false;
+        try RecyReportSvg(renderer).getRecycle(classifications) returns (string memory rendered) {
+            supportsRecycle = bytes(rendered).length != 0;
+        } catch {}
+        try RecyReportSvg(renderer).getCoins(3, classifications) returns (string memory rendered) {
+            supportsCoins = bytes(rendered).length != 0;
         } catch {}
         require(
-            supportsMaterialBadges,
-            "Legacy reportSvg: deploy a fresh RecyReportSvg via RecyReportSvgDeploy and update config first"
+            supportsRecycle && supportsCoins,
+            "reportSvg needs four-classification getRecycle/getCoins: deploy a fresh RecyReportSvg via RecyReportSvgDeploy and update config first"
         );
-        require(proxyConfig.proxy != address(0), "Proxy address not found in config for the requested proxy name");
     }
 
     /**
@@ -145,7 +152,7 @@ contract RecyReportDataRedeploy is Script, ConfigManager {
 
         // One in-range material and one deliberately out of range: the old data contract reverts
         // on the second, permanently bricking that token's metadata. Plastic exercises a known
-        // material badge while the out-of-range id exercises the fallback badge.
+        // material icon while the out-of-range id exercises the neutral icon fallback.
         RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
         materials[0] = RecyTypes.RecyMaterials({
             material: 1, recycleType: 0, recycleShape: 0, disposalMethod: 0, amountRecycled: 5_000_000
