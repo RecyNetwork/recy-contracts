@@ -2,13 +2,19 @@
 
 pragma solidity 0.8.36;
 
+import {RecyReportIcons} from "./RecyReportIcons.sol";
 import {RecyConstants} from "./lib/RecyConstants.sol";
-import {RecyReportIcons} from "./lib/RecyReportIcons.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract RecyReportSvg is Ownable {
-    constructor() Ownable(msg.sender) {}
+    /// @notice Glyph catalogue for the classification slots, deployed with this renderer so its
+    ///         path data does not count against the renderer's EIP-170 code-size limit.
+    RecyReportIcons public immutable icons;
+
+    constructor() Ownable(msg.sender) {
+        icons = new RecyReportIcons();
+    }
 
     string private constant svgFooter = "</svg>";
     string private constant size = "1024";
@@ -48,11 +54,32 @@ contract RecyReportSvg is Ownable {
         return string.concat(getSvgHeader(viewbox, bg), '<path d="', path, '" fill="', color, '" />', svgFooter);
     }
 
-    function _categorySlot(string memory x, string memory category, uint32 id, string memory icon, string memory accent)
-        private
-        pure
-        returns (string memory)
-    {
+    /// @dev Slot tile: dark rounded square outlined in the accent, holding the glyph's layers.
+    function _tile(RecyReportIcons.Glyph memory glyph, string memory accent) private pure returns (string memory) {
+        string memory tint = string.concat('fill="', accent, '" fill-opacity=".35"');
+        return string.concat(
+            '<rect x="8" y="8" width="84" height="84" rx="18" fill="#171717" stroke="',
+            accent,
+            '" stroke-width="2"/><svg x="22" y="22" width="56" height="56" viewBox="0 0 24 24"><g fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill-rule="evenodd">',
+            _layer(glyph.tone, string.concat(tint, ' stroke="none"')),
+            _layer(glyph.body, tint),
+            _layer(glyph.line, ""),
+            _layer(glyph.solid, 'fill="#FFFFFF"'),
+            "</g></svg>"
+        );
+    }
+
+    function _layer(string memory d, string memory paint) private pure returns (string memory) {
+        return bytes(d).length == 0 ? "" : string.concat('<path d="', d, '" ', paint, "/>");
+    }
+
+    function _categorySlot(
+        string memory x,
+        string memory category,
+        uint32 id,
+        RecyReportIcons.Glyph memory glyph,
+        string memory accent
+    ) private pure returns (string memory) {
         return string.concat(
             '<svg class="category-slot" data-category="',
             category,
@@ -61,14 +88,17 @@ contract RecyReportSvg is Ownable {
             '" x="',
             x,
             '" y="74%" width="25%" height="24%" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">',
-            '<rect x="8" y="8" width="84" height="84" rx="18" fill="#171717" stroke="',
-            accent,
-            '" stroke-width="2"/>',
-            '<svg x="24" y="24" width="52" height="52" viewBox="0 0 24 24">',
-            '<path d="',
-            icon,
-            '" fill="none" stroke="#FFFFFF" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>',
-            "</svg></svg>"
+            _tile(glyph, accent),
+            svgFooter
+        );
+    }
+
+    /// @dev A slot tile as a standalone 256px image, in the recycle image's green accent.
+    function _iconSvg(RecyReportIcons.Glyph memory glyph) private pure returns (string memory) {
+        return string.concat(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 100 100">',
+            _tile(glyph, "#00FF44"),
+            svgFooter
         );
     }
 
@@ -78,7 +108,7 @@ contract RecyReportSvg is Ownable {
         string memory color,
         string memory bg,
         uint32[4] calldata classifications
-    ) private pure returns (string memory) {
+    ) private view returns (string memory) {
         string memory accent = viewbox == 549 ? "#00FF44" : color;
         return string.concat(
             getSvgHeader(viewbox, bg),
@@ -87,11 +117,11 @@ contract RecyReportSvg is Ownable {
             '" fill="',
             color,
             '" />',
-            _categorySlot("0%", "material", classifications[0], getMaterialIcon(classifications[0]), accent),
-            _categorySlot("25%", "recycle-type", classifications[1], getRecycleTypeIcon(classifications[1]), accent),
-            _categorySlot("50%", "recycle-shape", classifications[2], getRecycleShapeIcon(classifications[2]), accent),
+            _categorySlot("0%", "material", classifications[0], icons.material(classifications[0]), accent),
+            _categorySlot("25%", "recycle-type", classifications[1], icons.recycleType(classifications[1]), accent),
+            _categorySlot("50%", "recycle-shape", classifications[2], icons.recycleShape(classifications[2]), accent),
             _categorySlot(
-                "75%", "disposal-method", classifications[3], getDisposalMethodIcon(classifications[3]), accent
+                "75%", "disposal-method", classifications[3], icons.disposalMethod(classifications[3]), accent
             ),
             svgFooter
         );
@@ -103,7 +133,7 @@ contract RecyReportSvg is Ownable {
 
     /// @notice Returns the recycle image with material, recycle type, shape and disposal method slots.
     /// @param classifications Catalogue IDs in category order, including undefined IDs.
-    function getRecycle(uint32[4] calldata classifications) external pure returns (string memory) {
+    function getRecycle(uint32[4] calldata classifications) external view returns (string memory) {
         return _getSvgWithCategories(recycle, 549, "#000000", "#00FF44", classifications);
     }
 
@@ -111,7 +141,7 @@ contract RecyReportSvg is Ownable {
     /// @dev Keeps the `getCoins` name for ABI compatibility although flagged and invalidated reports draw no coins.
     /// @param _status Report status: flagged orange flag, invalidated red stamp, rewarded grey coins, else gold coins.
     /// @param classifications Catalogue IDs in material, recycle type, shape, disposal method order.
-    function getCoins(uint8 _status, uint32[4] calldata classifications) external pure returns (string memory) {
+    function getCoins(uint8 _status, uint32[4] calldata classifications) external view returns (string memory) {
         if (_status == RecyConstants.RECYCLE_REWARDED) {
             return _getSvgWithCategories(coins, 512, "#808080", "#000000", classifications);
         } else if (_status == RecyConstants.RECYCLE_INVALIDATED) {
@@ -123,27 +153,27 @@ contract RecyReportSvg is Ownable {
         }
     }
 
-    /// @notice Returns a raw 24x24 material path d; unknown IDs use the material fallback.
-    /// @dev Not a standalone SVG: draw unfilled with a 1.75 stroke and round caps/joins.
-    function getMaterialIcon(uint32 materialId) public pure returns (string memory) {
-        return RecyReportIcons.material(materialId);
+    /// @notice Standalone SVG of a material slot tile, drawn exactly as on the recycle image.
+    /// @dev Zero and unknown IDs render the material fallback glyph.
+    function getMaterialIcon(uint32 materialId) external view returns (string memory) {
+        return _iconSvg(icons.material(materialId));
     }
 
-    /// @notice Returns a raw 24x24 recycle-type path d; unknown IDs use the type fallback.
-    /// @dev Not a standalone SVG: draw unfilled with a 1.75 stroke and round caps/joins.
-    function getRecycleTypeIcon(uint32 recycleTypeId) public pure returns (string memory) {
-        return RecyReportIcons.recycleType(recycleTypeId);
+    /// @notice Standalone SVG of a recycle-type slot tile, drawn exactly as on the recycle image.
+    /// @dev Zero and unknown IDs render the recycle-type fallback glyph.
+    function getRecycleTypeIcon(uint32 recycleTypeId) external view returns (string memory) {
+        return _iconSvg(icons.recycleType(recycleTypeId));
     }
 
-    /// @notice Returns a raw 24x24 recycle-shape path d; unknown IDs use the shape fallback.
-    /// @dev Not a standalone SVG: draw unfilled with a 1.75 stroke and round caps/joins.
-    function getRecycleShapeIcon(uint32 recycleShapeId) public pure returns (string memory) {
-        return RecyReportIcons.recycleShape(recycleShapeId);
+    /// @notice Standalone SVG of a recycle-shape slot tile, drawn exactly as on the recycle image.
+    /// @dev Zero and unknown IDs render the recycle-shape fallback glyph.
+    function getRecycleShapeIcon(uint32 recycleShapeId) external view returns (string memory) {
+        return _iconSvg(icons.recycleShape(recycleShapeId));
     }
 
-    /// @notice Returns a raw 24x24 disposal-method path d; unknown IDs use the method fallback.
-    /// @dev Not a standalone SVG: draw unfilled with a 1.75 stroke and round caps/joins.
-    function getDisposalMethodIcon(uint32 disposalMethodId) public pure returns (string memory) {
-        return RecyReportIcons.disposalMethod(disposalMethodId);
+    /// @notice Standalone SVG of a disposal-method slot tile, drawn exactly as on the recycle image.
+    /// @dev Zero and unknown IDs render the disposal-method fallback glyph.
+    function getDisposalMethodIcon(uint32 disposalMethodId) external view returns (string memory) {
+        return _iconSvg(icons.disposalMethod(disposalMethodId));
     }
 }

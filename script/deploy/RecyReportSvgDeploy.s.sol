@@ -16,6 +16,7 @@ contract RecyReportSvgDeploy is Script {
         // Log deployment information
         console.log("=== RecyReportSvg Deployment ===");
         console.log("RecyReportSvg deployed to:", address(recySvg));
+        console.log("RecyReportIcons deployed to:", address(recySvg.icons()));
         console.log("Contract owner:", recySvg.owner());
 
         // Test some functionality

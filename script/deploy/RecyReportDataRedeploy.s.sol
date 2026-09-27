@@ -111,7 +111,7 @@ contract RecyReportDataRedeploy is Script, ConfigManager {
         require(proxyConfig.proxy != address(0), "Proxy address not found in config for the requested proxy name");
     }
 
-    function _requireClassificationRenderer(address renderer) internal pure {
+    function _requireClassificationRenderer(address renderer) internal view {
         uint32[4] memory classifications = [uint32(1), 3, 4, 5];
         bool supportsRecycle = false;
         bool supportsCoins = false;

@@ -88,7 +88,7 @@ contract RecyReportDataDeploy is Script, ConfigManager {
         console.log("RecyReportData:", address(recyData));
     }
 
-    function _requireClassificationRenderer(address renderer) internal pure {
+    function _requireClassificationRenderer(address renderer) internal view {
         uint32[4] memory classifications = [uint32(1), 3, 4, 5];
         bool supportsRecycle = false;
         bool supportsCoins = false;

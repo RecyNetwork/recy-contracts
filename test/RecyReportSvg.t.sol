@@ -165,4 +165,28 @@ contract RecyReportSvgTest is Test {
         assertTrue(contains(image, 'data-category="disposal-method" data-id="4294967295"'));
         assertEq(countOccurrences(svg.getCoins(RecyConstants.RECYCLE_REWARDED, unknown), 'class="category-slot"'), 4);
     }
+
+    function test_everyCatalogueEntryHasItsOwnGlyphAndUnregisteredIdsFallBack() public view {
+        assertDistinctIcons(svg.getMaterialIcon, 12);
+        assertDistinctIcons(svg.getRecycleTypeIcon, 7);
+        assertDistinctIcons(svg.getRecycleShapeIcon, 5);
+        assertDistinctIcons(svg.getDisposalMethodIcon, 8);
+    }
+
+    /// @dev Renders ids 0..count-1 of one catalogue plus the first unregistered id.
+    // forge-lint: disable-next-item(calls-loop)
+    function assertDistinctIcons(function(uint32) external view returns (string memory) icon, uint32 count)
+        internal
+        view
+    {
+        string[] memory icons = new string[](count);
+        for (uint32 id = 0; id < count; ++id) {
+            icons[id] = icon(id);
+            assertFalse(contains(icons[id], 'd=""'), "empty glyph layer rendered");
+            for (uint32 other = 0; other < id; ++other) {
+                assertNotEq(icons[id], icons[other], "catalogue entries share a glyph");
+            }
+        }
+        assertEq(icon(count), icons[0], "first unregistered id must use the fallback glyph");
+    }
 }
