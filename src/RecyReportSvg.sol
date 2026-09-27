@@ -104,13 +104,15 @@ contract RecyReportSvg is Ownable {
     }
 
     /// @notice Returns the coin image with four classification slots in front of the main icon.
-    /// @param _status Report status selecting the original gold, grey or red coin colour.
+    /// @param _status Report status: grey rewarded, red invalidated, orange flagged, gold otherwise.
     /// @param classifications Catalogue IDs in material, recycle type, shape, disposal method order.
     function getCoins(uint8 _status, uint32[4] calldata classifications) external pure returns (string memory) {
         if (_status == RecyConstants.RECYCLE_REWARDED) {
             return _getSvgWithCategories(coins, 512, "#808080", "#000000", classifications);
         } else if (_status == RecyConstants.RECYCLE_INVALIDATED) {
             return _getSvgWithCategories(coins, 512, "#ff0000", "#000000", classifications);
+        } else if (_status == RecyConstants.RECYCLE_FLAGGED) {
+            return _getSvgWithCategories(coins, 512, "#FFA500", "#000000", classifications);
         } else {
             return _getSvgWithCategories(coins, 512, "#FFD700", "#000000", classifications);
         }

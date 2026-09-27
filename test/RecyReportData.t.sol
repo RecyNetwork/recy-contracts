@@ -180,6 +180,14 @@ contract RecyReportDataTest is Test, TestHelpers {
         );
     }
 
+    function test_generateSvgFlaggedRendersOrangeCoins() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](1);
+        materials[0] = createRecyMaterials(3, 4, 2, 3, 100);
+        string memory image = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_FLAGGED, materials);
+        assertTrue(contains(image, 'viewBox="0 0 512 512"'), "flagged must use the coin artwork");
+        assertTrue(contains(image, 'fill="#FFA500"'), "flagged coins must be orange");
+    }
+
     function test_topClassificationAggregatesAndKeepsHeaviestRowProcess() public view {
         RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](4);
         materials[0] = createRecyMaterials(1, 1, 1, 1, 12);

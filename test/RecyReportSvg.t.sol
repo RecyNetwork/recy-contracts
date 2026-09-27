@@ -120,7 +120,12 @@ contract RecyReportSvgTest is Test {
         assertTrue(contains(invalidated, 'fill="#ff0000"'));
         assertTrue(contains(invalidated, 'stroke="#ff0000"'));
         assertEq(countOccurrences(invalidated, 'class="category-slot"'), 4);
-        assertTrue(contains(svg.getCoins(RecyConstants.RECYCLE_FLAGGED, classifications), 'fill="#FFD700"'));
+
+        string memory flagged = svg.getCoins(RecyConstants.RECYCLE_FLAGGED, classifications);
+        assertTrue(contains(flagged, 'fill="#FFA500"'));
+        assertTrue(contains(flagged, 'stroke="#FFA500"'));
+        assertFalse(contains(flagged, "#FFD700"), "flagged must not reuse the validated gold");
+        assertEq(countOccurrences(flagged, 'class="category-slot"'), 4);
     }
 
     function test_unknownIdsRenderCategoryFallbackWithoutDroppingSlots() public view {
