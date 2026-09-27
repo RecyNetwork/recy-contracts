@@ -47,7 +47,7 @@ contract RecyReportAttributes is Ownable {
         "Thermal Recycling"
     ];
 
-    string[] public recycleShape = ["Undefined", "Pellets", "Bricks"];
+    string[] public recycleShape = ["Undefined", "Pellets", "Bricks", "Final Product", "Fertilizer"];
 
     string[] public disposalMethod = [
         "Undefined",
