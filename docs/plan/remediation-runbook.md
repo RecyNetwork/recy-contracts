@@ -252,6 +252,9 @@ deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x
 > Material 13, like other unknown material IDs, uses a plain package glyph rather than a
 > question mark. Shape icons include Final Product (3) and Fertilizer (4); the renderer does
 > not alter the attributes catalogue.
+> Organic (material 6) uses a filled stem/midrib that narrows continuously to a sharp tip.
+> The catalogue's `Glyph` tuple ends with `solidFillOnly`: true suppresses the solid layer's
+> outline stroke for that taper; other glyphs retain their existing strokes.
 
 > **Do not redeploy `RecyReportAttributes`.** An earlier draft of this work required it, because the
 > material-bounds check was going to depend on a `getMaterialsCount()` function that does not exist
