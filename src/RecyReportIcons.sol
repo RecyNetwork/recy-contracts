@@ -2,11 +2,13 @@
 pragma solidity 0.8.36;
 
 /// @title RecyReportIcons
-/// @notice Duotone glyphs on a 24x24 grid. RecyReportSvg paints four layers back to front: `tone`
+/// @notice Duotone glyphs on a 24x24 grid. RecyReportSvg paints five layers back to front: `tone`
 ///         is filled with the slot accent tint, `body` is tinted and stroked, `line` is only
-///         stroked and `solid` is filled and stroked white. Strokes are white, 1.5 wide, with
-///         round caps and joins. IDs are the material, recycle type, recycle shape and disposal
-///         method catalogue indices; zero and unknown IDs receive a neutral category glyph.
+///         stroked, `detail` is only stroked at a fine 1 width for small inner shapes a full
+///         stroke would clog, and `solid` is filled and stroked white. Strokes are white, 1.5
+///         wide unless noted, with round caps and joins. IDs are the material, recycle type,
+///         recycle shape and disposal method catalogue indices; zero and unknown IDs receive a
+///         neutral category glyph.
 /// @dev RecyReportSvg deploys this catalogue in its constructor so the glyph data does not count
 ///      against the renderer's own EIP-170 code-size limit.
 contract RecyReportIcons {
@@ -15,6 +17,7 @@ contract RecyReportIcons {
         string tone;
         string line;
         string solid;
+        string detail;
     }
 
     string private constant FLAME =
@@ -30,7 +33,8 @@ contract RecyReportIcons {
                 "",
                 "M7.5 12.3c3 .8 6 .8 9 0v4c-3 .8-6 .8-9 0Z",
                 "M10.5 5.5V7c0 1.2-3 1.6-3 3.8v8.5c0 1 .8 1.8 1.8 1.8h5.5c1 0 1.8-.8 1.8-1.7V10.8c0-2.2-3-2.6-3-3.8V5.5M7.5 12.3c3 .8 6 .8 9 0m-9 4c3 .8 6 .8 9 0",
-                "M10.7 2.8h2.7a.4.4 0 0 1 .4.4v.7a.4.4 0 0 1-.4.4H10.7a.4.4 0 0 1-.4-.4V3.2a.4.4 0 0 1 .4-.4Z"
+                "M10.7 2.8h2.7a.4.4 0 0 1 .4.4v.7a.4.4 0 0 1-.4.4H10.7a.4.4 0 0 1-.4-.4V3.2a.4.4 0 0 1 .4-.4Z",
+                ""
             );
         }
         if (id == 2) {
@@ -39,6 +43,7 @@ contract RecyReportIcons {
                 "",
                 "M6.5 8h11c-.4 2.9-2.7 5-5.5 5S6.9 10.9 6.5 8Z",
                 "M7 3H17c.4 1.4.6 2.8.6 4.1 0 3.4-2.5 6-5.5 6s-5.6-2.7-5.6-6c0-1.3.2-2.7.5-4.1Zm5 10v8M8.5 21h7",
+                "",
                 ""
             );
         }
@@ -48,6 +53,7 @@ contract RecyReportIcons {
                 "",
                 "M5.5 9.5a6.5 2.3 0 0 0 13 0v5a6.5 2.3 0 0 1-13 0Z",
                 "M5.5 5a6.5 2.3 0 1 0 13 0 6.5 2.3 0 1 0-13 0Zm0 0V18.8a6.5 2.3 0 0 0 13 0V5M5.5 9.5a6.5 2.3 0 0 0 13 0m-13 5a6.5 2.3 0 0 0 13 0M11.3 5.4h1.5",
+                "",
                 ""
             );
         }
@@ -57,7 +63,8 @@ contract RecyReportIcons {
                 "M14 3H7.5C6.7 3 6 3.7 6 4.5v15c0 .8.7 1.5 1.5 1.5h9c.8 0 1.5-.7 1.5-1.5V7Z",
                 "",
                 "M9 11h6M9 14h6M9 17h3.5",
-                "M14 3V6.3c0 .4.3.8.8.8H18Z"
+                "M14 3V6.3c0 .4.3.8.8.8H18Z",
+                ""
             );
         }
         if (id == 5) {
@@ -66,20 +73,21 @@ contract RecyReportIcons {
                 "M5.3 4H18.8a1.8 1.8 0 0 1 1.7 1.8v8a1.8 1.8 0 0 1-1.7 1.7H5.3a1.8 1.8 0 0 1-1.8-1.7v-8A1.8 1.8 0 0 1 5.3 4Z",
                 "",
                 "M12 15.5v4.8m-3.5 0h7M7.5 8h3l2 2.5h4M7.5 12h4",
-                "M6.7 8A.8.8 0 1 0 8.3 8 .8.8 0 1 0 6.7 8Zm9 2.5a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0ZM6.7 12a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z"
+                "M6.7 8A.8.8 0 1 0 8.3 8 .8.8 0 1 0 6.7 8Zm9 2.5a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0ZM6.7 12a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z",
+                ""
             );
         }
         if (id == 6) {
             // Organic: tinted leaf with its stem and midrib.
-            return
-                Glyph(
-                    "M7 17C4.9 11.1 8.9 4.5 19.5 4.5 19.9 14.1 13.9 18.9 7 17Z", "", "M4 20c3.5-4.5 7.5-8.5 12-11.5", ""
-                );
+            return Glyph(
+                "M7 17C4.9 11.1 8.9 4.5 19.5 4.5 19.9 14.1 13.9 18.9 7 17Z", "", "M4 20c3.5-4.5 7.5-8.5 12-11.5", "", ""
+            );
         }
         if (id == 7) {
             // Textile: tinted T-shirt.
             return Glyph(
                 "M9.3 3.5 3.5 6.5 5.3 10.3 7 9.3V19.6c0 .4.3.8.8.8h8.5c.4 0 .8-.3.8-.8V9.3l1.8 1 1.8-3.7-5.7-3c-.4 1.3-1.5 2.2-2.7 2.2s-2.6-1-3-2.3Z",
+                "",
                 "",
                 "",
                 ""
@@ -91,6 +99,7 @@ contract RecyReportIcons {
                 "M13.7 6.1 19.6 16.5a2 2 0 0 1-1.8 3H6.2a2 2 0 0 1-1.8-3L10.3 6.1a2 2 0 0 1 3.4 0Z",
                 "",
                 "M12 9.5v4.3m0 2.7v.1",
+                "",
                 ""
             );
         }
@@ -100,7 +109,8 @@ contract RecyReportIcons {
                 "",
                 "M7.5 14l-2 4.2A1.8 1.8 0 0 0 7 20.8H17a1.8 1.8 0 0 0 1.6-2.6L16.5 14Z",
                 "M10 3.3V8.5a1 1 0 0 1-.1.4L5.5 18.2A1.8 1.8 0 0 0 7 20.8H17a1.8 1.8 0 0 0 1.6-2.6L14.1 8.9a1 1 0 0 1-.1-.4V3.3m-5.2 0h6.5M7.5 14h9m-6.2 4.3v.1m2-7.1v.1",
-                "M12.7 17.4a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z"
+                "M12.7 17.4a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z",
+                ""
             );
         }
         if (id == 10) {
@@ -109,6 +119,7 @@ contract RecyReportIcons {
                 "",
                 "M6 14.5c1-.7 2-.7 3 0s2 .7 3 0 2-.7 3 0 2 .7 3 0a6 6 0 0 1-12 0Z",
                 "M12 3C9.2 6.9 6 10.6 6 14.5a6 6 0 0 0 12 0c0-3.9-3.2-7.6-6-11.5ZM6 14.5c1-.7 2-.7 3 0s2 .7 3 0 2-.7 3 0 2 .7 3 0",
+                "",
                 ""
             );
         }
@@ -118,11 +129,12 @@ contract RecyReportIcons {
                 "M7.3 14.3 8.8 10.5l4-2.2 3 2.7L11 15.3Zm8.2 6.2.8-4.5-.5-5 3 1.5 2.2 8Z",
                 "",
                 "M7.3 14.3l-3 2L3 20.5H15.5M11 15.3l-.7 5.2",
+                "",
                 ""
             );
         }
         // Undefined and unknown materials (including 13): a taped package.
-        return Glyph("M12 3 20 7.5 12 12 4 7.5Z", "", "M20 7.5v9L12 21 4 16.5v-9M12 12v9M8 5.3 16 9.8", "");
+        return Glyph("M12 3 20 7.5 12 12 4 7.5Z", "", "M20 7.5v9L12 21 4 16.5v-9M12 12v9M8 5.3 16 9.8", "", "");
     }
 
     /// @notice Recycle-type glyph; zero and unknown IDs fall back to the circular arrows.
@@ -138,25 +150,31 @@ contract RecyReportIcons {
                 string.concat(
                     CYCLE_HEADS,
                     " M11.2 9.5l.2-1.1h1.2l.2 1.1.9.6 1.1-.4.6 1-.9.8v1l.9.8-.6 1-1.1-.4-.9.6-.2 1.1H11.4l-.2-1.1-.9-.6-1.1.4-.6-1 .9-.8v-1l-.9-.8.6-1 1.1.4ZM10.3 12a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 1 0-3.4 0Z"
-                )
-            );
-        }
-        if (id == 4) {
-            // Pyrolysis: sealed drum on a stand, heated by a fire underneath.
-            return Glyph(
-                "M7.5 3.5h9a3.3 3.3 0 0 1 3.3 3.3 3.3 3.3 0 0 1-3.3 3.2h-9A3.3 3.3 0 0 1 4.3 6.8 3.3 3.3 0 0 1 7.5 3.5Zm4.5 17a2.9 2.9 0 0 1-2.9-2.9c0-1.3 1-2.3 1.6-3.3.2.7.6 1.2 1.1 1.5-.2-1.5.4-2.6 1.3-3.2-.1 1.3.4 2.1 1 3 .5.6.8 1.3.8 2A2.9 2.9 0 0 1 12 20.5Z",
-                "",
-                "M16.5 3.5a1.6 3.3 0 0 0 0 6.5M7.8 10 6.5 20.8M16.3 10 17.6 20.8m-14.3 0H20.8",
+                ),
                 ""
             );
         }
+        if (id == 4) {
+            // Pyrolysis: sealed drum on a stand, heated by a fire underneath. The small fire is
+            // drawn in fine strokes so its tongues stay legible.
+            string memory fire =
+                "M12 20.4a3 3 0 0 1-3-3c0-1.4 1-2.4 1.7-3.4.1.7.6 1.2 1.1 1.5-.2-1.6.4-2.7 1.4-3.4-.1 1.3.4 2.3 1.1 3.1.5.6.8 1.3.8 2.2A3 3 0 0 1 12 20.4Z";
+            return Glyph(
+                "M7.5 3.5h9a3.3 3.3 0 0 1 3.3 3.3 3.3 3.3 0 0 1-3.3 3.2h-9A3.3 3.3 0 0 1 4.3 6.8 3.3 3.3 0 0 1 7.5 3.5Z",
+                fire,
+                "M16.5 3.5a1.6 3.3 0 0 0 0 6.5M7.8 10 6.5 20.8M16.3 10 17.6 20.8m-14.3 0H20.8",
+                "",
+                fire
+            );
+        }
         if (id == 5) {
-            // Refuse-derived fuel: jerrycan carrying a recycling loop.
+            // Refuse-derived fuel: jerrycan carrying a recycling loop in fine strokes.
             return Glyph(
                 "M9.3 6h8a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 17.3 21H6.8a1.5 1.5 0 0 1-1.5-1.5V10.1a.8.8 0 0 1 .2-.6L8.8 6.2A.8.8 0 0 1 9.3 6Z",
                 "",
-                "M12.5 6V3.8h5.8V6M9.1 13.2a3.1 3.1 0 0 1 5.3-.9m.5 3a3.1 3.1 0 0 1-5.3.9",
-                "M6.6 7.2l-.9-1a.4.4 0 0 0-.5.5l1 .9a.4.4 0 0 0 .4-.4ZM15.1 14 13.3 12.7l2.1-.9Zm-6.2.5 1.8 1.3-2.1.9Z"
+                "M12.5 6V3.8h5.8V6",
+                "M6.6 7.2l-.9-1a.4.4 0 0 0-.5.5l1 .9a.4.4 0 0 0 .4-.4Z",
+                "M8.7 13A3.6 3.6 0 0 1 15.4 13M15.8 11.5 15.4 13 14 12.6M15.4 15.4A3.6 3.6 0 0 1 8.7 15.4M8.3 16.9 8.7 15.4 10.1 15.8"
             );
         }
         if (id == 6) {
@@ -165,11 +183,12 @@ contract RecyReportIcons {
                 "M10.8 13V8.8a1.3 1.3 0 0 1 2.5 0v4.3a2.4 2.4 0 1 1-2.5-.1Z",
                 "",
                 CYCLE,
-                string.concat(CYCLE_HEADS, " M10.4 15a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z")
+                string.concat(CYCLE_HEADS, " M10.4 15a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z"),
+                ""
             );
         }
         // Undefined and unknown types: circular arrows around a hub.
-        return Glyph("M10.4 12a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z", "", CYCLE, CYCLE_HEADS);
+        return Glyph("M10.4 12a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z", "", CYCLE, CYCLE_HEADS, "");
     }
 
     /// @notice Recycle-shape glyph; zero and unknown IDs fall back to the basic shapes.
@@ -180,13 +199,15 @@ contract RecyReportIcons {
                 "",
                 "M3.5 21C5 15.5 8.2 12.3 12 12.3s7 3.3 8.5 8.8Z",
                 "M2.8 21H21.3",
-                "M5.5 19.4l2.1-.3a.5.5 0 0 0-.1-1l-2.1.3a.5.5 0 0 0 .1 1Zm5.4 0 2.1.2a.5.5 0 0 0 .1-1L11 18.4a.5.5 0 0 0-.1 1Zm5.6-.1 2.1-.2a.5.5 0 0 0-.1-1l-2.1.2a.5.5 0 0 0 .1 1ZM8.1 15.6l2 .6a.5.5 0 0 0 .3-.9l-2-.7a.5.5 0 0 0-.3 1Zm5.8.4 2-.5a.5.5 0 0 0-.2-.9l-2.1.5a.5.5 0 0 0 .3.9Zm-2.5-2.8 1.8-1.1a.5.5 0 0 0-.6-.9l-1.8 1.1a.5.5 0 0 0 .6.9Z"
+                "M5.5 19.4l2.1-.3a.5.5 0 0 0-.1-1l-2.1.3a.5.5 0 0 0 .1 1Zm5.4 0 2.1.2a.5.5 0 0 0 .1-1L11 18.4a.5.5 0 0 0-.1 1Zm5.6-.1 2.1-.2a.5.5 0 0 0-.1-1l-2.1.2a.5.5 0 0 0 .1 1ZM8.1 15.6l2 .6a.5.5 0 0 0 .3-.9l-2-.7a.5.5 0 0 0-.3 1Zm5.8.4 2-.5a.5.5 0 0 0-.2-.9l-2.1.5a.5.5 0 0 0 .3.9Zm-2.5-2.8 1.8-1.1a.5.5 0 0 0-.6-.9l-1.8 1.1a.5.5 0 0 0 .6.9Z",
+                ""
             );
         }
         if (id == 2) {
             // Bricks: running-bond brick courses.
             return Glyph(
                 "M3.5 4h7.3V7.8H3.6Zm9.8 0h7.3V7.8H13.4ZM3.5 10.3H5.9v3.8H3.5Zm4.9 0h7.3v3.8H8.4Zm9.7 0h2.4v3.8H18.1ZM3.5 16.5h7.3v3.8H3.6Zm9.8 0h7.3v3.8H13.4Z",
+                "",
                 "",
                 "",
                 ""
@@ -198,6 +219,7 @@ contract RecyReportIcons {
                 "M4.8 9.3H19.3V19c0 .8-.7 1.5-1.5 1.5H6.3c-.8 0-1.5-.7-1.5-1.5Z",
                 "",
                 "M4.5 5.3h15a1.3 1.3 0 0 1 1.3 1.2V8a1.3 1.3 0 0 1-1.3 1.3H4.5A1.3 1.3 0 0 1 3.3 8V6.5A1.3 1.3 0 0 1 4.5 5.3ZM9 14.5l2.1 2.1 4-4.1",
+                "",
                 ""
             );
         }
@@ -207,12 +229,14 @@ contract RecyReportIcons {
                 "M6.5 4.5c1.8.6 3.7.9 5.5.9s3.7-.3 5.5-.9c-.4 1.4-.4 2.6-.2 3.8C18.4 9.9 19 12 19 14.5c0 2.9-.7 5-2.2 6H7.3c-1.5-1-2.3-3.1-2.3-6 0-2.5.6-4.6 1.7-6.2.3-1.2.2-2.4-.2-3.7Z",
                 "",
                 "M12 17.8V13.3",
-                "M12 15.3c-1.9.1-3.2-.9-3.4-2.9 1.9-.1 3.2.9 3.4 2.9Zm0-1.5c.1-2.1 1.5-3.3 3.5-3.3-.1 2.1-1.5 3.4-3.5 3.3Z"
+                "M12 15.3c-1.9.1-3.2-.9-3.4-2.9 1.9-.1 3.2.9 3.4 2.9Zm0-1.5c.1-2.1 1.5-3.3 3.5-3.3-.1 2.1-1.5 3.4-3.5 3.3Z",
+                ""
             );
         }
         // Undefined and unknown shapes: triangle, circle and square.
         return Glyph(
             "M8.1 4.8 10.4 9a1 1 0 0 1-.8 1.5H4.9A1 1 0 0 1 4.1 9L6.4 4.8a1 1 0 0 1 1.7 0ZM13.3 7a3.5 3.5 0 1 0 7 0 3.5 3.5 0 1 0-7 0ZM9.8 13.3h4.5a1.5 1.5 0 0 1 1.5 1.5v4.5a1.5 1.5 0 0 1-1.5 1.5H9.8a1.5 1.5 0 0 1-1.5-1.5V14.8a1.5 1.5 0 0 1 1.5-1.5Z",
+            "",
             "",
             "",
             ""
@@ -227,7 +251,8 @@ contract RecyReportIcons {
                 "M2.8 20.5c1.1-3.6 2.5-6.1 4.7-6.5h9c2.2.4 3.6 2.9 4.8 6.5Z",
                 "",
                 "M4.9 17.5c1.2-.6 2.4-.6 3.5 0 1.2.6 2.4.6 3.6 0s2.4-.6 3.6 0 2.4.6 3.5 0",
-                "M11.3 8.3c-1.6.4-2.7 1.5-2.7 3.1V13c0 1.1 1.1 1.8 3.4 1.8 2.4 0 3.4-.7 3.4-1.8V11.4c0-1.6-1.1-2.7-2.6-3.1Zm.4-.1c-.7 0-1.4-.3-1.9-1 .8-.3 1.5-.2 2.2.4Zm.6 0c.8 0 1.5-.3 1.9-1-.7-.3-1.5-.2-2.2.4Z"
+                "M11.3 8.3c-1.6.4-2.7 1.5-2.7 3.1V13c0 1.1 1.1 1.8 3.4 1.8 2.4 0 3.4-.7 3.4-1.8V11.4c0-1.6-1.1-2.7-2.6-3.1Zm.4-.1c-.7 0-1.4-.3-1.9-1 .8-.3 1.5-.2 2.2.4Zm.6 0c.8 0 1.5-.3 1.9-1-.7-.3-1.5-.2-2.2.4Z",
+                ""
             );
         }
         if (id == 2) return _flame();
@@ -237,7 +262,8 @@ contract RecyReportIcons {
                 "",
                 "",
                 "M8.4 10.4l2-3.5a1.8 1.8 0 0 1 3.2 0l.8 1.6m2.9 5 2 3.4a1.8 1.8 0 0 1-1.5 2.7H16m-5.8 0h-4a1.8 1.8 0 0 1-1.5-2.7l.8-1.5",
-                "M16.1 11.3l-3.2-2L16 7.6Zm-3.4 8.3 3.3-1.7v3.5ZM7.2 12.5 7.1 16.3 4 14.5Z"
+                "M16.1 11.3l-3.2-2L16 7.6Zm-3.4 8.3 3.3-1.7v3.5ZM7.2 12.5 7.1 16.3 4 14.5Z",
+                ""
             );
         }
         if (id == 4) return _compost();
@@ -247,7 +273,8 @@ contract RecyReportIcons {
                 "M17.9 8.6A2 2 0 0 1 16 6.7c0-1 .6-1.6 1-2.3.1.5.4.8.8 1-.2-1 .2-1.7.8-2.2 0 .9.3 1.5.7 2 .3.5.6.9.6 1.5a2 2 0 0 1-2 1.9Z",
                 "M4.6 16.3c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0a8.5 8.5 0 0 1 1.1 4.2H3.5a8.5 8.5 0 0 1 1.1-4.2Z",
                 "M3.5 20.5a8.5 8.5 0 0 1 17 0Zm1.1-4.2c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0M12 12V7.8h4.3M14.5 18.6v.1m-3.7-4.3v.1m2.5-.9v.1",
-                "M8.7 18.4a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z"
+                "M8.7 18.4a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z",
+                ""
             );
         }
         if (id == 6) {
@@ -256,18 +283,20 @@ contract RecyReportIcons {
                 "",
                 "M5.3 7H13V17H5.3A2.3 2.3 0 0 1 3 14.8V9.3A2.3 2.3 0 0 1 5.3 7Z",
                 "M5.3 7H16.5a2.3 2.3 0 0 1 2.3 2.3v5.5A2.3 2.3 0 0 1 16.5 17H5.3A2.3 2.3 0 0 1 3 14.8V9.3A2.3 2.3 0 0 1 5.3 7Z",
-                "M19.7 10.3h.1a.2.2 0 0 1 .2.2v3.1a.2.2 0 0 1-.2.2h-.1a.2.2 0 0 1-.2-.2V10.5a.2.2 0 0 1 .2-.2Zm-7.3-.9-3.1 3.2h2l-.7 2 3.1-3.1h-2Z"
+                "M19.7 10.3h.1a.2.2 0 0 1 .2.2v3.1a.2.2 0 0 1-.2.2h-.1a.2.2 0 0 1-.2-.2V10.5a.2.2 0 0 1 .2-.2Zm-7.3-.9-3.1 3.2h2l-.7 2 3.1-3.1h-2Z",
+                ""
             );
         }
         if (id == 7) {
-            // Plasma gasification: electrified flame with a lightning core.
-            return Glyph(FLAME, "", "", "M13.1 10 9.6 14.9h2.2l-.9 4 3.6-5H12.3Z");
+            // Plasma gasification: electrified flame with a lightning core kept clear of its outline.
+            return Glyph(FLAME, "", "", "M13.5 11.3 10.6 15.4h1.9l-.8 3.4 3.1-4.2H12.9Z", "");
         }
         // Undefined and unknown methods: waste bin.
         return Glyph(
             "M6 6.8H18l-.9 12.4c-.1.8-.7 1.4-1.5 1.4H8.5c-.8 0-1.4-.6-1.5-1.3Z",
             "",
             "M4.5 6.8h15m-10 0V5.3c0-.5.4-1 1-1h3c.6 0 1 .5 1 1V6.8M10 10.5v6.3m4-6.3v6.3",
+            "",
             ""
         );
     }
@@ -278,7 +307,8 @@ contract RecyReportIcons {
             "M4.5 20.5c1-3.7 4-6 7.5-6s6.5 2.3 7.5 6Z",
             "",
             "M12 14.5v-6",
-            "M12 11.3c-2.4.1-4.4-1.1-4.7-3.8 2.6-.2 4.5 1.1 4.8 3.8Zm0-2c.1-2.7 1.9-4.2 4.8-4.2-.1 2.9-1.9 4.5-4.7 4.3Z"
+            "M12 11.3c-2.4.1-4.4-1.1-4.7-3.8 2.6-.2 4.5 1.1 4.8 3.8Zm0-2c.1-2.7 1.9-4.2 4.8-4.2-.1 2.9-1.9 4.5-4.7 4.3Z",
+            ""
         );
     }
 
@@ -288,7 +318,8 @@ contract RecyReportIcons {
             FLAME,
             "",
             "",
-            "M12 19.3c-1.2 0-2.2-1-2.2-2.2 0-1.5 1.2-2.5 2.3-4.2 1.1 1.8 2.3 2.8 2.3 4.2 0 1.3-1 2.3-2.2 2.3Z"
+            "M12 19.3c-1.2 0-2.2-1-2.2-2.2 0-1.5 1.2-2.5 2.3-4.2 1.1 1.8 2.3 2.8 2.3 4.2 0 1.3-1 2.3-2.2 2.3Z",
+            ""
         );
     }
 }

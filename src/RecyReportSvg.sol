@@ -64,6 +64,7 @@ contract RecyReportSvg is Ownable {
             _layer(glyph.tone, string.concat(tint, ' stroke="none"')),
             _layer(glyph.body, tint),
             _layer(glyph.line, ""),
+            _layer(glyph.detail, 'stroke-width="1"'),
             _layer(glyph.solid, 'fill="#FFFFFF"'),
             "</g></svg>"
         );

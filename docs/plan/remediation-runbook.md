@@ -239,10 +239,10 @@ deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x
 > and reject legacy renderers. Unlike attributes, the SVG contract is safe to replace.
 > The four equal-width bottom slots on completed and coin images are, in order, Material,
 > Recycle Type, Recycle Shape, and Disposal Method. Their icons are duotone 24x24 glyphs (white
-> 1.5 strokes and solids over an accent-tinted fill) kept in `RecyReportIcons` so the renderer
-> stays under the EIP-170 size limit; the `get*Icon(id)` getters return each slot tile as a
-> standalone SVG. The status image supplies the accent, and flagged and invalidated reports keep
-> their flag and stamp artwork;
+> 1.5 strokes, fine 1-wide detail strokes and solids over an accent-tinted fill) kept in
+> `RecyReportIcons` so the renderer stays under the EIP-170 size limit; the `get*Icon(id)`
+> getters return each slot tile as a standalone SVG. The status image supplies the accent, and
+> flagged and invalidated reports keep their flag and stamp artwork;
 > CREATED remains a plain trashcan. The material is chosen by total positive recycled weight
 > across its rows (uint256 sum), with first positive appearance winning total ties. The other
 > three IDs come together from that material's heaviest positive row (first on row ties), not
