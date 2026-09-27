@@ -231,6 +231,12 @@ role on chain. The dangerous pairing cannot be re-applied silently by a future o
 **A single deployment.** The new `RecyReportData` is constructed against the **existing, already
 deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x5529c9CD…1227`).
 
+> **Material-badge renderer update:** The historical SVG address above cannot serve the newer
+> `getRecycle(uint32[])` ABI. Deploy a fresh stateless `RecyReportSvg` via
+> `RecyReportSvgDeploy`, update `reportSvg` in config, then redeploy `RecyReportData`.
+> Unlike attributes, the SVG contract is safe to replace; the data deployment scripts
+> now reject legacy SVGs before broadcasting.
+
 > **Do not redeploy `RecyReportAttributes`.** An earlier draft of this work required it, because the
 > material-bounds check was going to depend on a `getMaterialsCount()` function that does not exist
 > on the live attributes contract (verified: it reverts). That dependency was removed —
@@ -289,8 +295,17 @@ The deployed `RecyReportAttributes` differs from repo `HEAD` **in data**, not in
 - live `materialSvg` has **13** entries; `HEAD` had only 11
 - live `materialSvg[11]` and `[12]` are real SVG paths (~1150 and ~1204 bytes); `HEAD` had placeholders
 
-The repo source has been corrected to match the authoritative on-chain values. **This affects only
-future attributes deployments. The live contract is untouched and needs no action.**
+At this historical Phase 1 snapshot, source had been corrected to match the then-authoritative
+on-chain values; that change only affected future attributes deployments. The old live contract
+was untouched. The later pre-production cutover below intentionally changes source again.
+
+**Pre-production catalogue cutover (fresh testnet stack only):** source now removes the second
+`Glass` (old index 5) and its `materialSvg` placeholder. A fresh deployment has 12 aligned
+material/`materialSvg` entries: old ids ≥6 shift down one; ids 0–4 are unchanged, and new id 5 is
+`E-Waste`. Previously minted testnet reports keep their stale raw ids; do not repoint them to
+the new catalogue expecting unchanged names or icons. The historic live addresses and 13-entry
+observations above remain records of the old testnet deployment, not the new stack.
+
 
 ---
 
@@ -562,7 +577,7 @@ cast call $P \
   $REC 1773878400 1000000000000001 "[0]" "[1000]" "[0]" "[0]" 0 --from $REC --rpc-url $RPC
 # expect 0xe21e2bba  WasteAmountExceedsCap()
 
-# 13 materials in the catalogue, so id 13 and above must be rejected
+# A fresh 12-material stack rejects id 12 and above; 9999 also fails on the old 13-material testnet stack.
 cast call $P \
   "mintRecyReportResult(address,uint64,uint128,uint32[],uint128[],uint32[],uint32[],uint32)" \
   $REC 1773878400 1000 "[9999]" "[1000]" "[0]" "[0]" 0 --from $REC --rpc-url $RPC

@@ -16,9 +16,8 @@ contract MockToken is ERC20 {
     constructor() ERC20("Mock Token", "MOCK") {}
 }
 
-/// @dev Mirrors the RecyReportAttributes contract that is already deployed: it exposes
-///      getMaterials() but predates getMaterialsCount(). Phase 1 ships a single
-///      RecyReportData deployment against exactly this shape, so it must be supported.
+/// @dev Tests the older attributes ABI (getMaterials without getMaterialsCount) with
+///      the current testnet catalogue, independently of the catalogue length.
 contract LiveShapeAttributes {
     string[] private materials = [
         "Undefined",
@@ -26,7 +25,6 @@ contract LiveShapeAttributes {
         "Glass",
         "Metal",
         "Paper",
-        "Glass",
         "E-Waste",
         "Organic",
         "Textile",
@@ -62,8 +60,16 @@ contract RecyReportDataHarness is RecyReportData {
         return getStatus(_status);
     }
 
-    function exposed_generateSvg(uint8 _status) external view returns (string memory) {
-        return generateSvg(_status);
+    function exposed_generateSvg(uint8 _status, RecyTypes.RecyMaterials[] memory _materials)
+        external
+        view
+        returns (string memory)
+    {
+        return generateSvg(_status, _materials);
+    }
+
+    function exposed_topMaterials(RecyTypes.RecyMaterials[] memory _materials) external pure returns (uint32[] memory) {
+        return _topMaterials(_materials);
     }
 
     function exposed_generateMaterialsText(RecyTypes.RecyMaterials[] memory _materials)
@@ -163,21 +169,112 @@ contract RecyReportDataTest is Test, TestHelpers {
     }
 
     function test_generateSvg() public view {
-        // Test RECYCLE_CREATED status
-        string memory createdSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_CREATED);
-        assertTrue(bytes(createdSvg).length > 0, "Created SVG should not be empty");
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](0);
+        assertTrue(
+            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_CREATED, materials)).length > 0,
+            "Created SVG should not be empty"
+        );
+        assertTrue(
+            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_COMPLETED, materials)).length > 0,
+            "Completed SVG should not be empty"
+        );
+        assertTrue(
+            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_VALIDATED, materials)).length > 0,
+            "Validated SVG should not be empty"
+        );
+        assertTrue(
+            bytes(recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_REWARDED, materials)).length > 0,
+            "Rewarded SVG should not be empty"
+        );
+    }
 
-        // Test RECYCLE_COMPLETED status
-        string memory completedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_COMPLETED);
-        assertTrue(bytes(completedSvg).length > 0, "Completed SVG should not be empty");
+    function test_topMaterialsAggregatesDuplicatesAndOrdersByTotalWeight() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](5);
+        materials[0] = createRecyMaterials(1, 0, 0, 0, 12);
+        materials[1] = createRecyMaterials(2, 0, 0, 0, 20);
+        materials[2] = createRecyMaterials(3, 0, 0, 0, 15);
+        materials[3] = createRecyMaterials(1, 0, 0, 0, 13);
+        materials[4] = createRecyMaterials(4, 0, 0, 0, 2);
 
-        // Test RECYCLE_VALIDATED status (should return coins)
-        string memory validatedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_VALIDATED);
-        assertTrue(bytes(validatedSvg).length > 0, "Validated SVG should not be empty");
+        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
+        assertEq(top.length, 3);
+        assertEq(top[0], 1, "aggregate of two smaller entries wins");
+        assertEq(top[1], 2, "second heaviest");
+        assertEq(top[2], 3, "third heaviest");
+    }
 
-        // Test RECYCLE_REWARDED status (should return coins)
-        string memory rewardedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_REWARDED);
-        assertTrue(bytes(rewardedSvg).length > 0, "Rewarded SVG should not be empty");
+    function test_topMaterialsTiesUseFirstPositiveAppearance() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](4);
+        materials[0] = createRecyMaterials(9, 0, 0, 0, 0);
+        materials[1] = createRecyMaterials(2, 0, 0, 0, 10);
+        materials[2] = createRecyMaterials(9, 0, 0, 0, 10);
+        materials[3] = createRecyMaterials(3, 0, 0, 0, 10);
+
+        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
+        assertEq(top.length, 3);
+        assertEq(top[0], 2, "earliest positive entry wins tie");
+        assertEq(top[1], 9, "zero entry does not establish order");
+        assertEq(top[2], 3);
+    }
+
+    function test_topMaterialsZeroAndEmptyArrays() public view {
+        assertEq(recyReportData.exposed_topMaterials(new RecyTypes.RecyMaterials[](0)).length, 0);
+
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
+        materials[0] = createRecyMaterials(1, 0, 0, 0, 0);
+        materials[1] = createRecyMaterials(2, 0, 0, 0, 0);
+        assertEq(recyReportData.exposed_topMaterials(materials).length, 0);
+
+        materials[1] = createRecyMaterials(2, 0, 0, 0, 1);
+        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
+        assertEq(top.length, 1);
+        assertEq(top[0], 2, "zero-only material excluded");
+    }
+
+    function test_topMaterialsTruncatesAfterThreeDistinct() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](5);
+        materials[0] = createRecyMaterials(1, 0, 0, 0, 3);
+        materials[1] = createRecyMaterials(2, 0, 0, 0, 2);
+        materials[2] = createRecyMaterials(3, 0, 0, 0, 1);
+        materials[3] = createRecyMaterials(4, 0, 0, 0, 5);
+        materials[4] = createRecyMaterials(5, 0, 0, 0, 4);
+
+        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
+        assertEq(top.length, 3);
+        assertEq(top[0], 4);
+        assertEq(top[1], 5);
+        assertEq(top[2], 1);
+    }
+
+    function test_topMaterialsUsesUint256Aggregate() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](3);
+        materials[0] = createRecyMaterials(1, 0, 0, 0, type(uint128).max);
+        materials[1] = createRecyMaterials(2, 0, 0, 0, type(uint128).max);
+        materials[2] = createRecyMaterials(1, 0, 0, 0, 1);
+
+        uint32[] memory top = recyReportData.exposed_topMaterials(materials);
+        assertEq(top.length, 2);
+        assertEq(top[0], 1);
+        assertEq(top[1], 2);
+    }
+
+    function test_materialBadgesInCompletedUriAndCoinImage() public view {
+        RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](2);
+        materials[0] = createRecyMaterials(1, 0, 0, 0, 10);
+        materials[1] = createRecyMaterials(3, 0, 0, 0, 20);
+        string memory topIcon = recyReportSvg.getMaterialIcon(3);
+
+        string memory completedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_COMPLETED, materials);
+        string memory validatedSvg = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_VALIDATED, materials);
+        assertTrue(contains(completedSvg, topIcon), "completed icon contains heaviest material");
+        assertTrue(contains(validatedSvg, topIcon), "coin icon contains heaviest material");
+
+        string memory uri = recyReportData.tokenUriAttributes(
+            1, RecyConstants.RECYCLE_COMPLETED, mockToken, _sampleReward(), _sampleInfo(), materials
+        );
+        string memory json = decodeJsonDataUri(uri);
+        string memory encodedImage = vm.parseJsonString(json, ".image");
+        assertTrue(contains(encodedImage, "data:image/svg+xml;base64,"), "completed image has SVG data-URI");
     }
 
     function test_generateMaterialsText() public view {
@@ -373,7 +470,7 @@ contract RecyReportDataTest is Test, TestHelpers {
     // forge-lint: disable-next-item(calls-loop)
     function test_generateSvgWithAllStatuses() public view {
         for (uint8 i = 0; i <= 3; i++) {
-            string memory result = recyReportData.exposed_generateSvg(i);
+            string memory result = recyReportData.exposed_generateSvg(i, new RecyTypes.RecyMaterials[](0));
             assertTrue(bytes(result).length > 0);
             assertTrue(contains(result, "<svg"));
         }
@@ -516,18 +613,17 @@ contract RecyReportDataTest is Test, TestHelpers {
         new RecyReportData(address(attributes), address(0));
     }
 
-    /// @notice Phase 1 ships as a single RecyReportData deployment pointed at the
-    ///         attributes contract that is already live, which predates
-    ///         getMaterialsCount(). Nothing here may depend on that function.
+    /// @notice Data supports an attributes deployment predating getMaterialsCount().
+    ///         The catalogue is read through getMaterials(), not a count getter.
     function test_worksAgainstDeployedAttributesShape() public {
         LiveShapeAttributes liveShape = new LiveShapeAttributes();
         RecyReportData data = new RecyReportData(address(liveShape), address(recyReportSvg));
 
-        assertEq(data.materialsCount(), 13, "materialsCount against the deployed attributes shape");
+        assertEq(data.materialsCount(), 12, "materialsCount against the attributes ABI shape");
 
         RecyTypes.RecyReward memory noReward = RecyTypes.RecyReward({rewardAmount: 0, rewardUnlockDate: 0});
         string memory json =
-            data.tokenJson(1, RecyConstants.RECYCLE_CREATED, mockToken, noReward, _minimalInfo(), _oneMaterial(12));
+            data.tokenJson(1, RecyConstants.RECYCLE_CREATED, mockToken, noReward, _minimalInfo(), _oneMaterial(11));
         assertEq(
             vm.parseJsonString(json, ".attributes[1].trait_type"),
             "Solid Inert Industrial Waste",
@@ -550,7 +646,7 @@ contract RecyReportDataTest is Test, TestHelpers {
     }
 
     function test_materialsCount() public {
-        assertEq(recyReportData.materialsCount(), 13, "materialsCount should mirror the catalogue");
+        assertEq(recyReportData.materialsCount(), 12, "materialsCount should mirror the catalogue");
         assertEq(
             attributes.getMaterialsCount(),
             attributes.getMaterials().length,
@@ -559,7 +655,7 @@ contract RecyReportDataTest is Test, TestHelpers {
 
         // The passthrough must be live, not a snapshot taken at construction.
         attributes.addMaterial("NewMaterial", "<svg>new</svg>");
-        assertEq(recyReportData.materialsCount(), 14, "materialsCount should track catalogue growth");
+        assertEq(recyReportData.materialsCount(), 13, "materialsCount should track catalogue growth");
     }
 
     // Helper function to check if a string contains a substring

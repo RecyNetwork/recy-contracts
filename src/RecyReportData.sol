@@ -70,7 +70,9 @@ contract RecyReportData {
         RecyTypes.RecyInfo memory _info,
         RecyTypes.RecyMaterials[] memory _materials
     ) external view returns (string memory) {
-        string memory image = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(generateSvg(_status))));
+        string memory image = string.concat(
+            "data:image/svg+xml;base64,", Base64.encode(bytes(generateSvg(_status, _materials)))
+        );
 
         return string.concat(
             "data:application/json;base64,",
@@ -140,13 +142,77 @@ contract RecyReportData {
         return attributes.getMaterials().length;
     }
 
-    function generateSvg(uint8 _status) internal view returns (string memory) {
+    /**
+     * @notice Generates the status image with badges for the heaviest recycled materials
+     * @param _status The recycling report status
+     * @param _materials Recycled materials whose weights determine the badges
+     * @return string SVG image for the report
+     */
+    function generateSvg(uint8 _status, RecyTypes.RecyMaterials[] memory _materials)
+        internal
+        view
+        returns (string memory)
+    {
         if (_status == RecyConstants.RECYCLE_CREATED) {
             return svg.getTrashcan();
-        } else if (_status == RecyConstants.RECYCLE_COMPLETED) {
-            return svg.getRecycle();
-        } else {
-            return svg.getCoins(_status);
+        }
+
+        uint32[] memory topMaterials = _topMaterials(_materials);
+        if (_status == RecyConstants.RECYCLE_COMPLETED) {
+            return svg.getRecycle(topMaterials);
+        }
+        return svg.getCoins(_status, topMaterials);
+    }
+
+    /**
+     * @notice Finds up to three material ids with the highest aggregate recycled weights
+     * @dev Equal totals retain first-appearance order; zero-weight entries are excluded
+     * @param _materials Material entries, potentially containing repeated ids
+     * @return topMaterials Material ids ordered by descending aggregate weight
+     */
+    function _topMaterials(RecyTypes.RecyMaterials[] memory _materials)
+        internal
+        pure
+        returns (uint32[] memory topMaterials)
+    {
+        uint32[] memory ids = new uint32[](_materials.length);
+        uint256[] memory totals = new uint256[](_materials.length);
+        uint256 distinct = 0;
+
+        for (uint256 i = 0; i < _materials.length; i++) {
+            uint256 amount = _materials[i].amountRecycled;
+            if (amount == 0) continue;
+
+            uint32 id = _materials[i].material;
+            uint256 j = 0;
+            while (j < distinct && ids[j] != id) {
+                j++;
+            }
+            if (j == distinct) {
+                ids[distinct] = id;
+                distinct++;
+            }
+            totals[j] += amount;
+        }
+
+        uint256[3] memory topIndices;
+        uint256 count = 0;
+        for (uint256 i = 0; i < distinct; i++) {
+            uint256 position = 0;
+            while (position < count && totals[i] <= totals[topIndices[position]]) {
+                position++;
+            }
+            if (position >= 3) continue;
+            if (count < 3) count++;
+            for (uint256 j = count - 1; j > position; j--) {
+                topIndices[j] = topIndices[j - 1];
+            }
+            topIndices[position] = i;
+        }
+
+        topMaterials = new uint32[](count);
+        for (uint256 i = 0; i < count; i++) {
+            topMaterials[i] = ids[topIndices[i]];
         }
     }
 

@@ -18,6 +18,20 @@ contract RecyReportDataDeploy is Script, ConfigManager {
         console.log("Chain ID:", chainId);
         console.log("Network:", config.name);
 
+        // A configured SVG may predate material badges. Reject it before broadcasting any deployment.
+        if (config.reportSvg != address(0)) {
+            bool supportsMaterialBadges = false;
+            try RecyReportSvg(config.reportSvg).getRecycle(new uint32[](0)) returns (
+                string memory /* rendered */
+            ) {
+                supportsMaterialBadges = true;
+            } catch {}
+            require(
+                supportsMaterialBadges,
+                "Legacy reportSvg: deploy a fresh RecyReportSvg via RecyReportSvgDeploy and update config first"
+            );
+        }
+
         vm.startBroadcast();
 
         // Check if RecyReportAttributes is deployed
