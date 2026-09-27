@@ -29,36 +29,36 @@ contract RecyReportIcons {
     /// @notice Material glyph; zero and unknown IDs (including 13) fall back to the package.
     function material(uint32 id) external pure returns (Glyph memory) {
         if (id == 1) {
-            // Plastic: PET bottle with solid cap; neck joins beneath cap and label band is tinted.
+            // Plastic: PET bottle with three fine ribs and cap/neck join.
             return Glyph(
                 "",
-                "M7.5 12.3c3 .8 6 .8 9 0v4c-3 .8-6 .8-9 0Z",
-                "M10.5 4.3V7c0 1.2-3 1.6-3 3.8v8.5c0 1 .8 1.8 1.8 1.8h5.5c1 0 1.8-.8 1.8-1.7V10.8c0-2.2-3-2.6-3-3.8V4.3ZM7.5 12.3c3 .8 6 .8 9 0m-9 4c3 .8 6 .8 9 0",
-                "M10.7 2.8h2.7a.4.4 0 0 1 .4.4v.7a.4.4 0 0 1-.4.4H10.7a.4.4 0 0 1-.4-.4V3.2a.4.4 0 0 1 .4-.4Z",
                 "",
+                "M10.5 4.3V7c0 1.2-3 1.6-3 3.8v9.7c3 .8 6 .8 9 0V10.8c0-2.2-3-2.6-3-3.8V4.3Z",
+                "M10.7 2.8h2.7a.4.4 0 0 1 .4.4v.7a.4.4 0 0 1-.4.4H10.7a.4.4 0 0 1-.4-.4V3.2a.4.4 0 0 1 .4-.4Z",
+                "M7.5 12.75c3 .8 6 .8 9 0m-9 2.5c3 .8 6 .8 9 0m-9 2.5c3 .8 6 .8 9 0",
                 false
             );
         }
         if (id == 2) {
-            // Glass: stemmed wine glass holding tinted wine.
+            // Glass: stemmed wine glass holding tinted wine with a filled stem joint.
             return Glyph(
                 "",
                 "M6.5 8h11c-.4 2.9-2.7 5-5.5 5S6.9 10.9 6.5 8Z",
-                "M7 3H17c.4 1.4.6 2.8.6 4.1 0 3.4-2.5 6-5.5 6s-5.6-2.7-5.6-6c0-1.3.2-2.7.5-4.1Zm5 10v8M8.5 21h7",
+                "M7 3H17c.4 1.4.6 2.8.6 4.1 0 3.4-2.5 6-5.5 6s-5.6-2.7-5.6-6c0-1.3.2-2.7.5-4.1ZM8.5 21h7",
+                "M11.25 13H12.75V21H11.25Z",
                 "",
-                "",
-                false
+                true
             );
         }
         if (id == 3) {
-            // Metal: rolled sheet with a spiral cut end and a short unfurled lip.
+            // Metal: hollow steel coil with an even cut face and concentric wraps.
             return Glyph(
-                "M8.2 6.5c2.8 0 4.9 2.8 4.9 6.5s-2.1 6.5-4.9 6.5-4.9-2.8-4.9-6.5 2.1-6.5 4.9-6.5Z",
-                "M8.2 6.5 16.7 4c2.7-.8 4.6 2.2 4.6 6v3.9c0 1.8-.9 3.1-2.4 3.6L8.2 19.5ZM12.5 18.7l6.4-1.2 1.7 1.6-4 1.9Z",
-                "M8.2 6.5 16.7 4c2.7-.8 4.6 2.2 4.6 6v3.9c0 1.8-.9 3.1-2.4 3.6L8.2 19.5m10.7-2 1.7 1.6-4 1.9-4.1-2.3",
                 "",
-                "M7.8 9.3c2.3-.4 3.5 1.3 3.5 3.8 0 2.7-1.5 4.3-3.5 3.9-2-.4-2.7-2.3-2.6-4.4.2-1.8 1.4-2.7 2.9-2.5 1.7.1 2.3 1.5 2.2 2.9-.1 1.6-1 2.4-2.1 2.4-1.2 0-1.7-.9-1.5-2.1.1-1 .7-1.3 1.5-1.2",
-                false
+                "M11.2 7 15.8 5.95C17.75 5.95 18.85 8.1 18.85 11s-1.1 5.05-3.2 5.05L11.2 17.8c1.45-1.18 2.4-3.17 2.4-5.4s-.95-4.22-2.4-5.4Z",
+                "",
+                "M8.6 6.1 15.8 4.8C18.5 4.8 20 7.7 20 11s-1.5 6.2-4.2 6.2l-7.2 1.5a5 6.3 0 0 1 0-12.6ZM11.2 7 15.8 5.95C17.75 5.95 18.85 8.1 18.85 11s-1.1 5.05-3.2 5.05L11.2 17.8c1.45-1.18 2.4-3.17 2.4-5.4s-.95-4.22-2.4-5.4ZM4.65 12.4a3.95 5.25 0 1 0 7.9 0 3.95 5.25 0 1 0-7.9 0ZM5.7 12.4a2.9 4.2 0 1 0 5.8 0 2.9 4.2 0 1 0-5.8 0ZM6.75 12.4a1.85 3.15 0 1 0 3.7 0 1.85 3.15 0 1 0-3.7 0Z",
+                "",
+                true
             );
         }
         if (id == 4) {
@@ -295,7 +295,7 @@ contract RecyReportIcons {
         }
         if (id == 4) return _compost();
         if (id == 5) {
-            // Anaerobic digestion: fine flame and liquid contours keep the bubbles distinct.
+            // Anaerobic digestion: a filled pipe joint avoids a stroke cap at the flame.
             string memory flame =
                 "M17.9 8.6A2 2 0 0 1 16 6.7c0-1 .6-1.6 1-2.3.1.5.4.8.8 1-.2-1 .2-1.7.8-2.2 0 .9.3 1.5.7 2 .3.5.6.9.6 1.5a2 2 0 0 1-2 1.9Z";
             return Glyph(
@@ -304,9 +304,9 @@ contract RecyReportIcons {
                     flame,
                     " M4.6 16.3c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0a8.5 8.5 0 0 1 1.1 4.2H3.5a8.5 8.5 0 0 1 1.1-4.2Z"
                 ),
-                "M3.5 20.5a8.5 8.5 0 0 1 17 0ZM12 12V7.8h4.3",
-                "M8.85 18.4a.65.65 0 1 0 1.3 0 .65.65 0 1 0-1.3 0ZM14 18.5a.5.5 0 1 0 1 0 .5.5 0 1 0-1 0ZM10.1 14.3a.5.5 0 1 0 1 0 .5.5 0 1 0-1 0ZM12.95 14.1a.45.45 0 1 0 .9 0 .45.45 0 1 0-.9 0Z",
-                string.concat(flame, " M4.6 16.3c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5-.5 3.7 0 2.4.5 3.7 0"),
+                "M3.5 20.5a8.5 8.5 0 0 1 17 0Z",
+                "M11.25 12V7.8a.75.75 0 0 1 .75-.75H16.05C16.16 7.7 16.6 8.28 17.5 8.55H12.75V12Z M8.85 18.4a.65.65 0 1 0 1.3 0 .65.65 0 1 0-1.3 0ZM14 18.5a.5.5 0 1 0 1 0 .5.5 0 1 0-1 0ZM10.1 14.3a.5.5 0 1 0 1 0 .5.5 0 1 0-1 0ZM12.95 14.1a.45.45 0 1 0 .9 0 .45.45 0 1 0-.9 0Z",
+                string.concat(flame, " M4.6 16.3c1.2-.5 2.5-.5 3.7 0s2.5.5 3.7 0 2.5.5 3.7 0 2.4.5 3.7 0"),
                 true
             );
         }
@@ -336,13 +336,13 @@ contract RecyReportIcons {
         );
     }
 
-    /// @dev Composting (recycle type 1, disposal method 4): soil heap sprouting a seedling with unstroked leaves.
+    /// @dev Composting (recycle type 1, disposal method 4): soil heap with a continuous filled sprout.
     function _compost() private pure returns (Glyph memory) {
         return Glyph(
             "M4.5 20.5c1-3.7 4-6 7.5-6s6.5 2.3 7.5 6Z",
             "",
-            "M12 14.5V10",
-            "M12 11.3c-2.4.1-4.4-1.1-4.7-3.8 2.6-.2 4.5 1.1 4.8 3.8Zm0-2c.1-2.7 1.9-4.2 4.8-4.2-.1 2.9-1.9 4.5-4.7 4.3Z",
+            "",
+            "M11.25 14.5V11.3C9.2 11.2 7.6 10 7.3 7.5C9.4 7.3 11.2 8.2 12 9.8C12.1 6.8 14.1 5.1 16.8 5.1C16.7 7.6 15.3 9.6 12.75 9.5V14.5Z",
             "",
             true
         );
