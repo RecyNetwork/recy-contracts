@@ -254,15 +254,17 @@ deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x
 > not alter the attributes catalogue.
 > Organic (material 6) uses a filled stem/midrib that narrows continuously to a sharp tip.
 > The catalogue's `Glyph` tuple ends with `solidFillOnly`, which suppresses extra outlines
-> on filled details such as the Organic taper, Glass stem, Metal wraps, Compost sprout and
+> on filled details such as the Organic taper, Glass stem, Compost sprout and
 > Digestion pipe/bubbles. Compost stems and leaves form one continuous filled silhouette;
 > Glass uses a flat-ended filled stem joint. The plastic bottle neck closes beneath its cap,
 > and three fine ribs have no interior tint. Its base follows the same curve as the ribs,
 > with equal visible gaps allowing for the base's thicker outline.
 > Anaerobic digestion uses fine flame and liquid contours with separated, unstroked bubbles;
 > its filled pipe ends within the flame border, preserving the inner curve and lower join.
-> Metal (material 3) is a hollow steel coil with evenly spaced wraps and a tinted side,
-> without a loose flap, crowded spiral or overlapping outlines.
+> Metal (material 3) uses a ribbed food can with a pull-tab lid; E-Waste (material 5) uses
+> a mobile phone with an inset screen. Mechanical recycling (recycle type 3) has a thin
+> accent band around its gear hub, preserving the central dark opening. Both Incineration
+> entries (recycle type 2 and disposal method 2) use only the outer flame, without an inner core.
 
 > **Do not redeploy `RecyReportAttributes`.** An earlier draft of this work required it, because the
 > material-bounds check was going to depend on a `getMaterialsCount()` function that does not exist

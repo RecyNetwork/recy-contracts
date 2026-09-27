@@ -51,14 +51,14 @@ contract RecyReportIcons {
             );
         }
         if (id == 3) {
-            // Metal: hollow steel coil with an even cut face and concentric wraps.
+            // Metal: ribbed food can with an oval lid and pull-tab.
             return Glyph(
                 "",
-                "M11.2 7 15.8 5.95C17.75 5.95 18.85 8.1 18.85 11s-1.1 5.05-3.2 5.05L11.2 17.8c1.45-1.18 2.4-3.17 2.4-5.4s-.95-4.22-2.4-5.4Z",
+                "M5 6.6c0-1.3 3.1-2.35 7-2.35s7 1.05 7 2.35c0 1.3-3.1 2.35-7 2.35s-7-1.05-7-2.35Z",
+                "M5 19.2V6.6c0-1.3 3.1-2.35 7-2.35s7 1.05 7 2.35v12.6c0 1.3-3.1 2.35-7 2.35s-7-1.05-7-2.35Z",
                 "",
-                "M8.6 6.1 15.8 4.8C18.5 4.8 20 7.7 20 11s-1.5 6.2-4.2 6.2l-7.2 1.5a5 6.3 0 0 1 0-12.6ZM11.2 7 15.8 5.95C17.75 5.95 18.85 8.1 18.85 11s-1.1 5.05-3.2 5.05L11.2 17.8c1.45-1.18 2.4-3.17 2.4-5.4s-.95-4.22-2.4-5.4ZM4.65 12.4a3.95 5.25 0 1 0 7.9 0 3.95 5.25 0 1 0-7.9 0ZM5.7 12.4a2.9 4.2 0 1 0 5.8 0 2.9 4.2 0 1 0-5.8 0ZM6.75 12.4a1.85 3.15 0 1 0 3.7 0 1.85 3.15 0 1 0-3.7 0Z",
-                "",
-                true
+                "M5 6.6c0 1.3 3.1 2.35 7 2.35s7-1.05 7-2.35M6.5 12.25c3.6.8 7.4.8 11 0m-11 2.75c3.6.8 7.4.8 11 0m-11 2.75c3.6.8 7.4.8 11 0M10.9 6.8c0-.65.85-1.15 1.9-1.15s1.9.5 1.9 1.15-.85 1.15-1.9 1.15-1.9-.5-1.9-1.15ZM10.9 6.8 9.2 7.5l1.8.3",
+                false
             );
         }
         if (id == 4) {
@@ -73,13 +73,13 @@ contract RecyReportIcons {
             );
         }
         if (id == 5) {
-            // E-waste: monitor showing a circuit trace with solid pads.
+            // E-waste: mobile phone with an inset screen.
             return Glyph(
-                "M5.3 4H18.8a1.8 1.8 0 0 1 1.7 1.8v8a1.8 1.8 0 0 1-1.7 1.7H5.3a1.8 1.8 0 0 1-1.8-1.7v-8A1.8 1.8 0 0 1 5.3 4Z",
                 "",
-                "M12 15.5v4.8m-3.5 0h7M7.5 8h3l2 2.5h4M7.5 12h4",
-                "M6.7 8A.8.8 0 1 0 8.3 8 .8.8 0 1 0 6.7 8Zm9 2.5a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0ZM6.7 12a.8.8 0 1 0 1.6 0 .8.8 0 1 0-1.6 0Z",
+                "M8.5 6h7a.5.5 0 0 1 .5.5v10a.5.5 0 0 1-.5.5h-7a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5Z",
+                "M8 2.5h8A1.5 1.5 0 0 1 17.5 4v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5Z",
                 "",
+                "M10.5 4.5h3M10.5 19h3",
                 false
             );
         }
@@ -158,14 +158,14 @@ contract RecyReportIcons {
         if (id == 1) return _compost();
         if (id == 2) return _flame();
         if (id == 3) {
-            // Mechanical recycling: circular arrows around a gear.
+            // Mechanical recycling: circular arrows around a gear with an accent ring at its hub.
             return Glyph(
                 "",
-                "",
+                "M10.75 12a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 1 0-2.5 0ZM11.05 12a.95.95 0 1 0 1.9 0 .95.95 0 1 0-1.9 0Z",
                 CYCLE,
                 string.concat(
                     CYCLE_HEADS,
-                    " M11.2 9.5l.2-1.1h1.2l.2 1.1.9.6 1.1-.4.6 1-.9.8v1l.9.8-.6 1-1.1-.4-.9.6-.2 1.1H11.4l-.2-1.1-.9-.6-1.1.4-.6-1 .9-.8v-1l-.9-.8.6-1 1.1.4ZM10.3 12a1.7 1.7 0 1 0 3.4 0 1.7 1.7 0 1 0-3.4 0Z"
+                    " M11.2 9.5l.2-1.1h1.2l.2 1.1.9.6 1.1-.4.6 1-.9.8v1l.9.8-.6 1-1.1-.4-.9.6-.2 1.1H11.4l-.2-1.1-.9-.6-1.1.4-.6-1 .9-.8v-1l-.9-.8.6-1 1.1.4ZM10 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z"
                 ),
                 "",
                 false
@@ -348,15 +348,8 @@ contract RecyReportIcons {
         );
     }
 
-    /// @dev Incineration (recycle type 2, disposal method 2): tinted flame around a solid core.
+    /// @dev Incineration (recycle type 2, disposal method 2): plain tinted flame.
     function _flame() private pure returns (Glyph memory) {
-        return Glyph(
-            FLAME,
-            "",
-            "",
-            "M12 19.3c-1.2 0-2.2-1-2.2-2.2 0-1.5 1.2-2.5 2.3-4.2 1.1 1.8 2.3 2.8 2.3 4.2 0 1.3-1 2.3-2.2 2.3Z",
-            "",
-            false
-        );
+        return Glyph(FLAME, "", "", "", "", false);
     }
 }
