@@ -56,7 +56,7 @@ contract RecyReportSvg is Ownable {
 
     /// @dev Slot tile: dark rounded square outlined in the accent, holding the glyph's layers.
     function _tile(RecyReportIcons.Glyph memory glyph, string memory accent) private pure returns (string memory) {
-        string memory tint = string.concat('fill="', accent, '" fill-opacity=".35"');
+        string memory tint = string.concat('fill="', accent, glyph.accentOpaque ? '"' : '" fill-opacity=".35"');
         return string.concat(
             '<rect x="8" y="8" width="84" height="84" rx="18" fill="#171717" stroke="',
             accent,
