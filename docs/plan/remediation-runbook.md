@@ -263,11 +263,11 @@ deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x
 > its filled pipe ends within the flame border, preserving the inner curve and lower join.
 > Metal (material 3) is a crisp, filled hex nut with a circular hole; E-Waste (material 5)
 > uses a mobile phone with an inset screen. Mechanical recycling (recycle type 3) uses
-> a thin full-accent hub band, preserving the dark opening. Recycling (disposal method 3)
-> uses full-accent arrowhead fills with white outlines and white curved shafts.
-> `Glyph.accentOpaque` selects full-opacity body/tone fills for those recycling details;
-> other glyphs retain their existing accent tint. Both Incineration entries (recycle type 2
-> and disposal method 2) use only the outer flame, without an inner core.
+> a thin tinted hub band, preserving the dark opening. Recycling (disposal method 3)
+> uses tinted arrowhead fills with white outlines and white curved shafts.
+> All body and tone fills share the slot accent at .35 opacity, including these recycling details.
+> Both Incineration entries (recycle type 2 and disposal method 2) use only the outer flame,
+> without an inner core.
 
 > **Do not redeploy `RecyReportAttributes`.** An earlier draft of this work required it, because the
 > material-bounds check was going to depend on a `getMaterialsCount()` function that does not exist
