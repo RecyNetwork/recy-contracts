@@ -158,15 +158,12 @@ contract RecyReportIcons {
         if (id == 1) return _compost();
         if (id == 2) return _flame();
         if (id == 3) {
-            // Mechanical recycling: circular arrows around a gear with a tinted center.
+            // Mechanical recycling: circular arrows with tinted arrowheads around a gear with a tinted center.
             return Glyph(
-                "",
+                CYCLE_HEADS,
                 "M10.75 12a1.25 1.25 0 1 0 2.5 0 1.25 1.25 0 1 0-2.5 0Z",
                 CYCLE,
-                string.concat(
-                    CYCLE_HEADS,
-                    " M11.2 9.5l.2-1.1h1.2l.2 1.1.9.6 1.1-.4.6 1-.9.8v1l.9.8-.6 1-1.1-.4-.9.6-.2 1.1H11.4l-.2-1.1-.9-.6-1.1.4-.6-1 .9-.8v-1l-.9-.8.6-1 1.1.4ZM10 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z"
-                ),
+                "M11.2 9.5l.2-1.1h1.2l.2 1.1.9.6 1.1-.4.6 1-.9.8v1l.9.8-.6 1-1.1-.4-.9.6-.2 1.1H11.4l-.2-1.1-.9-.6-1.1.4-.6-1 .9-.8v-1l-.9-.8.6-1 1.1.4ZM10 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0Z",
                 "",
                 false
             );
@@ -197,18 +194,25 @@ contract RecyReportIcons {
             );
         }
         if (id == 6) {
-            // Thermal recycling: circular arrows around a thermometer.
+            // Thermal recycling: centered thermometer between circular arrows with tinted arrowheads.
             return Glyph(
-                "M10.8 13V8.8a1.3 1.3 0 0 1 2.5 0v4.3a2.4 2.4 0 1 1-2.5-.1Z",
+                string.concat(CYCLE_HEADS, " M10.8 12.32V8.12a1.3 1.3 0 0 1 2.5 0v4.3a2.4 2.4 0 1 1-2.5-.1Z"),
                 "",
                 CYCLE,
-                string.concat(CYCLE_HEADS, " M10.4 15a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z"),
+                "M10.4 14.32a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z",
                 "",
                 false
             );
         }
-        // Undefined and unknown types: circular arrows around a hub.
-        return Glyph("M10.4 12a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z", "", CYCLE, CYCLE_HEADS, "", false);
+        // Undefined and unknown types: circular arrows with tinted arrowheads around a hub.
+        return Glyph(
+            string.concat(CYCLE_HEADS, " ", "M10.4 12a1.6 1.6 0 1 0 3.2 0 1.6 1.6 0 1 0-3.2 0Z"),
+            "",
+            CYCLE,
+            "",
+            "",
+            false
+        );
     }
 
     /// @notice Recycle-shape glyph; zero and unknown IDs fall back to the basic shapes.

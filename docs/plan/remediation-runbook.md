@@ -263,8 +263,10 @@ deployed** `RecyReportAttributes` (`0x8a4B4c09…9Ef0`) and `RecyReportSvg` (`0x
 > its filled pipe ends within the flame border, preserving the inner curve and lower join.
 > Metal (material 3) is a crisp white hex nut with a tinted circular center; E-Waste (material 5)
 > uses a mobile phone with an inset screen. Mechanical recycling (recycle type 3) uses
-> a tinted disk filling the gear's central opening. Recycling (disposal method 3)
-> uses tinted arrowhead fills with white outlines and white curved shafts.
+> a tinted disk filling the gear's central opening. Recycling (disposal method 3), the recycle-type
+> fallback, Mechanical (recycle type 3), and Thermal (recycle type 6) use tinted arrowhead fills
+> with white outlines and white curved shafts. Thermal's thermometer is vertically centered
+> between its arrows.
 > All body and tone fills share the slot accent at .35 opacity, including these recycling details.
 > Both Incineration entries (recycle type 2 and disposal method 2) use only the outer flame,
 > without an inner core.
