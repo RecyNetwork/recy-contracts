@@ -180,12 +180,13 @@ contract RecyReportDataTest is Test, TestHelpers {
         );
     }
 
-    function test_generateSvgFlaggedRendersOrangeCoins() public view {
+    function test_generateSvgFlaggedAndInvalidatedRenderStatusArtwork() public view {
         RecyTypes.RecyMaterials[] memory materials = new RecyTypes.RecyMaterials[](1);
         materials[0] = createRecyMaterials(3, 4, 2, 3, 100);
-        string memory image = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_FLAGGED, materials);
-        assertTrue(contains(image, 'viewBox="0 0 512 512"'), "flagged must use the coin artwork");
-        assertTrue(contains(image, 'fill="#FFA500"'), "flagged coins must be orange");
+        string memory flagged = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_FLAGGED, materials);
+        string memory invalidated = recyReportData.exposed_generateSvg(RecyConstants.RECYCLE_INVALIDATED, materials);
+        assertTrue(contains(flagged, 'fill="#FF8C00"'), "flagged reports must render the orange flag");
+        assertTrue(contains(invalidated, 'fill="#ff0000"'), "invalidated reports must render the red stamp");
     }
 
     function test_topClassificationAggregatesAndKeepsHeaviestRowProcess() public view {

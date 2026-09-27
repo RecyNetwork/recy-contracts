@@ -75,6 +75,19 @@ contract RecyReportSvgTest is Test {
         return type(uint256).max;
     }
 
+    /// @dev The `d` of the first path: the main artwork, drawn before the classification slots.
+    function mainArt(string memory image) internal pure returns (string memory) {
+        bytes memory source = bytes(image);
+        uint256 start = firstIndex(image, '<path d="') + 9;
+        uint256 end = start;
+        while (source[end] != '"') ++end;
+        bytes memory art = new bytes(end - start);
+        for (uint256 i = 0; i < art.length; ++i) {
+            art[i] = source[start + i];
+        }
+        return string(art);
+    }
+
     function test_recycleRendersFourOrderedCategoriesEvenWhenUndefined() public view {
         uint32[4] memory classifications = [uint32(1), 3, 4, 5];
         string memory image = svg.getRecycle(classifications);
@@ -115,17 +128,27 @@ contract RecyReportSvgTest is Test {
         assertTrue(contains(rewarded, 'fill="#808080"'));
         assertTrue(contains(rewarded, 'stroke="#808080"'));
         assertEq(countOccurrences(rewarded, 'class="category-slot"'), 4);
+    }
+
+    function test_flaggedAndInvalidatedDrawOwnArtworkInsteadOfCoins() public view {
+        uint32[4] memory classifications = [uint32(7), 2, 3, 4];
+        string memory coins = mainArt(svg.getCoins(RecyConstants.RECYCLE_VALIDATED, classifications));
+
+        string memory flagged = svg.getCoins(RecyConstants.RECYCLE_FLAGGED, classifications);
+        assertTrue(contains(flagged, 'fill="#FF8C00"'));
+        assertTrue(contains(flagged, 'stroke="#FF8C00"'));
+        assertEq(countOccurrences(flagged, 'class="category-slot"'), 4);
+        assertTrue(firstIndex(flagged, 'fill="#FF8C00"') < firstIndex(flagged, 'class="category-slot"'));
 
         string memory invalidated = svg.getCoins(RecyConstants.RECYCLE_INVALIDATED, classifications);
         assertTrue(contains(invalidated, 'fill="#ff0000"'));
         assertTrue(contains(invalidated, 'stroke="#ff0000"'));
         assertEq(countOccurrences(invalidated, 'class="category-slot"'), 4);
+        assertTrue(firstIndex(invalidated, 'fill="#ff0000"') < firstIndex(invalidated, 'class="category-slot"'));
 
-        string memory flagged = svg.getCoins(RecyConstants.RECYCLE_FLAGGED, classifications);
-        assertTrue(contains(flagged, 'fill="#FFA500"'));
-        assertTrue(contains(flagged, 'stroke="#FFA500"'));
-        assertFalse(contains(flagged, "#FFD700"), "flagged must not reuse the validated gold");
-        assertEq(countOccurrences(flagged, 'class="category-slot"'), 4);
+        assertNotEq(mainArt(flagged), coins, "flagged must not reuse the coin artwork");
+        assertNotEq(mainArt(invalidated), coins, "invalidated must not reuse the coin artwork");
+        assertNotEq(mainArt(flagged), mainArt(invalidated), "flag and stamp must differ");
     }
 
     function test_unknownIdsRenderCategoryFallbackWithoutDroppingSlots() public view {
