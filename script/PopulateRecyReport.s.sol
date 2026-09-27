@@ -16,9 +16,9 @@ contract PopulateRecyReportScript is Script, ConfigManager {
      */
     function _addResultToNFT0(RecyReport recyReport, uint256 tokenId) private {
         uint32[] memory materials = new uint32[](3);
-        materials[0] = 0; // PLASTIC
-        materials[1] = 1; // GLASS
-        materials[2] = 2; // PAPER
+        materials[0] = 1; // PLASTIC
+        materials[1] = 2; // GLASS
+        materials[2] = 4; // PAPER
 
         uint128[] memory amounts = new uint128[](3);
         amounts[0] = 5000; // 5kg plastic
@@ -54,7 +54,7 @@ contract PopulateRecyReportScript is Script, ConfigManager {
     function _addResultToNFT1(RecyReport recyReport, uint256 tokenId) private {
         uint32[] memory materials = new uint32[](2);
         materials[0] = 3; // METAL
-        materials[1] = 4; // ORGANIC
+        materials[1] = 6; // ORGANIC
 
         uint128[] memory amounts = new uint128[](2);
         amounts[0] = 3000; // 3kg metal
@@ -86,10 +86,10 @@ contract PopulateRecyReportScript is Script, ConfigManager {
      */
     function _addResultToNFT2(RecyReport recyReport, uint256 tokenId) private {
         uint32[] memory materials = new uint32[](4);
-        materials[0] = 0; // PLASTIC
-        materials[1] = 1; // GLASS
-        materials[2] = 2; // PAPER
-        materials[3] = 5; // TEXTILE
+        materials[0] = 1; // PLASTIC
+        materials[1] = 2; // GLASS
+        materials[2] = 4; // PAPER
+        materials[3] = 7; // TEXTILE
 
         uint128[] memory amounts = new uint128[](4);
         amounts[0] = 2500; // 2.5kg plastic
